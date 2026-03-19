@@ -46,4 +46,139 @@
             <i class="fa fa-search absolute left-4 top-4 text-blue-800 opacity-30"></i>
         </div>
 
-        <div
+        <div id="activeList" class="space-y-8 mb-10"></div>
+
+        <div class="border-t-2 border-dashed border-gray-300 pt-6">
+            <h2 class="text-center text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] mb-4">Riwayat Terantar Selesai</h2>
+            <div id="historyList" class="space-y-3"></div>
+        </div>
+    </main>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAZ7twf8SbcK-HqniDnVqT6k8IM3shFtgc",
+            authDomain: "trackcust-jtm.firebaseapp.com",
+            databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "trackcust-jtm",
+            storageBucket: "trackcust-jtm.firebasestorage.app",
+            messagingSenderId: "411585432172",
+            appId: "1:411585432172:web:2d9ae1655d4e3073e4a649"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let currentPass = localStorage.getItem('adminPass') || "147852";
+        let isAdmin = false;
+        let firstLoad = true;
+
+        db.ref('customers').on('value', (snapshot) => {
+            renderContent(snapshot.val());
+            if (!firstLoad) document.getElementById('notifSound').play().catch(() => {});
+            firstLoad = false;
+        });
+
+        function saveToCloud() {
+            const area = document.getElementById('custArea').value.toUpperCase() || "LAINNYA";
+            const name = document.getElementById('custName').value || "Pelanggan";
+            const driver = document.getElementById('driverName').value || "Crew";
+            const phone = document.getElementById('custPhone').value;
+            const url = document.getElementById('custMaps').value;
+            const key = document.getElementById('editKey').value;
+
+            if (phone && url) {
+                const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
+                const data = { area, name, driver, phone: formattedPhone, maps: url, status: 'active' };
+                if (key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); });
+                else db.ref('customers').push(data).then(() => { clearForm(); });
+            } else { alert("Mohon isi nomor WA dan Maps!"); }
+        }
+
+        function setStatus(key, status) {
+            db.ref('customers/' + key).update({ status: status });
+        }
+
+        function renderContent(data, filter = "") {
+            const activeContainer = document.getElementById('activeList');
+            const historyContainer = document.getElementById('historyList');
+            activeContainer.innerHTML = ""; historyContainer.innerHTML = "";
+            if (!data) return;
+
+            const activeGroups = {};
+            const historyItems = [];
+
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                const searchStr = (item.area + item.name + (item.driver || "")).toLowerCase();
+                if (searchStr.includes(filter.toLowerCase())) {
+                    if (item.status === 'done') historyItems.push({ key, ...item });
+                    else {
+                        const area = item.area || "LAINNYA";
+                        if (!activeGroups[area]) activeGroups[area] = [];
+                        activeGroups[area].push({ key, ...item });
+                    }
+                }
+            });
+
+            Object.keys(activeGroups).sort().forEach(area => {
+                let html = `<div class="space-y-3"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
+                activeGroups[area].reverse().forEach(c => {
+                    // FITUR AUTO CHAT WHATSAPP
+                    const textWA = `Halo bapak/ibu ${c.name}, Saya dari Domino's Pizza Jatimakmur ingin mengantarkan pesanan, mohon tetap aktif WhatsApp ya, hingga pesanan tiba, Terimakasih ☺️`;
+                    const waLink = `https://wa.me/${c.phone}?text=${encodeURIComponent(textWA)}`;
+
+                    html += `
+                        <div class="bg-white rounded-3xl shadow-sm border-l-[6px] border-red-500 p-4">
+                            <div class="flex justify-between items-start mb-3">
+                                <div><h3 class="font-black text-blue-900 text-xs uppercase">${c.name}</h3><p class="text-[9px] font-bold text-gray-400 italic uppercase">Driver: <span class="text-red-500">${c.driver || 'Crew'}</span></p></div>
+                                ${isAdmin ? `<div class="flex gap-4"><button onclick="editCustomer('${c.key}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${c.key}')" class="text-red-200 text-sm"><i class="fa fa-trash"></i></button></div>` : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">Maps</a>
+                                <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">WhatsApp</a>
+                                <button onclick="setStatus('${c.key}', 'done')" class="bg-yellow-400 text-white px-4 rounded-2xl font-black text-xs shadow-md">✓</button>
+                            </div>
+                        </div>`;
+                });
+                activeContainer.innerHTML += html + `</div>`;
+            });
+
+            historyItems.reverse().forEach(c => {
+                const textWAHistory = `Halo bapak/ibu ${c.name}, pesanan Domino's Anda sudah terantar ya. Terimakasih!`;
+                const waLinkHistory = `https://wa.me/${c.phone}?text=${encodeURIComponent(textWAHistory)}`;
+
+                historyContainer.innerHTML += `
+                    <div class="bg-white rounded-2xl p-4 history-card flex justify-between items-center shadow-sm">
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-800 uppercase text-[10px] leading-tight">${c.name}</p>
+                            <p class="text-[8px] text-gray-500 font-bold uppercase">${c.area} | Driver: ${c.driver || 'Crew'}</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <a href="${waLinkHistory}" target="_blank" class="text-green-600 text-lg"><i class="fab fa-whatsapp"></i></a>
+                            <button onclick="setStatus('${c.key}', 'active')" class="text-blue-500 text-sm"><i class="fa fa-undo"></i></button>
+                            ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-400 text-sm"><i class="fa fa-trash"></i></button>` : ''}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function editCustomer(key, area, name, driver, phone, maps) {
+            document.getElementById('adminPanel').classList.remove('hidden');
+            document.getElementById('editKey').value = key;
+            document.getElementById('custArea').value = area;
+            document.getElementById('custName').value = name;
+            document.getElementById('driverName').value = driver || "";
+            document.getElementById('custPhone').value = phone;
+            document.getElementById('custMaps').value = maps;
+            document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('submitBtn').innerText = "Update";
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() { clearForm(); document.getElementById('adminPanel').classList.add('hidden'); }
+        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran Baru"; document.getElementById('submitBtn').innerText = "Simpan Ke Cloud"; }
+        function deleteData(id) { if(confirm('Hapus permanen?')) db.ref('customers/' + id).remove(); }
+        function loginProcess() { if (!isAdmin) { if (prompt("PIN Admin:") === currentPass) { isAdmin = true; document.getElementById('adminPanel').classList.remove('hidden'); document.getElementById('adminBtn').innerText = "Logout Admin"; db.ref('customers').once('value', s => renderContent(s.val())); } } else location.reload(); }
+        function searchData() { db.ref('customers').once('value', s => renderContent(s.val(), document.getElementById('searchInput').value)); }
+    </script>
+</body>
+</html>
