@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Ultimate WA</title>
+    <title>TrackCust JTM - Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -11,9 +11,7 @@
     <style>
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
-        .history-card { opacity: 0.6; filter: grayscale(1); border-left: 4px solid #9ca3af !important; }
-        .slide-up { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .history-card { opacity: 0.8; border-left: 4px solid #10b981 !important; background-color: #f0fdf4; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
     </style>
 </head>
@@ -26,7 +24,7 @@
         <button onclick="loginProcess()" id="adminBtn" class="bg-white text-blue-900 px-4 py-2 rounded-lg text-[10px] font-black shadow-sm uppercase">Admin Login</button>
     </nav>
 
-    <div id="adminPanel" class="hidden p-4 bg-white border-b-4 border-blue-800 shadow-xl space-y-3 slide-up">
+    <div id="adminPanel" class="hidden p-4 bg-white border-b-4 border-blue-800 shadow-xl space-y-3">
         <div class="flex justify-between items-center">
             <h2 id="formTitle" class="font-bold text-blue-900 text-xs uppercase italic">Input Antaran Baru</h2>
             <button onclick="cancelEdit()" id="cancelBtn" class="hidden text-[10px] text-red-500 font-bold underline">BATAL EDIT</button>
@@ -75,43 +73,34 @@
 
         db.ref('customers').on('value', (snapshot) => {
             renderContent(snapshot.val());
-            if (!firstLoad) {
-                document.getElementById('notifSound').play().catch(() => {});
-            }
+            if (!firstLoad) document.getElementById('notifSound').play().catch(() => {});
             firstLoad = false;
         });
 
         function saveToCloud() {
-            const area = document.getElementById('custArea').value.toUpperCase();
-            const name = document.getElementById('custName').value;
-            const driver = document.getElementById('driverName').value || "Belum Ada";
+            const area = document.getElementById('custArea').value.toUpperCase() || "LAINNYA";
+            const name = document.getElementById('custName').value || "Tanpa Nama";
+            const driver = document.getElementById('driverName').value || "Crew";
             const phone = document.getElementById('custPhone').value;
             const url = document.getElementById('custMaps').value;
             const key = document.getElementById('editKey').value;
 
-            if (area && name && phone && url) {
+            if (phone && url) {
                 const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
                 const data = { area, name, driver, phone: formattedPhone, maps: url, status: 'active' };
-
-                if (key) {
-                    db.ref('customers/' + key).update(data).then(() => { cancelEdit(); });
-                } else {
-                    db.ref('customers').push(data).then(() => { clearForm(); });
-                }
-            } else { alert("Data Belum Lengkap!"); }
+                if (key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); });
+                else db.ref('customers').push(data).then(() => { clearForm(); });
+            } else { alert("Minimal isi No WA dan Maps!"); }
         }
 
-        function setDone(key) {
-            if(confirm("Pesanan sudah sampai? Akan masuk ke Riwayat.")) {
-                db.ref('customers/' + key).update({ status: 'done' });
-            }
+        function setStatus(key, status) {
+            db.ref('customers/' + key).update({ status: status });
         }
 
         function renderContent(data, filter = "") {
             const activeContainer = document.getElementById('activeList');
             const historyContainer = document.getElementById('historyList');
-            activeContainer.innerHTML = "";
-            historyContainer.innerHTML = "";
+            activeContainer.innerHTML = ""; historyContainer.innerHTML = "";
             if (!data) return;
 
             const activeGroups = {};
@@ -119,11 +108,10 @@
 
             Object.keys(data).forEach(key => {
                 const item = data[key];
-                const searchStr = (item.area + item.name + item.driver).toLowerCase();
+                const searchStr = (item.area + item.name + (item.driver || "")).toLowerCase();
                 if (searchStr.includes(filter.toLowerCase())) {
-                    if (item.status === 'done') {
-                        historyItems.push({ key, ...item });
-                    } else {
+                    if (item.status === 'done') historyItems.push({ key, ...item });
+                    else {
                         const area = item.area || "LAINNYA";
                         if (!activeGroups[area]) activeGroups[area] = [];
                         activeGroups[area].push({ key, ...item });
@@ -132,26 +120,18 @@
             });
 
             Object.keys(activeGroups).sort().forEach(area => {
-                let html = `<div class="space-y-3 slide-up"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
+                let html = `<div class="space-y-3"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
                 activeGroups[area].reverse().forEach(c => {
-                    const waLink = `https://wa.me/${c.phone}?text=Halo%20Bapak/Ibu%20${c.name},%20saya%20dari%20Domino's%20Pizza%20Jatimakmur%20ingin%20mengantar%20pesanan...`;
                     html += `
                         <div class="bg-white rounded-3xl shadow-sm border-l-[6px] border-red-500 p-4">
                             <div class="flex justify-between items-start mb-3">
-                                <div>
-                                    <h3 class="font-black text-blue-900 text-xs uppercase">${c.name}</h3>
-                                    <p class="text-[9px] font-bold text-gray-400 italic uppercase">Driver: <span class="text-red-500">${c.driver}</span></p>
-                                </div>
-                                ${isAdmin ? `
-                                <div class="flex gap-4">
-                                    <button onclick="editCustomer('${c.key}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button>
-                                    <button onclick="deleteData('${c.key}')" class="text-red-200 text-sm"><i class="fa fa-trash"></i></button>
-                                </div>` : ''}
+                                <div><h3 class="font-black text-blue-900 text-xs uppercase">${c.name}</h3><p class="text-[9px] font-bold text-gray-400 italic">Driver: <span class="text-red-500 uppercase">${c.driver || 'Crew'}</span></p></div>
+                                ${isAdmin ? `<div class="flex gap-4"><button onclick="editCustomer('${c.key}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${c.key}')" class="text-red-200 text-sm"><i class="fa fa-trash"></i></button></div>` : ''}
                             </div>
                             <div class="flex gap-2">
-                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md active:scale-95 transition-all">Maps</a>
-                                <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md active:scale-95 transition-all">WhatsApp</a>
-                                <button onclick="setDone('${c.key}')" class="bg-yellow-400 text-white px-4 rounded-2xl font-black text-xs shadow-md active:scale-95 transition-all">✓</button>
+                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">Maps</a>
+                                <a href="https://wa.me/${c.phone}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">WhatsApp</a>
+                                <button onclick="setStatus('${c.key}', 'done')" class="bg-yellow-400 text-white px-4 rounded-2xl font-black text-xs shadow-md">✓</button>
                             </div>
                         </div>`;
                 });
@@ -160,14 +140,15 @@
 
             historyItems.reverse().forEach(c => {
                 historyContainer.innerHTML += `
-                    <div class="bg-white rounded-2xl p-3 history-card flex justify-between items-center shadow-sm slide-up">
-                        <div class="text-[9px]">
-                            <p class="font-bold text-gray-600 uppercase">${c.name} <span class="text-[8px] italic text-gray-400 ml-2">by: ${c.driver}</span></p>
-                            <p class="text-gray-400 font-bold italic uppercase">${c.area}</p>
+                    <div class="bg-white rounded-2xl p-4 history-card flex justify-between items-center shadow-sm">
+                        <div class="flex-1">
+                            <p class="font-bold text-gray-800 uppercase text-[10px] leading-tight">${c.name}</p>
+                            <p class="text-[8px] text-gray-500 font-bold uppercase">${c.area} | Driver: ${c.driver || 'Crew'}</p>
                         </div>
-                        <div class="flex items-center gap-3">
-                            <a href="https://wa.me/${c.phone}" target="_blank" class="text-green-500 text-xs"><i class="fab fa-whatsapp"></i></a>
-                            ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-200 text-xs px-2"><i class="fa fa-trash"></i></button>` : `<i class="fa fa-check-circle text-green-500 text-xs"></i>`}
+                        <div class="flex items-center gap-4">
+                            <a href="https://wa.me/${c.phone}" target="_blank" class="text-green-600 text-lg"><i class="fab fa-whatsapp"></i></a>
+                            <button onclick="setStatus('${c.key}', 'active')" class="text-blue-500 text-sm"><i class="fa fa-undo"></i></button>
+                            ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-400 text-sm"><i class="fa fa-trash"></i></button>` : ''}
                         </div>
                     </div>`;
             });
@@ -175,37 +156,21 @@
 
         function editCustomer(key, area, name, driver, phone, maps) {
             document.getElementById('adminPanel').classList.remove('hidden');
-            document.getElementById('formTitle').innerText = "Edit Antaran";
-            document.getElementById('submitBtn').innerText = "Update Data";
-            document.getElementById('cancelBtn').classList.remove('hidden');
             document.getElementById('editKey').value = key;
             document.getElementById('custArea').value = area;
             document.getElementById('custName').value = name;
-            document.getElementById('driverName').value = driver;
+            document.getElementById('driverName').value = driver || "";
             document.getElementById('custPhone').value = phone;
             document.getElementById('custMaps').value = maps;
+            document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('submitBtn').innerText = "Update";
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function cancelEdit() { clearForm(); document.getElementById('adminPanel').classList.add('hidden'); }
-        function clearForm() { 
-            document.querySelectorAll('input').forEach(i => i.value = ""); 
-            document.getElementById('editKey').value = "";
-            document.getElementById('formTitle').innerText = "Input Antaran Baru";
-            document.getElementById('submitBtn').innerText = "Simpan Ke Cloud";
-            document.getElementById('cancelBtn').classList.add('hidden');
-        }
-        function deleteData(id) { if(confirm('Hapus dari Cloud?')) db.ref('customers/' + id).remove(); }
-        function loginProcess() {
-            if (!isAdmin) {
-                if (prompt("PIN Admin:") === currentPass) {
-                    isAdmin = true;
-                    document.getElementById('adminPanel').classList.remove('hidden');
-                    document.getElementById('adminBtn').innerText = "Logout Admin";
-                    db.ref('customers').once('value', s => renderContent(s.val()));
-                }
-            } else { location.reload(); }
-        }
+        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran Baru"; document.getElementById('submitBtn').innerText = "Simpan Ke Cloud"; }
+        function deleteData(id) { if(confirm('Hapus permanen?')) db.ref('customers/' + id).remove(); }
+        function loginProcess() { if (!isAdmin) { if (prompt("PIN Admin:") === currentPass) { isAdmin = true; document.getElementById('adminPanel').classList.remove('hidden'); document.getElementById('adminBtn').innerText = "Logout Admin"; db.ref('customers').once('value', s => renderContent(s.val())); } } else location.reload(); }
         function searchData() { db.ref('customers').once('value', s => renderContent(s.val(), document.getElementById('searchInput').value)); }
     </script>
 </body>
