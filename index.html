@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TrackCust Jtm</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#006491">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        .dominos-blue { background-color: #006491; }
+        .dominos-red { background-color: #e31837; }
+        .safe-area-inset { padding-top: env(safe-area-inset-top); }
+        
+        /* Animasi Transisi Mobile */
+        .slide-up {
+            animation: slideUp 0.3s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen pb-20">
+
+    <nav class="dominos-blue safe-area-inset sticky top-0 z-50 shadow-md">
+        <div class="p-4 flex justify-between items-center text-white">
+            <div>
+                <h1 class="font-black text-lg italic tracking-tighter leading-none">DOMINO'S</h1>
+                <p class="text-[10px] font-bold tracking-widest text-red-400">TRACKCUST JTM</p>
+            </div>
+            <button onclick="loginProcess()" id="adminBtn" class="bg-white text-blue-900 px-4 py-2 rounded-lg text-xs font-black shadow-sm active:scale-95 transition">
+                ADMIN
+            </button>
+        </div>
+    </nav>
+
+    <div id="adminPanel" class="hidden fixed inset-x-0 top-[72px] bg-white z-40 border-b-4 border-blue-800 shadow-2xl p-4 slide-up">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="font-bold text-blue-900"><i class="fa fa-plus-circle"></i> Input Data Pesanan</h2>
+            <button onclick="changePassword()" class="text-[10px] bg-gray-100 p-1 px-2 rounded border font-bold text-gray-500">GANTI PIN</button>
+        </div>
+        <div class="space-y-3">
+            <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none text-sm">
+            <input type="tel" id="custPhone" placeholder="No HP/WA (Contoh: 0812...)" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none text-sm">
+            <input type="text" id="custMaps" placeholder="Tempel Link Google Maps" class="w-full border-2 border-gray-100 p-3 rounded-xl focus:border-blue-500 outline-none text-sm">
+            <button onclick="saveCustomer()" class="w-full dominos-red text-white p-3 rounded-xl font-black shadow-lg active:bg-red-700">
+                SIMPAN KE DATABASE
+            </button>
+        </div>
+    </div>
+
+    <main class="p-4 mt-2">
+        <div class="relative mb-6">
+            <input type="text" id="searchInput" onkeyup="searchCustomer()" placeholder="Cari Nama / No HP..." 
+                   class="w-full p-4 pl-12 rounded-2xl border-none shadow-md focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            <i class="fa fa-search absolute left-4 top-4 text-blue-800 opacity-40"></i>
+        </div>
+
+        <div id="resultList" class="space-y-4">
+            </div>
+    </main>
+
+    <div class="fixed bottom-0 inset-x-0 bg-white border-t flex justify-around p-3 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+        <button onclick="location.reload()" class="flex flex-col items-center text-blue-900">
+            <i class="fa fa-home text-xl"></i>
+            <span class="text-[10px] font-bold mt-1">Beranda</span>
+        </button>
+        <button onclick="alert('Fitur History segera hadir!')" class="flex flex-col items-center text-gray-400">
+            <i class="fa fa-history text-xl"></i>
+            <span class="text-[10px] font-bold mt-1">Riwayat</span>
+        </button>
+        <button onclick="alert('TrackCust Jtm v2.0 - Jatimakmur Delivery')" class="flex flex-col items-center text-gray-400">
+            <i class="fa fa-info-circle text-xl"></i>
+            <span class="text-[10px] font-bold mt-1">Info</span>
+        </button>
+    </div>
+
+    <script>
+        let customers = JSON.parse(localStorage.getItem('custData')) || [];
+        let currentPass = localStorage.getItem('adminPass') || "147852"; 
+        let isAdmin = false;
+
+        function loginProcess() {
+            if (!isAdmin) {
+                const passInput = prompt("Masukkan PIN Admin:");
+                if (passInput === currentPass) {
+                    isAdmin = true;
+                    document.getElementById('adminPanel').classList.toggle('hidden');
+                    document.getElementById('adminBtn').innerText = "KELUAR";
+                    document.getElementById('adminBtn').className = "bg-red-500 text-white px-4 py-2 rounded-lg text-xs font-black";
+                } else {
+                    alert("PIN Salah!");
+                }
+            } else {
+                isAdmin = false;
+                document.getElementById('adminPanel').classList.add('hidden');
+                document.getElementById('adminBtn').innerText = "ADMIN";
+                document.getElementById('adminBtn').className = "bg-white text-blue-900 px-4 py-2 rounded-lg text-xs font-black shadow-sm";
+            }
+            renderCards();
+        }
+
+        function changePassword() {
+            const oldPass = prompt("PIN Lama:");
+            if (oldPass === currentPass) {
+                const newPass = prompt("PIN Baru:");
+                if (newPass) {
+                    currentPass = newPass;
+                    localStorage.setItem('adminPass', newPass);
+                    alert("PIN Berhasil Diubah!");
+                }
+            } else { alert("PIN Salah!"); }
+        }
+
+        function saveCustomer() {
+            const name = document.getElementById('custName').value;
+            const phone = document.getElementById('custPhone').value;
+            const url = document.getElementById('custMaps').value;
+            
+            if (name && phone && url) {
+                const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
+                customers.push({ id: Date.now(), name, phone: formattedPhone, maps: url });
+                localStorage.setItem('custData', JSON.stringify(customers));
+                
+                // Reset form & close panel
+                document.getElementById('custName').value = '';
+                document.getElementById('custPhone').value = '';
+                document.getElementById('custMaps').value = '';
+                document.getElementById('adminPanel').classList.add('hidden');
+                
+                renderCards();
+                alert("Berhasil!");
+            }
+        }
+
+        function deleteCust(id) {
+            if(confirm('Hapus data?')) {
+                customers = customers.filter(c => c.id !== id);
+                localStorage.setItem('custData', JSON.stringify(customers));
+                renderCards();
+            }
+        }
+
+        function renderCards(filter = "") {
+            const container = document.getElementById('resultList');
+            container.innerHTML = "";
+
+            const filtered = customers.filter(c => 
+                c.name.toLowerCase().includes(filter.toLowerCase()) || c.phone.includes(filter)
+            );
+
+            filtered.forEach(c => {
+                const waLink = `https://wa.me/${c.phone}?text=Halo%20Bapak/Ibu%20${c.name},%20saya%20dari%20Domino's%20Pizza%20Jatimakmur%20ingin%20mengkonfirmasi%20bahwa%20pesanan%20anda%20sedang%20diantar.%20Mohon%20tetap%20aktif%20WhatsApp%20sampai%20pesanan%20tiba,%20terimakasih%20😊`;
+                
+                container.innerHTML += `
+                    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden slide-up">
+                        <div class="p-4 flex justify-between items-center">
+                            <div class="flex items-center space-x-3">
+                                <div class="bg-blue-100 text-blue-800 h-10 w-10 rounded-full flex items-center justify-center font-black">
+                                    ${c.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h3 class="font-black text-gray-800 uppercase text-sm">${c.name}</h3>
+                                    <p class="text-xs text-gray-400 font-bold">${c.phone}</p>
+                                </div>
+                            </div>
+                            ${isAdmin ? `<button onclick="deleteCust(${c.id})" class="text-red-200"><i class="fa fa-trash"></i></button>` : ''}
+                        </div>
+                        <div class="flex border-t divide-x">
+                            <a href="${c.maps}" target="_blank" class="flex-1 p-3 text-center text-blue-600 font-black text-xs active:bg-gray-50 transition">
+                                <i class="fa fa-directions mb-1 block text-lg"></i> MAPS
+                            </a>
+                            <a href="${waLink}" target="_blank" class="flex-1 p-3 text-center text-green-500 font-black text-xs active:bg-gray-50 transition">
+                                <i class="fab fa-whatsapp mb-1 block text-lg"></i> WHATSAPP
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function searchCustomer() {
+            renderCards(document.getElementById('searchInput').value);
+        }
+
+        renderCards();
+    </script>
+</body>
+</html>
