@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust Jtm - Online</title>
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#006491">
+    <title>TrackCust JTM - Ultimate</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -13,34 +11,52 @@
     <style>
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
+        .history-card { opacity: 0.6; filter: grayscale(1); border-left: 4px solid #9ca3af !important; }
         .slide-up { animation: slideUp 0.3s ease-out; }
         @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        ::-webkit-scrollbar { width: 0; background: transparent; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
+<body class="bg-gray-100 min-h-screen pb-24 font-sans">
+    
+    <audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+
     <nav class="dominos-blue p-4 text-white flex justify-between items-center sticky top-0 z-50 shadow-lg">
-        <h1 class="font-black italic tracking-tighter">DOMINO'S <span class="text-red-400">JTM</span></h1>
-        <button onclick="loginProcess()" id="adminBtn" class="bg-white text-blue-900 px-4 py-2 rounded-lg text-xs font-black shadow-sm">ADMIN</button>
+        <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
+        <button onclick="loginProcess()" id="adminBtn" class="bg-white text-blue-900 px-4 py-2 rounded-lg text-[10px] font-black shadow-sm uppercase tracking-widest">Admin Login</button>
     </nav>
 
     <div id="adminPanel" class="hidden p-4 bg-white border-b-4 border-blue-800 shadow-xl space-y-3 slide-up">
-        <div class="flex justify-between items-center"><h2 class="font-bold text-blue-900">Input Pesanan Baru</h2><button onclick="changePassword()" class="text-[10px] text-gray-400">GANTI PIN</button></div>
-        <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full border p-3 rounded-xl text-sm">
-        <input type="tel" id="custPhone" placeholder="No WA (08...)" class="w-full border p-3 rounded-xl text-sm">
-        <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full border p-3 rounded-xl text-sm">
-        <button onclick="saveToCloud()" class="w-full dominos-red text-white p-3 rounded-xl font-black">SIMPAN KE CLOUD</button>
+        <div class="flex justify-between items-center">
+            <h2 id="formTitle" class="font-bold text-blue-900 text-xs uppercase italic">Input Antaran Baru</h2>
+            <button onclick="cancelEdit()" id="cancelBtn" class="hidden text-[10px] text-red-500 font-bold underline">BATAL EDIT</button>
+        </div>
+        <input type="hidden" id="editKey">
+        <input type="text" id="custArea" placeholder="Area (Contoh: Jatikramat / Jatibening)" class="w-full border p-3 rounded-xl text-sm font-bold bg-yellow-50 outline-none uppercase focus:border-blue-500">
+        <div class="grid grid-cols-2 gap-2">
+            <input type="text" id="custName" placeholder="Nama / No Order" class="border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
+            <input type="text" id="driverName" placeholder="Nama Driver" class="border p-3 rounded-xl text-sm outline-none bg-blue-50 font-bold focus:border-blue-500">
+        </div>
+        <input type="tel" id="custPhone" placeholder="No WA (08...)" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
+        <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
+        <button id="submitBtn" onclick="saveToCloud()" class="w-full dominos-red text-white p-4 rounded-xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">Simpan Ke Cloud</button>
     </div>
 
     <main class="p-4">
         <div class="relative mb-6">
-            <input type="text" id="searchInput" onkeyup="searchCustomer()" placeholder="Cari Nama / No HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none">
+            <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Area/Driver..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-semibold italic">
             <i class="fa fa-search absolute left-4 top-4 text-blue-800 opacity-30"></i>
         </div>
-        <div id="resultList" class="space-y-4"></div>
+
+        <div id="activeList" class="space-y-8 mb-10"></div>
+
+        <div class="border-t-2 border-dashed border-gray-300 pt-6">
+            <h2 class="text-center text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] mb-4">Riwayat Terantar Selesai</h2>
+            <div id="historyList" class="space-y-3"></div>
+        </div>
     </main>
 
     <script>
-        // Konfigurasi otomatis dari gambar kamu
         const firebaseConfig = {
             apiKey: "AIzaSyAZ7twf8SbcK-HqniDnVqT6k8IM3shFtgc",
             authDomain: "trackcust-jtm.firebaseapp.com",
@@ -55,61 +71,143 @@
         const db = firebase.database();
         let currentPass = localStorage.getItem('adminPass') || "147852";
         let isAdmin = false;
+        let firstLoad = true;
 
-        // Ambil Data Otomatis
+        // Monitor Perubahan Data
         db.ref('customers').on('value', (snapshot) => {
-            renderCards(snapshot.val());
+            renderContent(snapshot.val());
+            
+            // Bunyi Notif jika ada perubahan status menjadi 'done' (kecuali saat baru buka web)
+            if (!firstLoad) {
+                document.getElementById('notifSound').play().catch(() => {});
+            }
+            firstLoad = false;
         });
 
         function saveToCloud() {
+            const area = document.getElementById('custArea').value.toUpperCase();
             const name = document.getElementById('custName').value;
+            const driver = document.getElementById('driverName').value || "Belum Ada";
             const phone = document.getElementById('custPhone').value;
             const url = document.getElementById('custMaps').value;
-            if (name && phone && url) {
+            const key = document.getElementById('editKey').value;
+
+            if (area && name && phone && url) {
                 const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
-                db.ref('customers').push({ name, phone: formattedPhone, maps: url });
-                document.getElementById('custName').value = '';
-                document.getElementById('custPhone').value = '';
-                document.getElementById('custMaps').value = '';
-                alert("Berhasil disimpan ke Cloud!");
+                const data = { area, name, driver, phone: formattedPhone, maps: url, status: 'active' };
+
+                if (key) {
+                    db.ref('customers/' + key).update(data).then(() => { cancelEdit(); alert("Data Terupdate!"); });
+                } else {
+                    db.ref('customers').push(data).then(() => { clearForm(); alert("Berhasil Disimpan!"); });
+                }
+            } else { alert("Mohon lengkapi semua kolom!"); }
+        }
+
+        function setDone(key) {
+            if(confirm("Pesanan sudah sampai ke alamat?")) {
+                db.ref('customers/' + key).update({ status: 'done' });
             }
         }
 
-        function renderCards(data, filter = "") {
-            const container = document.getElementById('resultList');
-            container.innerHTML = "";
+        function renderContent(data, filter = "") {
+            const activeContainer = document.getElementById('activeList');
+            const historyContainer = document.getElementById('historyList');
+            activeContainer.innerHTML = "";
+            historyContainer.innerHTML = "";
             if (!data) return;
-            Object.keys(data).reverse().forEach(key => {
-                const c = data[key];
-                if (c.name.toLowerCase().includes(filter.toLowerCase()) || c.phone.includes(filter)) {
-                    const waLink = `https://wa.me/${c.phone}?text=Halo%20Bapak/Ibu%20${c.name},%20saya%20dari%20Domino's%20Pizza%20Jatimakmur%20ingin%20mengkonfirmasi%20pesanan%20anda%20akan%20diantarkan%20sekarang,%20mohon%20tetap%20aktif%20WhatsApp%20sampai%20pesanan%20tiba,%20terimakasih%20😊`;
-                    container.innerHTML += `
-                        <div class="bg-white rounded-2xl shadow-sm border p-4 slide-up">
+
+            const activeGroups = {};
+            const historyItems = [];
+
+            Object.keys(data).forEach(key => {
+                const item = data[key];
+                const searchStr = (item.area + item.name + item.driver).toLowerCase();
+                
+                if (searchStr.includes(filter.toLowerCase())) {
+                    if (item.status === 'done') {
+                        historyItems.push({ key, ...item });
+                    } else {
+                        const area = item.area || "LAINNYA";
+                        if (!activeGroups[area]) activeGroups[area] = [];
+                        activeGroups[area].push({ key, ...item });
+                    }
+                }
+            });
+
+            // Render Grouping Aktif
+            Object.keys(activeGroups).sort().forEach(area => {
+                let areaHTML = `<div class="space-y-3 slide-up"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
+                activeGroups[area].reverse().forEach(c => {
+                    areaHTML += `
+                        <div class="bg-white rounded-3xl shadow-sm border-l-[6px] border-red-500 p-4">
                             <div class="flex justify-between items-start mb-3">
-                                <div><h3 class="font-black text-blue-900 uppercase text-sm">${c.name}</h3><p class="text-xs text-green-600 font-bold">${c.phone}</p></div>
-                                ${isAdmin ? `<button onclick="deleteData('${key}')" class="text-red-200 p-2"><i class="fa fa-trash"></i></button>` : ''}
+                                <div>
+                                    <h3 class="font-black text-blue-900 text-xs uppercase">${c.name}</h3>
+                                    <p class="text-[9px] font-bold text-gray-400 italic">Driver: <span class="text-red-500 uppercase">${c.driver}</span></p>
+                                </div>
+                                ${isAdmin ? `
+                                <div class="flex gap-4">
+                                    <button onclick="editCustomer('${c.key}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button>
+                                    <button onclick="deleteData('${c.key}')" class="text-red-200 text-sm"><i class="fa fa-trash"></i></button>
+                                </div>` : ''}
                             </div>
                             <div class="flex gap-2">
-                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white p-3 rounded-xl text-center font-bold text-xs">MAPS</a>
-                                <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white p-3 rounded-xl text-center font-bold text-xs text-white">WHATSAPP</a>
+                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[10px] uppercase shadow-md active:scale-95 transition-all">Maps</a>
+                                <button onclick="setDone('${c.key}')" class="flex-1 bg-green-500 text-white py-3 rounded-2xl font-bold text-[10px] uppercase shadow-md active:scale-95 transition-all">Selesai</button>
                             </div>
                         </div>`;
-                }
+                });
+                activeContainer.innerHTML += areaHTML + `</div>`;
+            });
+
+            // Render Riwayat
+            historyItems.reverse().forEach(c => {
+                historyContainer.innerHTML += `
+                    <div class="bg-white rounded-2xl p-3 history-card flex justify-between items-center shadow-sm slide-up">
+                        <div class="text-[9px]">
+                            <p class="font-bold text-gray-600 uppercase">${c.name} <span class="text-[8px] italic text-gray-400 ml-2">by: ${c.driver}</span></p>
+                            <p class="text-gray-400 font-bold">${c.area}</p>
+                        </div>
+                        ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-200 text-xs px-2"><i class="fa fa-trash"></i></button>` : `<i class="fa fa-check-circle text-green-500 text-sm"></i>`}
+                    </div>`;
             });
         }
 
-        function deleteData(id) { if(confirm('Hapus data ini?')) db.ref('customers/' + id).remove(); }
+        function editCustomer(key, area, name, driver, phone, maps) {
+            document.getElementById('adminPanel').classList.remove('hidden');
+            document.getElementById('formTitle').innerText = "Edit Data Antaran";
+            document.getElementById('submitBtn').innerText = "Update Data";
+            document.getElementById('cancelBtn').classList.remove('hidden');
+            document.getElementById('editKey').value = key;
+            document.getElementById('custArea').value = area;
+            document.getElementById('custName').value = name;
+            document.getElementById('driverName').value = driver;
+            document.getElementById('custPhone').value = phone;
+            document.getElementById('custMaps').value = maps;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEdit() { clearForm(); document.getElementById('adminPanel').classList.add('hidden'); }
+        function clearForm() { 
+            document.querySelectorAll('input').forEach(i => i.value = ""); 
+            document.getElementById('editKey').value = "";
+            document.getElementById('formTitle').innerText = "Input Antaran Baru";
+            document.getElementById('submitBtn').innerText = "Simpan Ke Cloud";
+            document.getElementById('cancelBtn').classList.add('hidden');
+        }
+        function deleteData(id) { if(confirm('Hapus permanen dari Cloud?')) db.ref('customers/' + id).remove(); }
         function loginProcess() {
-            if (!isAdmin) { if (prompt("PIN Admin:") === currentPass) { isAdmin = true; document.getElementById('adminPanel').classList.remove('hidden'); document.getElementById('adminBtn').innerText = "LOGOUT"; } else { alert("PIN Salah!"); } } 
-            else { location.reload(); }
+            if (!isAdmin) {
+                if (prompt("PIN Admin Toko:") === currentPass) {
+                    isAdmin = true;
+                    document.getElementById('adminPanel').classList.remove('hidden');
+                    document.getElementById('adminBtn').innerText = "Logout Admin";
+                    db.ref('customers').once('value', s => renderContent(s.val()));
+                } else { alert("PIN Salah!"); }
+            } else { location.reload(); }
         }
-        function changePassword() {
-            const newPass = prompt("Masukkan PIN Baru:");
-            if (newPass) { currentPass = newPass; localStorage.setItem('adminPass', newPass); alert("PIN diganti!"); }
-        }
-        function searchCustomer() {
-            db.ref('customers').once('value', (s) => renderCards(s.val(), document.getElementById('searchInput').value));
-        }
+        function searchData() { db.ref('customers').once('value', s => renderContent(s.val(), document.getElementById('searchInput').value)); }
     </script>
 </body>
 </html>
