@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Ultimate</title>
+    <title>TrackCust JTM - Ultimate WA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -23,7 +23,7 @@
 
     <nav class="dominos-blue p-4 text-white flex justify-between items-center sticky top-0 z-50 shadow-lg">
         <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-        <button onclick="loginProcess()" id="adminBtn" class="bg-white text-blue-900 px-4 py-2 rounded-lg text-[10px] font-black shadow-sm uppercase tracking-widest">Admin Login</button>
+        <button onclick="loginProcess()" id="adminBtn" class="bg-white text-blue-900 px-4 py-2 rounded-lg text-[10px] font-black shadow-sm uppercase">Admin Login</button>
     </nav>
 
     <div id="adminPanel" class="hidden p-4 bg-white border-b-4 border-blue-800 shadow-xl space-y-3 slide-up">
@@ -32,13 +32,13 @@
             <button onclick="cancelEdit()" id="cancelBtn" class="hidden text-[10px] text-red-500 font-bold underline">BATAL EDIT</button>
         </div>
         <input type="hidden" id="editKey">
-        <input type="text" id="custArea" placeholder="Area (Contoh: Jatikramat / Jatibening)" class="w-full border p-3 rounded-xl text-sm font-bold bg-yellow-50 outline-none uppercase focus:border-blue-500">
+        <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur/Benih)" class="w-full border p-3 rounded-xl text-sm font-bold bg-yellow-50 outline-none uppercase">
         <div class="grid grid-cols-2 gap-2">
-            <input type="text" id="custName" placeholder="Nama / No Order" class="border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
-            <input type="text" id="driverName" placeholder="Nama Driver" class="border p-3 rounded-xl text-sm outline-none bg-blue-50 font-bold focus:border-blue-500">
+            <input type="text" id="custName" placeholder="Nama / No Order" class="border p-3 rounded-xl text-sm outline-none">
+            <input type="text" id="driverName" placeholder="Nama Driver" class="border p-3 rounded-xl text-sm outline-none bg-blue-50 font-bold uppercase">
         </div>
-        <input type="tel" id="custPhone" placeholder="No WA (08...)" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
-        <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full border p-3 rounded-xl text-sm outline-none focus:border-blue-500">
+        <input type="tel" id="custPhone" placeholder="No WA (08...)" class="w-full border p-3 rounded-xl text-sm outline-none">
+        <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full border p-3 rounded-xl text-sm outline-none">
         <button id="submitBtn" onclick="saveToCloud()" class="w-full dominos-red text-white p-4 rounded-xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">Simpan Ke Cloud</button>
     </div>
 
@@ -73,11 +73,8 @@
         let isAdmin = false;
         let firstLoad = true;
 
-        // Monitor Perubahan Data
         db.ref('customers').on('value', (snapshot) => {
             renderContent(snapshot.val());
-            
-            // Bunyi Notif jika ada perubahan status menjadi 'done' (kecuali saat baru buka web)
             if (!firstLoad) {
                 document.getElementById('notifSound').play().catch(() => {});
             }
@@ -97,15 +94,15 @@
                 const data = { area, name, driver, phone: formattedPhone, maps: url, status: 'active' };
 
                 if (key) {
-                    db.ref('customers/' + key).update(data).then(() => { cancelEdit(); alert("Data Terupdate!"); });
+                    db.ref('customers/' + key).update(data).then(() => { cancelEdit(); });
                 } else {
-                    db.ref('customers').push(data).then(() => { clearForm(); alert("Berhasil Disimpan!"); });
+                    db.ref('customers').push(data).then(() => { clearForm(); });
                 }
-            } else { alert("Mohon lengkapi semua kolom!"); }
+            } else { alert("Data Belum Lengkap!"); }
         }
 
         function setDone(key) {
-            if(confirm("Pesanan sudah sampai ke alamat?")) {
+            if(confirm("Pesanan sudah sampai? Akan masuk ke Riwayat.")) {
                 db.ref('customers/' + key).update({ status: 'done' });
             }
         }
@@ -123,7 +120,6 @@
             Object.keys(data).forEach(key => {
                 const item = data[key];
                 const searchStr = (item.area + item.name + item.driver).toLowerCase();
-                
                 if (searchStr.includes(filter.toLowerCase())) {
                     if (item.status === 'done') {
                         historyItems.push({ key, ...item });
@@ -135,16 +131,16 @@
                 }
             });
 
-            // Render Grouping Aktif
             Object.keys(activeGroups).sort().forEach(area => {
-                let areaHTML = `<div class="space-y-3 slide-up"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
+                let html = `<div class="space-y-3 slide-up"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
                 activeGroups[area].reverse().forEach(c => {
-                    areaHTML += `
+                    const waLink = `https://wa.me/${c.phone}?text=Halo%20Bapak/Ibu%20${c.name},%20saya%20dari%20Domino's%20Pizza%20Jatimakmur%20ingin%20mengantar%20pesanan...`;
+                    html += `
                         <div class="bg-white rounded-3xl shadow-sm border-l-[6px] border-red-500 p-4">
                             <div class="flex justify-between items-start mb-3">
                                 <div>
                                     <h3 class="font-black text-blue-900 text-xs uppercase">${c.name}</h3>
-                                    <p class="text-[9px] font-bold text-gray-400 italic">Driver: <span class="text-red-500 uppercase">${c.driver}</span></p>
+                                    <p class="text-[9px] font-bold text-gray-400 italic uppercase">Driver: <span class="text-red-500">${c.driver}</span></p>
                                 </div>
                                 ${isAdmin ? `
                                 <div class="flex gap-4">
@@ -153,30 +149,33 @@
                                 </div>` : ''}
                             </div>
                             <div class="flex gap-2">
-                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[10px] uppercase shadow-md active:scale-95 transition-all">Maps</a>
-                                <button onclick="setDone('${c.key}')" class="flex-1 bg-green-500 text-white py-3 rounded-2xl font-bold text-[10px] uppercase shadow-md active:scale-95 transition-all">Selesai</button>
+                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md active:scale-95 transition-all">Maps</a>
+                                <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md active:scale-95 transition-all">WhatsApp</a>
+                                <button onclick="setDone('${c.key}')" class="bg-yellow-400 text-white px-4 rounded-2xl font-black text-xs shadow-md active:scale-95 transition-all">✓</button>
                             </div>
                         </div>`;
                 });
-                activeContainer.innerHTML += areaHTML + `</div>`;
+                activeContainer.innerHTML += html + `</div>`;
             });
 
-            // Render Riwayat
             historyItems.reverse().forEach(c => {
                 historyContainer.innerHTML += `
                     <div class="bg-white rounded-2xl p-3 history-card flex justify-between items-center shadow-sm slide-up">
                         <div class="text-[9px]">
                             <p class="font-bold text-gray-600 uppercase">${c.name} <span class="text-[8px] italic text-gray-400 ml-2">by: ${c.driver}</span></p>
-                            <p class="text-gray-400 font-bold">${c.area}</p>
+                            <p class="text-gray-400 font-bold italic uppercase">${c.area}</p>
                         </div>
-                        ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-200 text-xs px-2"><i class="fa fa-trash"></i></button>` : `<i class="fa fa-check-circle text-green-500 text-sm"></i>`}
+                        <div class="flex items-center gap-3">
+                            <a href="https://wa.me/${c.phone}" target="_blank" class="text-green-500 text-xs"><i class="fab fa-whatsapp"></i></a>
+                            ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-200 text-xs px-2"><i class="fa fa-trash"></i></button>` : `<i class="fa fa-check-circle text-green-500 text-xs"></i>`}
+                        </div>
                     </div>`;
             });
         }
 
         function editCustomer(key, area, name, driver, phone, maps) {
             document.getElementById('adminPanel').classList.remove('hidden');
-            document.getElementById('formTitle').innerText = "Edit Data Antaran";
+            document.getElementById('formTitle').innerText = "Edit Antaran";
             document.getElementById('submitBtn').innerText = "Update Data";
             document.getElementById('cancelBtn').classList.remove('hidden');
             document.getElementById('editKey').value = key;
@@ -196,15 +195,15 @@
             document.getElementById('submitBtn').innerText = "Simpan Ke Cloud";
             document.getElementById('cancelBtn').classList.add('hidden');
         }
-        function deleteData(id) { if(confirm('Hapus permanen dari Cloud?')) db.ref('customers/' + id).remove(); }
+        function deleteData(id) { if(confirm('Hapus dari Cloud?')) db.ref('customers/' + id).remove(); }
         function loginProcess() {
             if (!isAdmin) {
-                if (prompt("PIN Admin Toko:") === currentPass) {
+                if (prompt("PIN Admin:") === currentPass) {
                     isAdmin = true;
                     document.getElementById('adminPanel').classList.remove('hidden');
                     document.getElementById('adminBtn').innerText = "Logout Admin";
                     db.ref('customers').once('value', s => renderContent(s.val()));
-                } else { alert("PIN Salah!"); }
+                }
             } else { location.reload(); }
         }
         function searchData() { db.ref('customers').once('value', s => renderContent(s.val(), document.getElementById('searchInput').value)); }
