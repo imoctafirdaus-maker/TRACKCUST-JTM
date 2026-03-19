@@ -3,7 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Secure</title>
+    <title>TrackCust JTM - Ultimate App</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#006491">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#006491">
+    <meta name="apple-mobile-web-app-title" content="JTM Track">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="icon" type="image/png" href="logo.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -68,9 +77,16 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         let currentPass = localStorage.getItem('adminPass') || "147852";
-        let deletePass = "9999"; // PASSWORD UNTUK HAPUS DATA
+        let deletePass = "9999";
         let isAdmin = false;
         let firstLoad = true;
+
+        // PWA SERVICE WORKER (UNTUK OFFLINE CACHE)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').catch(() => {});
+            });
+        }
 
         db.ref('customers').on('value', (snapshot) => {
             renderContent(snapshot.val());
@@ -173,15 +189,13 @@
 
         function cancelEdit() { clearForm(); document.getElementById('adminPanel').classList.add('hidden'); }
         function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran Baru"; document.getElementById('submitBtn').innerText = "Simpan Ke Cloud"; }
-        
-        // FUNGSI HAPUS DENGAN PASSWORD KHUSUS
         function secureDelete(id) { 
-            const inputPass = prompt('Konfirmasi Penghapusan Permanen.\nMasukkan PIN Hapus:');
+            const inputPass = prompt('PIN Hapus (9999):');
             if (inputPass === deletePass) {
                 db.ref('customers/' + id).remove();
-                alert('Data berhasil dihapus.');
+                alert('Hapus Sukses.');
             } else if (inputPass !== null) {
-                alert('PIN Hapus Salah!');
+                alert('PIN Salah!');
             }
         }
 
@@ -192,8 +206,6 @@
                     document.getElementById('adminPanel').classList.remove('hidden'); 
                     document.getElementById('adminBtn').innerText = "Logout Admin"; 
                     db.ref('customers').once('value', s => renderContent(s.val())); 
-                } else {
-                    alert("PIN Admin Salah!");
                 }
             } else location.reload(); 
         }
