@@ -1,0 +1,21 @@
+{
+  "name": "TrackCust Domino's JTM",
+  "short_name": "JTM Track",
+  "description": "Aplikasi Track Customer Domino's Pizza Jatimakmur",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#006491",
+  "theme_color": "#006491",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
