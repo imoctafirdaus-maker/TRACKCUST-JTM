@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Ultimate App</title>
+    <title>TrackCust JTM - Anti Duplicate</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="#006491">
-    <meta name="apple-mobile-web-app-title" content="JTM Track">
     <link rel="apple-touch-icon" href="logo.png">
     <link rel="icon" type="image/png" href="logo.png">
 
@@ -46,7 +45,7 @@
         </div>
         <input type="tel" id="custPhone" placeholder="No WA (08...)" class="w-full border p-3 rounded-xl text-sm outline-none">
         <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full border p-3 rounded-xl text-sm outline-none">
-        <button id="submitBtn" onclick="saveToCloud()" class="w-full dominos-red text-white p-4 rounded-xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">Simpan Ke Cloud</button>
+        <button id="submitBtn" onclick="checkBeforeSave()" class="w-full dominos-red text-white p-4 rounded-xl font-black uppercase tracking-widest shadow-lg active:scale-95 transition-all">Simpan Ke Cloud</button>
     </div>
 
     <main class="p-4">
@@ -54,9 +53,7 @@
             <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Area/Driver/No HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-semibold italic">
             <i class="fa fa-search absolute left-4 top-4 text-blue-800 opacity-30"></i>
         </div>
-
         <div id="activeList" class="space-y-8 mb-10"></div>
-
         <div class="border-t-2 border-dashed border-gray-300 pt-6">
             <h2 class="text-center text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] mb-4">Riwayat Terantar Selesai</h2>
             <div id="historyList" class="space-y-3"></div>
@@ -80,34 +77,53 @@
         let deletePass = "9999";
         let isAdmin = false;
         let firstLoad = true;
-
-        // PWA SERVICE WORKER (UNTUK OFFLINE CACHE)
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js').catch(() => {});
-            });
-        }
+        let allData = {};
 
         db.ref('customers').on('value', (snapshot) => {
-            renderContent(snapshot.val());
+            allData = snapshot.val() || {};
+            renderContent(allData);
             if (!firstLoad) document.getElementById('notifSound').play().catch(() => {});
             firstLoad = false;
         });
 
-        function saveToCloud() {
+        // FUNGSI CEK NOMOR SAMA
+        function checkBeforeSave() {
+            const phone = document.getElementById('custPhone').value;
+            const editKey = document.getElementById('editKey').value;
+            if (!phone) return alert("Nomor WA harus diisi!");
+            
+            const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
+            
+            // Cari apakah nomor sudah ada di daftar 'active'
+            let isDuplicate = false;
+            let existingName = "";
+
+            Object.keys(allData).forEach(key => {
+                if (allData[key].phone === formattedPhone && allData[key].status === 'active' && key !== editKey) {
+                    isDuplicate = true;
+                    existingName = allData[key].name;
+                }
+            });
+
+            if (isDuplicate) {
+                alert("GAGAL! Nomor ini masih ada dalam antaran aktif atas nama: " + existingName);
+            } else {
+                saveToCloud(formattedPhone);
+            }
+        }
+
+        function saveToCloud(formattedPhone) {
             const area = document.getElementById('custArea').value.toUpperCase() || "LAINNYA";
             const name = document.getElementById('custName').value || "Pelanggan";
             const driver = document.getElementById('driverName').value || "Crew";
-            const phone = document.getElementById('custPhone').value;
             const url = document.getElementById('custMaps').value;
             const key = document.getElementById('editKey').value;
 
-            if (phone && url) {
-                const formattedPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
+            if (url) {
                 const data = { area, name, driver, phone: formattedPhone, maps: url, status: 'active' };
                 if (key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); });
                 else db.ref('customers').push(data).then(() => { clearForm(); });
-            } else { alert("Isi No WA dan Maps!"); }
+            } else { alert("Link Maps harus diisi!"); }
         }
 
         function setStatus(key, status) {
@@ -118,8 +134,7 @@
             const activeContainer = document.getElementById('activeList');
             const historyContainer = document.getElementById('historyList');
             activeContainer.innerHTML = ""; historyContainer.innerHTML = "";
-            if (!data) return;
-
+            
             const activeGroups = {};
             const historyItems = [];
 
@@ -140,8 +155,6 @@
                 let html = `<div class="space-y-3"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
                 activeGroups[area].reverse().forEach(c => {
                     const textWA = `Halo bapak/ibu ${c.name}, Saya dari Domino's Pizza Jatimakmur ingin mengantarkan pesanan, mohon tetap aktif WhatsApp ya, hingga pesanan tiba, Terimakasih ☺️`;
-                    const waLink = `https://wa.me/${c.phone}?text=${encodeURIComponent(textWA)}`;
-
                     html += `
                         <div class="bg-white rounded-3xl shadow-sm border-l-[6px] border-red-500 p-4">
                             <div class="flex justify-between items-start mb-3">
@@ -150,7 +163,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">Maps</a>
-                                <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">WhatsApp</a>
+                                <a href="https://wa.me/${c.phone}?text=${encodeURIComponent(textWA)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">WhatsApp</a>
                                 <button onclick="setStatus('${c.key}', 'done')" class="bg-yellow-400 text-white px-4 rounded-2xl font-black text-xs shadow-md">✓</button>
                             </div>
                         </div>`;
@@ -191,25 +204,15 @@
         function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran Baru"; document.getElementById('submitBtn').innerText = "Simpan Ke Cloud"; }
         function secureDelete(id) { 
             const inputPass = prompt('PIN Hapus (9999):');
-            if (inputPass === deletePass) {
-                db.ref('customers/' + id).remove();
-                alert('Hapus Sukses.');
-            } else if (inputPass !== null) {
-                alert('PIN Salah!');
-            }
+            if (inputPass === deletePass) { db.ref('customers/' + id).remove(); alert('Hapus Sukses.'); }
+            else if (inputPass !== null) alert('PIN Salah!');
         }
-
         function loginProcess() { 
             if (!isAdmin) { 
-                if (prompt("PIN Admin:") === currentPass) { 
-                    isAdmin = true; 
-                    document.getElementById('adminPanel').classList.remove('hidden'); 
-                    document.getElementById('adminBtn').innerText = "Logout Admin"; 
-                    db.ref('customers').once('value', s => renderContent(s.val())); 
-                }
+                if (prompt("PIN Admin:") === currentPass) { isAdmin = true; document.getElementById('adminPanel').classList.remove('hidden'); document.getElementById('adminBtn').innerText = "Logout Admin"; renderContent(allData); }
             } else location.reload(); 
         }
-        function searchData() { db.ref('customers').once('value', s => renderContent(s.val(), document.getElementById('searchInput').value)); }
+        function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
     </script>
 </body>
 </html>
