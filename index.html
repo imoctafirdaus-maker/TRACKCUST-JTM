@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Auto Chat</title>
+    <title>TrackCust JTM - Secure</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -15,7 +15,7 @@
         ::-webkit-scrollbar { width: 0; background: transparent; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-24 font-sans">
+<body class="bg-gray-100 min-h-screen pb-24 font-sans text-gray-800">
     
     <audio id="notifSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
@@ -42,7 +42,7 @@
 
     <main class="p-4">
         <div class="relative mb-6">
-            <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Area/Driver..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-semibold italic">
+            <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Area/Driver/No HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-semibold italic">
             <i class="fa fa-search absolute left-4 top-4 text-blue-800 opacity-30"></i>
         </div>
 
@@ -68,6 +68,7 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         let currentPass = localStorage.getItem('adminPass') || "147852";
+        let deletePass = "9999"; // PASSWORD UNTUK HAPUS DATA
         let isAdmin = false;
         let firstLoad = true;
 
@@ -90,7 +91,7 @@
                 const data = { area, name, driver, phone: formattedPhone, maps: url, status: 'active' };
                 if (key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); });
                 else db.ref('customers').push(data).then(() => { clearForm(); });
-            } else { alert("Mohon isi nomor WA dan Maps!"); }
+            } else { alert("Isi No WA dan Maps!"); }
         }
 
         function setStatus(key, status) {
@@ -108,7 +109,7 @@
 
             Object.keys(data).forEach(key => {
                 const item = data[key];
-                const searchStr = (item.area + item.name + (item.driver || "")).toLowerCase();
+                const searchStr = (item.area + item.name + (item.driver || "") + (item.phone || "")).toLowerCase();
                 if (searchStr.includes(filter.toLowerCase())) {
                     if (item.status === 'done') historyItems.push({ key, ...item });
                     else {
@@ -122,7 +123,6 @@
             Object.keys(activeGroups).sort().forEach(area => {
                 let html = `<div class="space-y-3"><h2 class="font-black text-blue-900 text-[10px] px-2 uppercase tracking-widest italic">Area: ${area} (${activeGroups[area].length})</h2>`;
                 activeGroups[area].reverse().forEach(c => {
-                    // FITUR AUTO CHAT WHATSAPP
                     const textWA = `Halo bapak/ibu ${c.name}, Saya dari Domino's Pizza Jatimakmur ingin mengantarkan pesanan, mohon tetap aktif WhatsApp ya, hingga pesanan tiba, Terimakasih ☺️`;
                     const waLink = `https://wa.me/${c.phone}?text=${encodeURIComponent(textWA)}`;
 
@@ -130,7 +130,7 @@
                         <div class="bg-white rounded-3xl shadow-sm border-l-[6px] border-red-500 p-4">
                             <div class="flex justify-between items-start mb-3">
                                 <div><h3 class="font-black text-blue-900 text-xs uppercase">${c.name}</h3><p class="text-[9px] font-bold text-gray-400 italic uppercase">Driver: <span class="text-red-500">${c.driver || 'Crew'}</span></p></div>
-                                ${isAdmin ? `<div class="flex gap-4"><button onclick="editCustomer('${c.key}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${c.key}')" class="text-red-200 text-sm"><i class="fa fa-trash"></i></button></div>` : ''}
+                                ${isAdmin ? `<div class="flex gap-4"><button onclick="editCustomer('${c.key}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="secureDelete('${c.key}')" class="text-red-200 text-sm"><i class="fa fa-trash"></i></button></div>` : ''}
                             </div>
                             <div class="flex gap-2">
                                 <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-2xl text-center font-bold text-[9px] uppercase shadow-md">Maps</a>
@@ -143,9 +143,6 @@
             });
 
             historyItems.reverse().forEach(c => {
-                const textWAHistory = `Halo bapak/ibu ${c.name}, pesanan Domino's Anda sudah terantar ya. Terimakasih!`;
-                const waLinkHistory = `https://wa.me/${c.phone}?text=${encodeURIComponent(textWAHistory)}`;
-
                 historyContainer.innerHTML += `
                     <div class="bg-white rounded-2xl p-4 history-card flex justify-between items-center shadow-sm">
                         <div class="flex-1">
@@ -153,9 +150,9 @@
                             <p class="text-[8px] text-gray-500 font-bold uppercase">${c.area} | Driver: ${c.driver || 'Crew'}</p>
                         </div>
                         <div class="flex items-center gap-4">
-                            <a href="${waLinkHistory}" target="_blank" class="text-green-600 text-lg"><i class="fab fa-whatsapp"></i></a>
+                            <a href="https://wa.me/${c.phone}" target="_blank" class="text-green-600 text-lg"><i class="fab fa-whatsapp"></i></a>
                             <button onclick="setStatus('${c.key}', 'active')" class="text-blue-500 text-sm"><i class="fa fa-undo"></i></button>
-                            ${isAdmin ? `<button onclick="deleteData('${c.key}')" class="text-red-400 text-sm"><i class="fa fa-trash"></i></button>` : ''}
+                            ${isAdmin ? `<button onclick="secureDelete('${c.key}')" class="text-red-400 text-sm"><i class="fa fa-trash"></i></button>` : ''}
                         </div>
                     </div>`;
             });
@@ -176,8 +173,30 @@
 
         function cancelEdit() { clearForm(); document.getElementById('adminPanel').classList.add('hidden'); }
         function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran Baru"; document.getElementById('submitBtn').innerText = "Simpan Ke Cloud"; }
-        function deleteData(id) { if(confirm('Hapus permanen?')) db.ref('customers/' + id).remove(); }
-        function loginProcess() { if (!isAdmin) { if (prompt("PIN Admin:") === currentPass) { isAdmin = true; document.getElementById('adminPanel').classList.remove('hidden'); document.getElementById('adminBtn').innerText = "Logout Admin"; db.ref('customers').once('value', s => renderContent(s.val())); } } else location.reload(); }
+        
+        // FUNGSI HAPUS DENGAN PASSWORD KHUSUS
+        function secureDelete(id) { 
+            const inputPass = prompt('Konfirmasi Penghapusan Permanen.\nMasukkan PIN Hapus:');
+            if (inputPass === deletePass) {
+                db.ref('customers/' + id).remove();
+                alert('Data berhasil dihapus.');
+            } else if (inputPass !== null) {
+                alert('PIN Hapus Salah!');
+            }
+        }
+
+        function loginProcess() { 
+            if (!isAdmin) { 
+                if (prompt("PIN Admin:") === currentPass) { 
+                    isAdmin = true; 
+                    document.getElementById('adminPanel').classList.remove('hidden'); 
+                    document.getElementById('adminBtn').innerText = "Logout Admin"; 
+                    db.ref('customers').once('value', s => renderContent(s.val())); 
+                } else {
+                    alert("PIN Admin Salah!");
+                }
+            } else location.reload(); 
+        }
         function searchData() { db.ref('customers').once('value', s => renderContent(s.val(), document.getElementById('searchInput').value)); }
     </script>
 </body>
