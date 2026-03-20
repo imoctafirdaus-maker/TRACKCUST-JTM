@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Notification Update</title>
+    <title>TrackCust JTM - Sound Fix</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -151,21 +151,32 @@
         function setUser(name) { currentUser = name; localStorage.setItem('jtm_user', name); document.getElementById('userDisplay').innerText = name; document.getElementById('profileNameChat').innerText = name; closeProfile(); if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden'); const myPresenceRef = db.ref('presence/' + name); myPresenceRef.onDisconnect().remove(); myPresenceRef.set({ status: 'online', time: Date.now() }); }
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function closeProfile() { if(!currentUser) { alert("Pilih user dulu!"); return; } document.getElementById('profileModal').classList.add('hidden'); }
-        db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
-        db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad) { document.getElementById('chatSound').play(); if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; } });
-        db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = c.text; if(content.startsWith('data:audio')) { content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`; } else { content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`; } d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
-        async function toggleVoiceRecord() { const btn = document.getElementById('voiceBtn'); if (!isRecording) { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.readAsDataURL(audioBlob); reader.onloadend = () => { db.ref('chats').push({ user: currentUser, text: reader.result, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); }; }; mediaRecorder.start(); isRecording = true; btn.classList.add('recording-active'); } catch (err) { alert("Akses Mikrofon Ditolak!"); } } else { mediaRecorder.stop(); isRecording = false; btn.classList.remove('recording-active'); } }
         
-        // Listener untuk suara "Selesai" (Berjalan di semua perangkat)
-        db.ref('customers').on('child_changed', (snapshot) => {
-            const data = snapshot.val();
-            if (data && data.status === 'done' && !firstLoad) {
-                document.getElementById('doneSound').play().catch(e => console.log("Audio play blocked"));
-            }
+        db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
+        
+        // Suara Chat Masuk
+        db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
+            if(!firstLoad) { 
+                const snd = document.getElementById('chatSound');
+                snd.currentTime = 0;
+                snd.play().catch(e => console.log("Sound block"));
+                if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; 
+            } 
         });
 
+        db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = c.text; if(content.startsWith('data:audio')) { content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`; } else { content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`; } d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
+        
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
         
+        function setStatus(k, s) { 
+            if(s === 'done') {
+                const snd = document.getElementById('doneSound');
+                snd.currentTime = 0;
+                snd.play().catch(e => console.log("Sound block"));
+            }
+            db.ref('customers/' + k).update({ status: s }); 
+        }
+
         function renderContent(data, filter = "") { 
             const activeCont = document.getElementById('activeList'); 
             const historyCont = document.getElementById('historyList'); 
@@ -182,18 +193,19 @@
             }); 
         }
 
+        // Fungsi Lainnya Tetap Sama...
         function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') { document.getElementById('chatBadge').style.display = 'none'; setTimeout(() => { const d = document.getElementById('chatDisplay'); d.scrollTop = d.scrollHeight; }, 100); } }
         function checkBeforeSave() { const phone = document.getElementById('custPhone').value; if (!phone) return alert("WA Wajib!"); saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase() || "JTM", name: document.getElementById('custName').value || "Cust", driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); else db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
         function editData(key) { const item = allData[key]; document.getElementById('editKey').value = key; document.getElementById('custArea').value = item.area || ""; document.getElementById('custName').value = item.name; document.getElementById('driverName').value = item.driver; document.getElementById('custPhone').value = item.phone; document.getElementById('custMaps').value = item.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
         function deleteData(key) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + key).remove(); }
         function clearHistoryWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); }); } }
-        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
         function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); input.value = ""; } }
         function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
         function clearForm() { document.querySelectorAll('#page-add input').forEach(i => i.value = ""); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
         function clearAllChats() { if(confirm("Hapus Chat?")) db.ref('chats').remove(); }
+        async function toggleVoiceRecord() { const btn = document.getElementById('voiceBtn'); if (!isRecording) { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.readAsDataURL(audioBlob); reader.onloadend = () => { db.ref('chats').push({ user: currentUser, text: reader.result, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); }; }; mediaRecorder.start(); isRecording = true; btn.classList.add('recording-active'); } catch (err) { alert("Akses Mikrofon Ditolak!"); } } else { mediaRecorder.stop(); isRecording = false; btn.classList.remove('recording-active'); } }
     </script>
 </body>
 </html>
