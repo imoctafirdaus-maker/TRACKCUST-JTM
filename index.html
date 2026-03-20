@@ -21,6 +21,9 @@
         .page { display: none; } .page.active { display: block; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
+        /* Style tambahan untuk voice record */
+        .recording-active { animation: pulse-red 1.5s infinite; color: #e31837 !important; }
+        @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen pb-24 font-sans text-gray-800">
@@ -80,9 +83,12 @@
             </div>
             <div class="bg-white rounded-3xl p-4 shadow-sm border-b-4 border-blue-900">
                 <div id="chatDisplay" class="h-64 overflow-y-auto text-[11px] mb-3 space-y-2 border-t pt-2"></div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 items-center">
+                    <button id="voiceBtn" onclick="toggleVoiceRecord()" class="bg-gray-100 text-gray-500 w-12 h-12 rounded-xl flex items-center justify-center transition-all">
+                        <i class="fa fa-microphone text-lg"></i>
+                    </button>
                     <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none font-bold">
-                    <button onclick="sendChat()" class="dominos-blue text-white px-5 rounded-xl shadow-lg"><i class="fa fa-paper-plane"></i></button>
+                    <button onclick="sendChat()" class="dominos-blue text-white px-5 h-12 rounded-xl shadow-lg"><i class="fa fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
@@ -135,6 +141,11 @@
         let firstLoad = true;
         let currentPage = 'search';
 
+        // Variabel untuk Voice Note
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
@@ -183,9 +194,49 @@
         db.ref('chats').limitToLast(20).on('value', s => {
             const d = document.getElementById('chatDisplay');
             d.innerHTML = "";
-            if(s.val()) Object.values(s.val()).forEach(c => { d.innerHTML += `<div class="mb-2"><span class="font-black text-blue-900 uppercase text-[9px]">${c.user}:</span> <span class="text-gray-700 font-bold">${c.text}</span></div>`; });
+            if(s.val()) {
+                Object.values(s.val()).forEach(c => { 
+                    let content = c.text;
+                    // Deteksi jika pesan adalah audio base64
+                    if(content.startsWith('data:audio')) {
+                        content = `<audio controls src="${c.text}" class="max-w-full"></audio>`;
+                    }
+                    d.innerHTML += `<div class="mb-2"><span class="font-black text-blue-900 uppercase text-[9px]">${c.user}:</span> <span class="text-gray-700 font-bold">${content}</span></div>`; 
+                });
+            }
             d.scrollTop = d.scrollHeight;
         });
+
+        // Fitur Voice Note
+        async function toggleVoiceRecord() {
+            const btn = document.getElementById('voiceBtn');
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = async () => {
+                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader();
+                        reader.readAsDataURL(audioBlob);
+                        reader.onloadend = () => {
+                            const base64Audio = reader.result;
+                            db.ref('chats').push({ user: currentUser, text: base64Audio });
+                        };
+                    };
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btn.classList.add('recording-active');
+                } catch (err) {
+                    alert("Akses Mikrofon Ditolak!");
+                }
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                btn.classList.remove('recording-active');
+            }
+        }
 
         db.ref().on('value', s => { 
             const raw = s.val() || {};
