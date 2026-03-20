@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Pro</title>
+    <title>TrackCust JTM - Ultimate</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -31,15 +31,20 @@
         .btn-action:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
+<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden" onclick="unlockAudio()">
 
-    <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
-    <audio id="doneSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
+    <audio id="chatSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_7303c73441.mp3" preload="auto"></audio>
+    <audio id="doneSound" src="https://cdn.pixabay.com/audio/2021/08/04/audio_06250b570e.mp3" preload="auto"></audio>
 
     <nav class="dominos-blue p-4 text-white shadow-md">
         <div class="flex justify-between items-center mb-1">
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md">Pilih Nama</button>
+            <div class="flex items-center gap-2">
+                <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">Pilih Nama</button>
+                <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-75 transition-all">
+                    <i class="fa fa-sync-alt text-[10px]"></i>
+                </button>
+            </div>
         </div>
         <div id="onlineStatusCont" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
             <span class="opacity-60 italic uppercase">Online:</span>
@@ -127,6 +132,14 @@
         let allData = {}; let firstLoad = true; let currentPage = 'search';
         let mediaRecorder; let audioChunks = []; let isRecording = false;
 
+        // FUNGSI KRUSIAL UNTUK SUARA
+        function unlockAudio() {
+            const sounds = [document.getElementById('chatSound'), document.getElementById('doneSound')];
+            sounds.forEach(s => {
+                s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {});
+            });
+        }
+
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
@@ -144,17 +157,17 @@
             setInterval(() => { if(currentPage === 'search') renderContent(allData, document.getElementById('searchInput').value); }, 10000);
         };
 
-        function handleLogin(name) { const pinInput = prompt(`PIN untuk ${name}:`); if (pinInput === userPins[name]) setUser(name); else alert("PIN SALAH!"); }
-        
-        function unlockAudio() {
-            const sounds = [document.getElementById('chatSound'), document.getElementById('doneSound')];
-            sounds.forEach(s => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => {}); });
+        function handleLogin(name) { 
+            const pinInput = prompt(`PIN untuk ${name}:`); 
+            if (pinInput === userPins[name]) {
+                unlockAudio(); // Aktifkan suara saat login
+                setUser(name); 
+            } else alert("PIN SALAH!"); 
         }
 
         function setUser(name) { 
             currentUser = name; localStorage.setItem('jtm_user', name); 
             document.getElementById('userDisplay').innerText = name; 
-            unlockAudio();
             closeProfile(); 
             const myPresenceRef = db.ref('presence/' + name); 
             myPresenceRef.onDisconnect().remove(); 
@@ -164,28 +177,56 @@
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function closeProfile() { if(!currentUser) return; document.getElementById('profileModal').classList.add('hidden'); }
 
-        db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
+        db.ref('presence').on('value', s => { 
+            const list = document.getElementById('onlineList'); list.innerHTML = ""; 
+            Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); 
+        });
         
-        // Logika Suara Chat Baru
+        // LOGIKA SUARA CHAT - DIPERBAIKI TOTAL
         db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
             const newMsg = snapshot.val();
             if(!firstLoad && newMsg.user !== currentUser) {
                 if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
-                const s = document.getElementById('chatSound'); s.currentTime = 0; s.play();
+                const s = document.getElementById('chatSound');
+                s.currentTime = 0;
+                let playPromise = s.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(() => { console.log("Menunggu klik user untuk suara"); });
+                }
             }
         });
 
-        db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}<span class="text-[13px] font-bold text-gray-700">${c.text}</span><span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
+        db.ref('chats').limitToLast(25).on('value', s => { 
+            const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
+            if(s.val()) { 
+                Object.values(s.val()).forEach(c => { 
+                    const isMe = c.user === currentUser; 
+                    d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}<span class="text-[13px] font-bold text-gray-700">${c.text}</span><span class="chat-time">${c.time || ''}</span></div>`; 
+                }); 
+            } d.scrollTop = d.scrollHeight; 
+        });
+
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
 
         function startDelivery(key) { db.ref('customers/' + key).update({ status: 'delivering', startTime: Date.now() }); }
         
         function setStatus(k, s) { 
             db.ref('customers/' + k).update({ status: s }); 
-            if(s === 'done') { const ds = document.getElementById('doneSound'); ds.currentTime = 0; ds.play(); }
+            if(s === 'done') { 
+                const ds = document.getElementById('doneSound'); 
+                ds.currentTime = 0; ds.play(); 
+            }
         }
 
-        function checkAutoDone() { const now = Date.now(); Object.keys(allData).forEach(key => { const item = allData[key]; if (item.status === 'delivering' && item.startTime) { if ((now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); } }); }
+        function checkAutoDone() { 
+            const now = Date.now(); 
+            Object.keys(allData).forEach(key => { 
+                const item = allData[key]; 
+                if (item.status === 'delivering' && item.startTime) { 
+                    if ((now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); 
+                } 
+            }); 
+        }
 
         function renderContent(data, filter = "") { 
             const activeCont = document.getElementById('activeList'); const historyCont = document.getElementById('historyList'); 
@@ -219,8 +260,8 @@
                         </div>
                         ${!isDone ? `
                         <div class="flex gap-2 mt-3">
-                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a>
-                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WhatsApp</a>
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md flex items-center justify-center">Maps</a>
+                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md flex items-center justify-center">WhatsApp</a>
                         </div>
                         <div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-bold text-[9px] uppercase italic">Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-bold text-[9px] uppercase italic">Hapus</button></div>
                         ` : ''}
@@ -243,7 +284,7 @@
         }
 
         function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) db.ref('chats').remove(); }
-        function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; unlockAudio(); }
+        function showPage(id) { unlockAudio(); currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; }
         function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); input.value = ""; } }
         function checkBeforeSave() { unlockAudio(); const phone = document.getElementById('custPhone').value; saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(cancelEdit); else db.ref('customers').push(data).then(clearForm); showPage('search'); }
