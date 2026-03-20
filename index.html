@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JTM Track Pro</title>
+    <title>JTM Track Pro - Final Version</title>
     
     <meta name="theme-color" content="#006491">
     <meta name="mobile-web-app-capable" content="yes">
@@ -19,23 +19,21 @@
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; position: relative; width: 20%; }
         .nav-item.active { color: #006491; }
-        .nav-add { background: #006491 !important; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
+        .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; }
-        #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
-        .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; }
+        #chatBadge { position: absolute; top: 0; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; z-index: 50; }
+        .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
         .bubble { max-width: 85%; padding: 7px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; font-weight: 600; }
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         .chat-footer { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 2px; }
         .chat-time { font-size: 8px; color: #8e8e8e; }
-        .timer-text { font-family: monospace; font-weight: bold; color: #e31837; }
-        .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); }
-        .read-icon { font-size: 10px; }
-        .read-blue { color: #34b7f1; }
-        .unread-gray { color: #94a3b8; }
+        .read-blue { color: #34b7f1; } .unread-gray { color: #94a3b8; }
+        .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transition: transform 0.1s; }
+        .btn-action:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden" onclick="initAudio()">
@@ -45,7 +43,7 @@
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
             <div class="flex items-center gap-2">
                 <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">Pilih Nama</button>
-                <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-75 transition-all"><i class="fa fa-sync-alt text-[10px]"></i></button>
+                <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-90"><i class="fa fa-sync-alt text-[10px]"></i></button>
             </div>
         </div>
         <div id="onlineStatusCont" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
@@ -57,14 +55,14 @@
     <main class="flex-1 overflow-hidden relative">
         <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
             <div class="relative"><input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Driver..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic"><i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i></div>
-            <div id="activeList" class="space-y-4 pb-24"></div>
+            <div id="activeList" class="space-y-4 pb-32"></div>
         </div>
 
         <div id="page-add" class="page p-4 overflow-y-auto">
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
                 <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Pengantaran</h2>
                 <input type="hidden" id="editKey">
-                <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
+                <input type="text" id="custArea" placeholder="Area (Contoh: Jatikramat Blok A)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
@@ -79,18 +77,20 @@
         </div>
 
         <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
-            <div id="historyList" class="space-y-2 pb-24"></div>
+            <div class="flex justify-between items-center"><h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2><button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline italic">Clear All</button></div>
+            <div id="historyList" class="space-y-2 pb-32"></div>
         </div>
 
         <div id="page-chat" class="page overflow-hidden">
             <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
-                <div class="flex items-center gap-2"><div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div><h3 class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3></div>
-                <button onclick="clearAllChatsWithPin()" class="text-red-500 text-[10px] font-bold underline italic uppercase">Hapus Chat</button>
+                <div class="flex items-center gap-2"><div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div><h3 class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Chat</h3></div>
+                <button onclick="clearAllChatsWithPin()" class="text-red-500 text-[10px] font-bold underline italic">Clear Chat</button>
             </div>
-            <div id="chatDisplay" class="chat-container p-4 flex flex-col"></div>
+            <div id="chatDisplay" class="chat-container p-4"></div>
             <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
+                <button class="w-10 h-10 flex items-center justify-center text-gray-400"><i class="fa fa-microphone text-xl"></i></button>
                 <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
-                <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
+                <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md active:scale-90"><i class="fa fa-paper-plane text-xs"></i></button>
             </div>
         </div>
     </main>
@@ -99,15 +99,18 @@
         <button onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></button>
         <button onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>History</span></button>
         <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></button>
-        <button onclick="showPage('chat')" id="nav-chat" class="nav-item"><div id="chatBadge"></div><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></button>
+        <button onclick="showPage('chat')" id="nav-chat" class="nav-item">
+            <div id="chatBadge"></div>
+            <i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span>
+        </button>
         <button onclick="openProfile()" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
     </div>
 
     <div id="profileModal" class="fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
-        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto text-center shadow-2xl border-t-8 border-red-500 relative">
-            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Siapa yang bertugas?</h2>
+        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto text-center shadow-2xl border-t-8 border-red-500">
+            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Pilih User Tugas</h2>
             <div id="crewOptions" class="grid grid-cols-1 gap-1"></div>
-            <button onclick="closeProfile()" class="mt-4 w-full p-3 bg-gray-100 text-gray-500 rounded-2xl font-black text-[10px] uppercase">Kembali</button>
+            <button onclick="closeProfile()" class="mt-4 w-full p-3 bg-gray-100 text-gray-500 rounded-2xl font-black text-[10px] uppercase">Batal</button>
         </div>
     </div>
 
@@ -122,7 +125,6 @@
         let allData = {}; let firstLoad = true; let currentPage = 'search';
         let audioCtx = null;
 
-        // SUARA PING TING!
         function playBeep(type) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator();
@@ -133,13 +135,12 @@
                 osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.12);
                 gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
             } else {
                 osc.type = 'sine'; osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             }
-            if ("vibrate" in navigator) navigator.vibrate([80, 50, 80]);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+            if ("vibrate" in navigator) navigator.vibrate([70, 40, 70]);
         }
 
         function initAudio() {
@@ -154,18 +155,18 @@
             const modal = document.getElementById('crewOptions');
             modal.innerHTML = "";
             Object.keys(userPins).forEach(name => {
-                let label = ""; let bgColor = "bg-white";
-                if (["Pak KUR", "Pak Agus", "Pak Ageng"].includes(name)) { label = `<span class="text-[8px] text-red-500 ml-1">(MGMT)</span>`; bgColor = "bg-gray-50"; } 
-                else if (["Sintiya", "Ridha"].includes(name)) { label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`; }
-                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50 ${bgColor}">${name}${label}</button>`;
+                let lbl = ""; let bg = "bg-white";
+                if (["Pak KUR", "Pak Agus", "Pak Ageng"].includes(name)) { lbl = `<span class="text-[8px] text-red-500 ml-1">(MGMT)</span>`; bg = "bg-gray-50"; } 
+                else if (["Sintiya", "Ridha"].includes(name)) { lbl = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`; }
+                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50 ${bg}">${name}${lbl}</button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
             setInterval(checkAutoDone, 5000);
         };
 
         function handleLogin(name) { 
-            const pinInput = prompt(`PIN untuk ${name}:`); 
-            if (pinInput === userPins[name]) { initAudio(); setUser(name); } else alert("PIN SALAH!"); 
+            const pin = prompt(`PIN ${name}:`); 
+            if (pin === userPins[name]) { initAudio(); setUser(name); } else alert("PIN SALAH!"); 
         }
 
         function setUser(name) { 
@@ -183,29 +184,21 @@
             Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); 
         });
 
-        // LOGIKA CHAT & CENTANG BIRU
+        // CHAT LOGIC
         db.ref('chats').limitToLast(25).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
                 Object.keys(s.val()).forEach(key => { 
-                    const c = s.val()[key];
-                    const isMe = c.user === currentUser;
-                    
-                    // Otomatis tandai sebagai terbaca jika kita melihat chat orang lain
-                    if (currentPage === 'chat' && !isMe && !c.seen) {
-                        db.ref('chats/' + key).update({ seen: true });
-                    }
-
-                    const tickClass = c.seen ? 'read-blue' : 'unread-gray';
-                    const tickIcon = c.seen ? 'fa-check-double' : 'fa-check';
-
+                    const c = s.val()[key]; const isMe = c.user === currentUser;
+                    if (currentPage === 'chat' && !isMe && !c.seen) db.ref('chats/' + key).update({ seen: true });
+                    const tick = c.seen ? 'fa-check-double read-blue' : 'fa-check unread-gray';
                     d.innerHTML += `
                         <div class="bubble ${isMe ? 'right' : 'left'}">
                             ${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}
                             <span class="text-[13px] text-gray-700 font-bold">${c.text}</span>
                             <div class="chat-footer">
                                 <span class="chat-time">${c.time}</span>
-                                ${isMe ? `<i class="fa ${tickIcon} read-icon ${tickClass}"></i>` : ''}
+                                ${isMe ? `<i class="fa ${tick} text-[10px]"></i>` : ''}
                             </div>
                         </div>`; 
                 }); 
@@ -213,8 +206,7 @@
         });
 
         db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
-            const newMsg = snapshot.val();
-            if(!firstLoad && newMsg.user !== currentUser) {
+            if(!firstLoad && snapshot.val().user !== currentUser) {
                 if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
                 playBeep('chat');
             }
@@ -223,15 +215,13 @@
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
 
         function sendChat() { 
-            const input = document.getElementById('chatInput'); 
-            if(input.value) { 
+            const inp = document.getElementById('chatInput'); 
+            if(inp.value.trim()) { 
                 db.ref('chats').push({ 
-                    user: currentUser, 
-                    text: input.value, 
+                    user: currentUser, text: inp.value, 
                     time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
                     seen: false 
-                }); 
-                input.value = ""; 
+                }); inp.value = ""; 
             } 
         }
 
@@ -243,49 +233,48 @@
             document.getElementById('nav-'+id).classList.add('active'); 
             if(id === 'chat') {
                 document.getElementById('chatBadge').style.display = 'none';
-                // Trigger tandai terbaca saat halaman chat dibuka
                 db.ref('chats').limitToLast(10).once('value', s => {
                     s.forEach(child => { if(child.val().user !== currentUser) child.ref.update({seen: true}); });
                 });
             }
         }
 
-        // FUNGSI LAINNYA TETAP SAMA (ANTARAN, WA, MAPS, PIN)
+        // DATA LOGIC
         function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); if(s === 'done') playBeep('done'); }
-        function checkAutoDone() { const now = Date.now(); Object.keys(allData).forEach(key => { const item = allData[key]; if (item.status === 'delivering' && item.startTime && (now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); }); }
+        function checkAutoDone() { const now = Date.now(); Object.keys(allData).forEach(k => { const itm = allData[k]; if (itm.status === 'delivering' && itm.startTime && (now - itm.startTime) / 60000 >= 20) setStatus(k, 'done'); }); }
         
         function renderContent(data, filter = "") { 
-            const activeCont = document.getElementById('activeList'); const historyCont = document.getElementById('historyList'); 
-            activeCont.innerHTML = ""; historyCont.innerHTML = ""; const now = Date.now();
-            Object.keys(data).forEach(k => { 
-                const item = data[k]; if(!item.name || typeof item !== 'object') return; 
-                if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; 
-                const isDone = item.status === 'done'; const isDelivering = item.status === 'delivering';
-                let timerHtml = ""; if (isDelivering && item.startTime) { const remaining = Math.max(0, (20 * 60) - Math.floor((now - item.startTime) / 1000)); timerHtml = `<p class="text-[9px] timer-text mt-1">Sisa: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}</p>`; }
-                const msg = `Halo bapak/ibu ${item.name}, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, mohon sedia menunggu dan untuk tetap aktif WhatsApp ya, terimakasih ☺️`;
+            const act = document.getElementById('activeList'); const hist = document.getElementById('historyList'); 
+            act.innerHTML = ""; hist.innerHTML = ""; const now = Date.now();
+            Object.keys(data).sort((a,b) => (data[b].startTime || 0) - (data[a].startTime || 0)).forEach(k => { 
+                const itm = data[k]; if(!itm.name || typeof itm !== 'object') return; 
+                if(!(`${itm.name} ${itm.driver || ''} ${itm.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; 
+                const isDone = itm.status === 'done'; const isDel = itm.status === 'delivering';
+                let tmr = ""; if (isDel && itm.startTime) { const rem = Math.max(0, 1200 - Math.floor((now - itm.startTime) / 1000)); tmr = `<p class="text-[9px] font-bold text-red-500 mt-1">Sisa: ${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}</p>`; }
+                const msg = `Halo bapak/ibu ${itm.name}, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, mohon sedia menunggu dan tetap aktif WhatsApp ya, terimakasih ☺️`;
                 const html = `
-                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60': (isDelivering ? 'border-blue-500' : 'border-red-500')} mb-3">
-                        <div class="flex justify-between items-center mb-2">
+                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60': (isDel ? 'border-blue-500' : 'border-red-500')} mb-3">
+                        <div class="flex justify-between items-start">
                             <div>
-                                <p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${item.area || 'JTM'}</p>
-                                <h3 class="font-black text-blue-900 uppercase text-xs leading-none">${item.name}</h3>
-                                <p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${item.driver || 'No Driver'}</p>
-                                ${timerHtml}
+                                <p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${itm.area || 'JTM'}</p>
+                                <h3 class="font-black text-blue-900 uppercase text-xs leading-none">${itm.name}</h3>
+                                <p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${itm.driver || 'No Driver'}</p>
+                                ${tmr}
                             </div>
                             <div class="flex gap-2">
-                                ${!isDone ? `<button onclick="db.ref('customers/${k}').update({status:'delivering',startTime:Date.now()})" class="btn-action ${isDelivering ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white'}"><i class="fa fa-motorcycle"></i></button><button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black italic text-[9px]">UNDO</button>`}
+                                ${!isDone ? `<button onclick="db.ref('customers/${k}').update({status:'delivering',startTime:Date.now()})" class="btn-action ${isDel ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white'}"><i class="fa fa-motorcycle"></i></button><button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black italic text-[9px]">UNDO</button>`}
                             </div>
                         </div>
-                        ${!isDone ? `<div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a><a href="https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WA</a></div><div class="flex gap-6 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-500 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${k}')" class="text-red-400 text-sm"><i class="fa fa-trash-alt"></i></button></div>` : ''}
+                        ${!isDone ? `<div class="flex gap-2 mt-3"><a href="${itm.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a><a href="https://wa.me/${itm.phone}?text=${window.encodeURIComponent(msg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WA</a></div><div class="flex gap-6 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-500 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${k}')" class="text-red-400 text-sm"><i class="fa fa-trash-alt"></i></button></div>` : ''}
                     </div>`; 
-                if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html; 
+                if(isDone) hist.innerHTML += html; else act.innerHTML += html; 
             }); 
         }
 
-        function checkBeforeSave() { initAudio(); const phone = document.getElementById('custPhone').value; saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
-        function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(cancelEdit); else db.ref('customers').push(data).then(clearForm); showPage('search'); }
-        function editData(key) { const item = allData[key]; document.getElementById('editKey').value = key; document.getElementById('custArea').value = item.area; document.getElementById('custName').value = item.name; document.getElementById('driverName').value = item.driver; document.getElementById('custPhone').value = item.phone; document.getElementById('custMaps').value = item.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
-        function deleteData(key) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + key).remove(); }
+        function checkBeforeSave() { initAudio(); const ph = document.getElementById('custPhone').value; saveToCloud(ph.startsWith('0')?'62'+ph.slice(1):ph); }
+        function saveToCloud(ph) { const k = document.getElementById('editKey').value; const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: ph, maps: document.getElementById('custMaps').value, status: 'active' }; if(k) db.ref('customers/' + k).update(d).then(cancelEdit); else db.ref('customers').push(d).then(clearForm); showPage('search'); }
+        function editData(k) { const itm = allData[k]; document.getElementById('editKey').value = k; document.getElementById('custArea').value = itm.area; document.getElementById('custName').value = itm.name; document.getElementById('driverName').value = itm.driver; document.getElementById('custPhone').value = itm.phone; document.getElementById('custMaps').value = itm.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
+        function deleteData(k) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + k).remove(); }
         function clearHistoryWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); }); } }
         function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) db.ref('chats').remove(); }
         function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
