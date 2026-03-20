@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JTM Track Pro - FINAL STABLE</title>
+    <title>JTM Track Pro - User Active WA</title>
     
     <meta name="theme-color" content="#006491">
     <meta name="mobile-web-app-capable" content="yes">
@@ -122,7 +122,19 @@
         let audioCtx = null;
         let mediaRecorder; let audioChunks = [];
 
-        // FUNGSI VOICE NOTE (AUDIO RECORDING)
+        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
+        
+        function playBeep(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain();
+            osc.connect(gn); gn.connect(audioCtx.destination);
+            if(type === 'chat') { osc.frequency.setValueAtTime(1500, audioCtx.currentTime); }
+            else if(type === 'done') { osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1); }
+            gn.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            if(navigator.vibrate) navigator.vibrate(50);
+        }
+
         async function toggleRecording() {
             const btn = document.getElementById('micBtn');
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
@@ -137,38 +149,17 @@
                     };
                     mediaRecorder.start();
                     btn.innerHTML = '<i class="fa fa-stop-circle text-red-600 text-2xl animate-pulse"></i>';
-                    if(navigator.vibrate) navigator.vibrate(100);
                 } catch(e) { alert("Butuh izin mikrofon!"); }
-            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl text-gray-400"></i>'; }
+            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
         }
-
-        // AUDIO NOTIFIKASI (CHAT & SELESAI)
-        function playBeep(type) {
-            if (!audioCtx) return;
-            const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain();
-            osc.connect(gn); gn.connect(audioCtx.destination);
-            if(type === 'chat') { 
-                osc.frequency.setValueAtTime(1500, audioCtx.currentTime); 
-            } else if(type === 'done') {
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
-            } else { 
-                osc.frequency.setValueAtTime(1100, audioCtx.currentTime); 
-            }
-            gn.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-            if(navigator.vibrate) navigator.vibrate(50);
-        }
-
-        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
 
         window.onload = () => {
             const drvSel = document.getElementById('driverName'); drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(d => drvSel.innerHTML += `<option value="${d}">${d}</option>`);
             const optCont = document.getElementById('crewOptions'); optCont.innerHTML = "";
             Object.keys(userPins).forEach(n => {
-                let lbl = ""; if(n.includes("Pak")) lbl=" (MGMT)"; else if(["Sintiya","Ridha"].includes(n)) lbl=" (KASIR)";
-                optCont.innerHTML += `<button onclick="handleLogin('${n}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${n}<span class="text-[8px] opacity-50 ml-1">${lbl}</span></button>`;
+                let lbl = n.includes("Pak") ? " (MGMT)" : (["Sintiya","Ridha"].includes(n) ? " (KASIR)" : "");
+                optCont.innerHTML += `<button onclick="handleLogin('${n}')" class="w-full p-4 text-center font-black text-xs border-b uppercase">${n}<span class="text-[8px] opacity-50 ml-1">${lbl}</span></button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
             setInterval(checkAutoDone, 5000);
@@ -184,36 +175,20 @@
             Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span><span class="online-dot"></span>${u}</span>`); 
         });
 
-        // CHAT LOGIC (TEKS + VOICE NOTE + CENTANG)
         db.ref('chats').limitToLast(25).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
                 Object.keys(s.val()).forEach(k => { 
                     const c = s.val()[k]; const isMe = c.user === currentUser;
                     if(currentPage === 'chat' && !isMe && !c.seen) db.ref('chats/'+k).update({seen:true});
-                    
-                    let msgBody = `<span class="text-[13px] font-bold">${c.text}</span>`;
-                    if(c.type === "voice") {
-                        msgBody = `
-                            <div class="flex items-center gap-2 bg-black/5 p-2 rounded-lg">
-                                <button onclick="new Audio('${c.text}').play()" class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center"><i class="fa fa-play text-[8px] ml-0.5"></i></button>
-                                <span class="text-[9px] font-black italic">Voice Note</span>
-                            </div>`;
-                    }
-
-                    d.innerHTML += `
-                        <div class="bubble ${isMe?'right':'left'}">
-                            ${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}
-                            ${msgBody}
-                            <div class="chat-footer"><span class="chat-time">${c.time}</span>${isMe?`<i class="fa ${c.seen?'fa-check-double read-blue':'fa-check unread-gray'} text-[10px]"></i>`:''}</div>
-                        </div>`; 
+                    let msg = c.type === "voice" ? `<button onclick="new Audio('${c.text}').play()" class="bg-blue-600 text-white p-2 rounded-full flex items-center gap-2 px-4"><i class="fa fa-play text-[10px]"></i> <span class="text-[10px] font-black italic">Voice Note</span></button>` : `<span class="text-[13px] font-bold">${c.text}</span>`;
+                    d.innerHTML += `<div class="bubble ${isMe?'right':'left'}">${!isMe?`<span class="text-[9px] block font-black uppercase mb-1">${c.user}</span>`:''}${msg}<div class="chat-footer"><span class="chat-time">${c.time}</span>${isMe?`<i class="fa ${c.seen?'fa-check-double read-blue':'fa-check unread-gray'} text-[10px]"></i>`:''}</div></div>`; 
                 }); 
             } d.scrollTop = d.scrollHeight; 
         });
 
         db.ref('chats').limitToLast(1).on('child_added', snap => { if(!firstLoad && snap.val().user !== currentUser) { if(currentPage !== 'chat') document.getElementById('chatBadge').style.display='block'; playBeep('chat'); } });
 
-        // ANTARAN RENDER + SEARCH (DETAIL)
         db.ref().on('value', s => { const r = s.val() || {}; allData = r.customers || r; render(allData); firstLoad = false; });
         function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
 
@@ -227,7 +202,10 @@
 
                 const isD = i.status === 'done'; const isDel = i.status === 'delivering';
                 let tmr = (isDel && i.startTime) ? `<p class="text-[9px] font-bold text-red-500">Estimasi: ${Math.floor((1200-Math.floor((now-i.startTime)/1000))/60)}m</p>` : "";
-                const msg = `Halo bapak/ibu ${i.name}, saya dari Domino's JTM ingin mengantarkan pesanan ya ☺️`;
+                
+                // LOGIKA: Nama pengirim pesan mengikuti akun yang sedang LOGIN (currentUser)
+                const textWA = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
+
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':(isDel?'border-blue-500':'border-red-500')} mb-3">
                         <div class="flex justify-between items-start">
@@ -236,13 +214,12 @@
                                 ${!isD ? `<button onclick="db.ref('customers/${k}').update({status:'delivering',startTime:Date.now()})" class="btn-action ${isDel?'bg-gray-200 text-gray-400':'bg-blue-600 text-white'}"><i class="fa fa-motorcycle"></i></button><button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-3 rounded-xl font-black text-[9px]">UNDO</button>`}
                             </div>
                         </div>
-                        ${!isD ? `<div class="flex gap-2 mt-3"><a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a><a href="https://wa.me/${i.phone}?text=${window.encodeURIComponent(msg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px]">WA</a></div><div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${k}')" class="text-red-300 text-sm"><i class="fa fa-trash-alt"></i></button></div>`:''}
+                        ${!isD ? `<div class="flex gap-2 mt-3"><a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a><a href="https://wa.me/${i.phone}?text=${window.encodeURIComponent(textWA)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px]">WA</a></div><div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${k}')" class="text-red-300 text-sm"><i class="fa fa-trash-alt"></i></button></div>`:''}
                     </div>`; 
                 if(isD) hist.innerHTML += html; else act.innerHTML += html; 
             }); 
         }
 
-        // CONTROL LOGIC
         function setStatus(k, s) { db.ref('customers/'+k).update({status:s}); if(s==='done') playBeep('done'); }
         function checkAutoDone() { const n = Date.now(); Object.keys(allData).forEach(k => { if (allData[k].status === 'delivering' && allData[k].startTime && (n-allData[k].startTime)/60000 >= 20) setStatus(k,'done'); }); }
         function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value.trim():m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), seen:false}); i.value=""; } }
