@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Fixed Version</title>
+    <title>TrackCust JTM - Notification Version</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -15,23 +15,30 @@
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; position: relative; }
         .nav-item.active { color: #006491; }
         .nav-add { background: #006491; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; } .page.active { display: block; }
+        .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
+        /* Badge Merah Chat */
+        #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen pb-24 font-sans text-gray-800">
 
     <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
-    <audio id="doneSound" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" preload="auto"></audio>
 
     <nav class="dominos-blue p-4 text-white sticky top-0 z-50 shadow-md">
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-1">
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md">Pilih Nama</button>
+            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md tracking-tighter">Pilih Nama</button>
         </div>
-        <div id="onlineList" class="text-[9px] font-bold opacity-90 flex gap-3 overflow-x-auto whitespace-nowrap"></div>
+        <div id="onlineStatusCont" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+            <span class="text-[8px] font-black uppercase opacity-60 italic whitespace-nowrap">Online:</span>
+            <div id="onlineList" class="flex gap-3 text-[9px] font-bold whitespace-nowrap">
+                <span class="opacity-50">Memuat...</span>
+            </div>
+        </div>
     </nav>
 
     <main class="p-4">
@@ -45,7 +52,7 @@
 
         <div id="page-add" class="page">
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
-                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Pengantaran</h2>
+                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center text-sm">Input Pengantaran</h2>
                 <input type="hidden" id="editKey">
                 <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
                 <div class="grid grid-cols-2 gap-2">
@@ -54,8 +61,8 @@
                 </div>
                 <input type="tel" id="custPhone" placeholder="Nomor WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                 <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                <div class="flex gap-2">
-                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-xs text-[10px]">Batal Edit</button>
+                <div class="flex gap-2 pt-2">
+                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-[10px]">Batal</button>
                     <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan Data</button>
                 </div>
             </div>
@@ -64,7 +71,7 @@
         <div id="page-history" class="page space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2>
-                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline">Hapus Riwayat (PIN)</button>
+                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline italic text-[9px]">Clear (PIN)</button>
             </div>
             <div id="historyList" class="space-y-2"></div>
         </div>
@@ -74,11 +81,11 @@
                 <h3 id="profileName" class="font-black text-blue-900 uppercase text-xs italic">Crew JTM</h3>
                 <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic uppercase">Clear Chat</button>
             </div>
-            <div class="bg-white rounded-3xl p-4 shadow-sm">
+            <div class="bg-white rounded-3xl p-4 shadow-sm border-b-4 border-blue-900">
                 <div id="chatDisplay" class="h-64 overflow-y-auto text-[11px] mb-3 space-y-2 border-t pt-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none">
-                    <button onclick="sendChat()" class="dominos-blue text-white px-4 rounded-xl"><i class="fa fa-paper-plane"></i></button>
+                    <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none font-bold">
+                    <button onclick="sendChat()" class="dominos-blue text-white px-5 rounded-xl shadow-lg"><i class="fa fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
@@ -88,21 +95,22 @@
         <button onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></button>
         <button onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>History</span></button>
         <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></button>
-        <button onclick="showPage('chat')" id="nav-chat" class="nav-item"><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></button>
+        <button onclick="showPage('chat')" id="nav-chat" class="nav-item">
+            <div id="chatBadge"></div>
+            <i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span>
+        </button>
         <button onclick="openProfile()" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
     </div>
 
     <div id="profileModal" class="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
-        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto shadow-2xl text-center">
-            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Pilih Identitas</h2>
-            <div id="crewOptions" class="grid grid-cols-1 gap-2"></div>
+        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto text-center shadow-2xl border-t-8 border-red-500">
+            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Siapa yang bertugas?</h2>
+            <div id="crewOptions" class="grid grid-cols-1 gap-1"></div>
         </div>
     </div>
 
     <script>
         const PIN_RAHASIA = "147852";
-
-        // INI CONFIG ASLI DARI FIREBASE KAMU
         const firebaseConfig = {
           apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc",
           authDomain: "trackcust-jtm.firebaseapp.com",
@@ -120,6 +128,7 @@
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {};
         let firstLoad = true;
+        let currentPage = 'search';
 
         window.onload = () => {
             const select = document.getElementById('driverName');
@@ -133,10 +142,13 @@
         };
 
         function showPage(id) {
+            currentPage = id;
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('page-'+id).classList.add('active');
             document.getElementById('nav-'+id).classList.add('active');
+            // Hilangkan badge jika masuk menu chat
+            if(id === 'chat') { document.getElementById('chatBadge').style.display = 'none'; }
         }
 
         function setUser(name) {
@@ -146,8 +158,18 @@
             document.getElementById('profileName').innerText = name;
             document.getElementById('profileModal').classList.add('hidden');
             if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden');
-            db.ref('presence/' + name).set({ status: 'online', time: Date.now() });
+            const myPresenceRef = db.ref('presence/' + name);
+            myPresenceRef.onDisconnect().remove();
+            myPresenceRef.set({ status: 'online', time: Date.now() });
         }
+
+        db.ref('presence').on('value', s => {
+            const list = document.getElementById('onlineList');
+            list.innerHTML = "";
+            Object.keys(s.val() || {}).forEach(u => {
+                list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`;
+            });
+        });
 
         function checkBeforeSave() {
             const phone = document.getElementById('custPhone').value;
@@ -169,11 +191,8 @@
                 status: 'active'
             };
             if(!data.driver || !data.maps) return alert("Lengkapi Driver & Maps!");
-            if(key) {
-                db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); });
-            } else {
-                db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); });
-            }
+            if(key) { db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); }
+            else { db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
         }
 
         function editData(key) {
@@ -191,7 +210,7 @@
 
         function deleteData(key) {
             const pin = prompt("PIN Hapus:");
-            if(pin === PIN_RAHASIA) { if(confirm("Hapus antaran?")) db.ref('customers/' + key).remove(); }
+            if(pin === PIN_RAHASIA && confirm("Hapus antaran?")) db.ref('customers/' + key).remove();
         }
 
         function clearHistoryWithPin() {
@@ -201,19 +220,21 @@
             }
         }
 
-        function cancelEdit() {
-            document.getElementById('editKey').value = "";
-            document.getElementById('formTitle').innerText = "Input Pengantaran";
-            document.getElementById('btnCancelEdit').classList.add('hidden');
-            clearForm();
-        }
+        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
+        function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
+        function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; } }
 
-        function sendChat() {
-            const input = document.getElementById('chatInput');
-            if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; }
-        }
+        // --- SISTEM NOTIFIKASI CHAT ---
+        db.ref('chats').limitToLast(1).on('child_added', (snap) => {
+            if(!firstLoad) {
+                document.getElementById('chatSound').play();
+                // Jika user sedang tidak di halaman chat, tampilkan badge merah
+                if(currentPage !== 'chat') {
+                    document.getElementById('chatBadge').style.display = 'block';
+                }
+            }
+        });
 
-        db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad) document.getElementById('chatSound').play(); });
         db.ref('chats').limitToLast(20).on('value', s => {
             const d = document.getElementById('chatDisplay');
             d.innerHTML = "";
@@ -221,8 +242,9 @@
             d.scrollTop = d.scrollHeight;
         });
 
-        db.ref('customers').on('value', s => { 
-            allData = s.val() || {}; 
+        db.ref().on('value', s => { 
+            const raw = s.val() || {};
+            allData = raw.customers || raw; 
             renderContent(allData); 
             firstLoad = false; 
         });
@@ -234,23 +256,18 @@
             
             Object.keys(data).forEach(k => {
                 const item = data[k];
-                if(!item.name) return;
-
-                const searchStr = `${item.name} ${item.driver || ''} ${item.phone || ''} ${item.area || ''}`.toLowerCase();
+                if(!item.name || typeof item !== 'object') return;
+                const searchStr = `${item.name} ${item.driver || ''} ${item.phone || ''}`.toLowerCase();
                 if(!searchStr.includes(filter.toLowerCase())) return;
-
                 const isDone = item.status === 'done';
-                // TEKS WHATSAPP CUSTOM DARI OCTA
-                const waText = window.encodeURIComponent(`Halo bapak/ibu.......saya dari Domino's pizza mau mengantarkan pesanan, pastikan selalu aktif WhatsApp hingga pesanan tiba,Terimakasih ☺️`);
+                const msg = `Halo bapak/ibu ${item.name} saya ${item.driver || 'Driver Domino\'s'} mau mengantarkan pesanan, mohon tetap aktif WhatsApp hingga pesanan tiba, terimakasih ☺️`;
+                const waText = window.encodeURIComponent(msg);
                 
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start mb-2">
-                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver || 'No Driver'} | ${item.area || 'JTM'}</p></div>
-                            ${!isDone ? 
-                                `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-4 rounded-xl font-black shadow-md">✓</button>` : 
-                                `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`
-                            }
+                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400 uppercase italic">🛵 ${item.driver || 'No Driver'} | ${item.area || 'JTM'}</p></div>
+                            ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}
                         </div>
                         ${!isDone ? `
                         <div class="flex gap-2 mt-3">
@@ -258,16 +275,14 @@
                             <a href="https://wa.me/${item.phone}?text=${waText}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a>
                         </div>
                         <div class="flex gap-4 mt-4 pt-2 border-t border-gray-100 flex justify-center">
-                            <button onclick="editData('${k}')" class="text-blue-400 font-black text-[9px] uppercase"><i class="fa fa-edit mr-1"></i>Edit Cepat</button>
+                            <button onclick="editData('${k}')" class="text-blue-400 font-black text-[9px] uppercase"><i class="fa fa-edit mr-1"></i>Edit</button>
                             <button onclick="deleteData('${k}')" class="text-red-300 font-black text-[9px] uppercase"><i class="fa fa-trash mr-1"></i>Hapus (PIN)</button>
                         </div>` : ''}
                     </div>`;
-                
                 if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html;
             });
         }
 
-        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
         function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; }
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
