@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Fixed</title>
+    <title>TrackCust JTM - Fixed Version</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,11 +23,15 @@
 </head>
 <body class="bg-gray-50 min-h-screen pb-24 font-sans text-gray-800">
 
+    <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+    <audio id="doneSound" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" preload="auto"></audio>
+
     <nav class="dominos-blue p-4 text-white sticky top-0 z-50 shadow-md">
         <div class="flex justify-between items-center mb-2">
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
             <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md">Pilih Nama</button>
         </div>
+        <div id="onlineList" class="text-[9px] font-bold opacity-90 flex gap-3 overflow-x-auto whitespace-nowrap"></div>
     </nav>
 
     <main class="p-4">
@@ -43,14 +47,16 @@
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
                 <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Pengantaran</h2>
                 <input type="hidden" id="editKey">
-                <input type="text" id="custArea" placeholder="Area" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
-                <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl text-sm font-bold outline-none">
-                <select id="driverName" class="w-full bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
+                <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                    <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
+                </div>
                 <input type="tel" id="custPhone" placeholder="Nomor WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
                 <div class="flex gap-2">
-                    <button onclick="cancelEdit()" class="flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-[10px]">Batal</button>
-                    <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan</button>
+                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-xs text-[10px]">Batal Edit</button>
+                    <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan Data</button>
                 </div>
             </div>
         </div>
@@ -58,28 +64,45 @@
         <div id="page-history" class="page space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2>
-                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline">Hapus Riwayat</button>
+                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline">Hapus Riwayat (PIN)</button>
             </div>
             <div id="historyList" class="space-y-2"></div>
         </div>
+
+        <div id="page-chat" class="page space-y-4">
+            <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
+                <h3 id="profileName" class="font-black text-blue-900 uppercase text-xs italic">Crew JTM</h3>
+                <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic uppercase">Clear Chat</button>
+            </div>
+            <div class="bg-white rounded-3xl p-4 shadow-sm">
+                <div id="chatDisplay" class="h-64 overflow-y-auto text-[11px] mb-3 space-y-2 border-t pt-2"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none">
+                    <button onclick="sendChat()" class="dominos-blue text-white px-4 rounded-xl"><i class="fa fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
     </main>
 
-    <div class="bottom-nav">
+    <div class="bottom-nav shadow-2xl">
         <button onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></button>
         <button onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>History</span></button>
         <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></button>
+        <button onclick="showPage('chat')" id="nav-chat" class="nav-item"><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></button>
         <button onclick="openProfile()" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
     </div>
 
-    <div id="profileModal" class="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center hidden p-8">
-        <div class="bg-white w-full rounded-[2.5rem] p-6 text-center">
-            <h2 class="font-black text-blue-900 mb-6 uppercase">Pilih Identitas</h2>
+    <div id="profileModal" class="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
+        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto shadow-2xl text-center">
+            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Pilih Identitas</h2>
             <div id="crewOptions" class="grid grid-cols-1 gap-2"></div>
         </div>
     </div>
 
     <script>
         const PIN_RAHASIA = "147852";
+
+        // INI CONFIG ASLI DARI FIREBASE KAMU
         const firebaseConfig = {
           apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc",
           authDomain: "trackcust-jtm.firebaseapp.com",
@@ -93,16 +116,18 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const crewList = ["Okta", "Dendy", "Arif", "Rian", "Gemilang", "Sadewa", "Fahran", "Rafli", "Acong"];
+        const mgmtList = ["Pak KUR", "Pak Agus", "Pak Ageng", "Sintya", "Ridha"];
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {};
+        let firstLoad = true;
 
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
             crewList.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
             const modal = document.getElementById('crewOptions');
-            crewList.forEach(name => {
-                modal.innerHTML += `<button onclick="setUser('${name}')" class="w-full p-4 border-b font-black uppercase text-xs">${name}</button>`;
+            [...crewList, ...mgmtList].forEach(name => {
+                modal.innerHTML += `<button onclick="setUser('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
         };
@@ -118,13 +143,88 @@
             currentUser = name;
             localStorage.setItem('jtm_user', name);
             document.getElementById('userDisplay').innerText = name;
+            document.getElementById('profileName').innerText = name;
             document.getElementById('profileModal').classList.add('hidden');
+            if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden');
+            db.ref('presence/' + name).set({ status: 'online', time: Date.now() });
         }
 
-        // LOGIKA PENYELAMAT: Mengambil data dari folder 'customers'
+        function checkBeforeSave() {
+            const phone = document.getElementById('custPhone').value;
+            const editKey = document.getElementById('editKey').value;
+            if (!phone) return alert("Nomor WA Wajib!");
+            const fmtPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
+            const isDuplicate = Object.keys(allData).some(k => k !== editKey && allData[k].phone === fmtPhone && allData[k].status === 'active');
+            if (isDuplicate) { alert("Nomor ini SEDANG AKTIF!"); } else { saveToCloud(fmtPhone); }
+        }
+
+        function saveToCloud(phone) {
+            const key = document.getElementById('editKey').value;
+            const data = {
+                area: document.getElementById('custArea').value.toUpperCase() || "JATIMAKMUR",
+                name: document.getElementById('custName').value || "Customer",
+                driver: document.getElementById('driverName').value,
+                phone: phone,
+                maps: document.getElementById('custMaps').value,
+                status: 'active'
+            };
+            if(!data.driver || !data.maps) return alert("Lengkapi Driver & Maps!");
+            if(key) {
+                db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); });
+            } else {
+                db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); });
+            }
+        }
+
+        function editData(key) {
+            const item = allData[key];
+            document.getElementById('editKey').value = key;
+            document.getElementById('custArea').value = item.area;
+            document.getElementById('custName').value = item.name;
+            document.getElementById('driverName').value = item.driver;
+            document.getElementById('custPhone').value = item.phone;
+            document.getElementById('custMaps').value = item.maps;
+            document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('btnCancelEdit').classList.remove('hidden');
+            showPage('add');
+        }
+
+        function deleteData(key) {
+            const pin = prompt("PIN Hapus:");
+            if(pin === PIN_RAHASIA) { if(confirm("Hapus antaran?")) db.ref('customers/' + key).remove(); }
+        }
+
+        function clearHistoryWithPin() {
+            const pin = prompt("PIN Clear History:");
+            if(pin === PIN_RAHASIA && confirm("Hapus semua history?")) {
+                Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); });
+            }
+        }
+
+        function cancelEdit() {
+            document.getElementById('editKey').value = "";
+            document.getElementById('formTitle').innerText = "Input Pengantaran";
+            document.getElementById('btnCancelEdit').classList.add('hidden');
+            clearForm();
+        }
+
+        function sendChat() {
+            const input = document.getElementById('chatInput');
+            if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; }
+        }
+
+        db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad) document.getElementById('chatSound').play(); });
+        db.ref('chats').limitToLast(20).on('value', s => {
+            const d = document.getElementById('chatDisplay');
+            d.innerHTML = "";
+            if(s.val()) Object.values(s.val()).forEach(c => { d.innerHTML += `<div class="mb-2"><span class="font-black text-blue-900 uppercase text-[9px]">${c.user}:</span> <span class="text-gray-700 font-bold">${c.text}</span></div>`; });
+            d.scrollTop = d.scrollHeight;
+        });
+
         db.ref('customers').on('value', s => { 
             allData = s.val() || {}; 
             renderContent(allData); 
+            firstLoad = false; 
         });
 
         function renderContent(data, filter = "") {
@@ -136,30 +236,30 @@
                 const item = data[k];
                 if(!item.name) return;
 
-                const searchStr = `${item.name} ${item.driver || ''} ${item.phone || ''}`.toLowerCase();
+                const searchStr = `${item.name} ${item.driver || ''} ${item.phone || ''} ${item.area || ''}`.toLowerCase();
                 if(!searchStr.includes(filter.toLowerCase())) return;
 
-                // FIX: Jika status kosong, paksa jadi 'active' supaya muncul!
-                const status = item.status || 'active';
-                const isDone = (status === 'done');
-                
+                const isDone = item.status === 'done';
+                // TEKS WHATSAPP CUSTOM DARI OCTA
                 const waText = window.encodeURIComponent(`Halo bapak/ibu.......saya dari Domino's pizza mau mengantarkan pesanan, pastikan selalu aktif WhatsApp hingga pesanan tiba,Terimakasih ☺️`);
                 
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3>
-                                <p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver || 'No Driver'}</p>
-                            </div>
-                            <button onclick="setStatus('${k}','${isDone?'active':'done'}')" class="${isDone?'bg-blue-400':'bg-yellow-400'} text-white px-4 py-2 rounded-xl font-black text-[9px] shadow-md uppercase">
-                                ${isDone ? 'UNDO' : 'Selesai'}
-                            </button>
+                        <div class="flex justify-between items-start mb-2">
+                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver || 'No Driver'} | ${item.area || 'JTM'}</p></div>
+                            ${!isDone ? 
+                                `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-4 rounded-xl font-black shadow-md">✓</button>` : 
+                                `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`
+                            }
                         </div>
                         ${!isDone ? `
                         <div class="flex gap-2 mt-3">
-                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">Maps</a>
-                            <a href="https://wa.me/${item.phone}?text=${waText}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">WA</a>
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a>
+                            <a href="https://wa.me/${item.phone}?text=${waText}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a>
+                        </div>
+                        <div class="flex gap-4 mt-4 pt-2 border-t border-gray-100 flex justify-center">
+                            <button onclick="editData('${k}')" class="text-blue-400 font-black text-[9px] uppercase"><i class="fa fa-edit mr-1"></i>Edit Cepat</button>
+                            <button onclick="deleteData('${k}')" class="text-red-300 font-black text-[9px] uppercase"><i class="fa fa-trash mr-1"></i>Hapus (PIN)</button>
                         </div>` : ''}
                     </div>`;
                 
@@ -168,39 +268,10 @@
         }
 
         function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-
-        function checkBeforeSave() {
-            const phone = document.getElementById('custPhone').value;
-            if (!phone) return alert("No WA Wajib!");
-            const fmtPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
-            const data = {
-                area: document.getElementById('custArea').value.toUpperCase() || "JATIMAKMUR",
-                name: document.getElementById('custName').value,
-                driver: document.getElementById('driverName').value,
-                phone: fmtPhone,
-                maps: document.getElementById('custMaps').value,
-                status: 'active'
-            };
-            db.ref('customers').push(data).then(() => {
-                cancelEdit();
-                showPage('search');
-            });
-        }
-
-        function clearHistoryWithPin() {
-            const pin = prompt("PIN Hapus:");
-            if(pin === PIN_RAHASIA) {
-                Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); });
-            }
-        }
-
-        function cancelEdit() {
-            document.querySelectorAll('input').forEach(i => i.value = "");
-            document.getElementById('editKey').value = "";
-        }
-
+        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; }
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
+        function clearAllChats() { if(confirm("Hapus Chat?")) db.ref('chats').remove(); }
     </script>
 </body>
 </html>
