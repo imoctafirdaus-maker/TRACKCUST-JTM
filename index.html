@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Fast Edit</title>
+    <title>TrackCust JTM - Pro + Undo Feature</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -29,7 +29,7 @@
     <nav class="dominos-blue p-4 text-white sticky top-0 z-50 shadow-md">
         <div class="flex justify-between items-center mb-2">
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md">Pilih Nama</button>
+            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md text-xs">Pilih Identitas</button>
         </div>
         <div id="onlineList" class="text-[9px] font-bold opacity-90 flex gap-3 overflow-x-auto whitespace-nowrap"></div>
     </nav>
@@ -45,18 +45,18 @@
 
         <div id="page-add" class="page">
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
-                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Pengantaran</h2>
+                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Antaran Baru</h2>
                 <input type="hidden" id="editKey">
                 <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
                 <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                    <input type="text" id="custName" placeholder="Nama Customer" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
                 </div>
-                <input type="tel" id="custPhone" placeholder="Nomor WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                <input type="tel" id="custPhone" placeholder="No WhatsApp (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                 <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
                 <div class="flex gap-2">
-                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-xs">Batal</button>
-                    <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Simpan Data</button>
+                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-[10px]">Batal Edit</button>
+                    <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan Antaran</button>
                 </div>
             </div>
         </div>
@@ -94,7 +94,7 @@
 
     <div id="profileModal" class="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
         <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto shadow-2xl text-center">
-            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Siapa Kamu?</h2>
+            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Pilih Identitas</h2>
             <div id="crewOptions" class="grid grid-cols-1 gap-2"></div>
         </div>
     </div>
@@ -173,7 +173,6 @@
             }
         }
 
-        // EDIT SEKARANG LANGSUNG TANPA PIN
         function editData(key) {
             const item = allData[key];
             document.getElementById('editKey').value = key;
@@ -182,14 +181,14 @@
             document.getElementById('driverName').value = item.driver;
             document.getElementById('custPhone').value = item.phone;
             document.getElementById('custMaps').value = item.maps;
-            document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('formTitle').innerText = "Edit Antaran Berjalan";
             document.getElementById('btnCancelEdit').classList.remove('hidden');
             showPage('add');
         }
 
         function deleteData(key) {
             const pin = prompt("PIN Hapus:");
-            if(pin === PIN_RAHASIA) { if(confirm("Hapus antaran?")) db.ref('customers/' + key).remove(); }
+            if(pin === PIN_RAHASIA) { if(confirm("Hapus antaran ini?")) db.ref('customers/' + key).remove(); }
         }
 
         function clearHistoryWithPin() {
@@ -201,7 +200,7 @@
 
         function cancelEdit() {
             document.getElementById('editKey').value = "";
-            document.getElementById('formTitle').innerText = "Input Pengantaran";
+            document.getElementById('formTitle').innerText = "Input Antaran Baru";
             document.getElementById('btnCancelEdit').classList.add('hidden');
             clearForm();
         }
@@ -219,13 +218,6 @@
             d.scrollTop = d.scrollHeight;
         });
 
-        db.ref('customers').on('child_changed', s => {
-            if(s.val().status === 'done' && !firstLoad) {
-                document.getElementById('doneSound').play();
-                alert("Orderan Selesai: " + s.val().name);
-            }
-        });
-
         db.ref('customers').on('value', s => { 
             allData = s.val() || {}; 
             renderContent(allData); 
@@ -239,17 +231,23 @@
             
             Object.keys(data).forEach(k => {
                 const item = data[k];
-                const searchStr = `${item.name} ${item.driver} ${item.phone} ${item.area}`.toLowerCase();
+                if(!item.name) return; // Mencegah data rusak
+
+                const searchStr = `${item.name} ${item.driver || ''} ${item.phone || ''} ${item.area || ''}`.toLowerCase();
                 if(!searchStr.includes(filter.toLowerCase())) return;
 
+                // LOGIKA PENYELAMAT: Jika status kosong, anggap 'active' (muncul di depan)
                 const isDone = item.status === 'done';
-                const waText = window.encodeURIComponent(`Halo bapak/ibu... saya ${item.driver} dari Domino's JTM mau mengantarkan pesanan, mohon untuk tetap aktif WhatsApp ya pak/bu hingga pesanan tiba. Terimakasih ☺️`);
+                const waText = window.encodeURIComponent(`Halo bapak/ibu.......saya dari Domino's pizza mau mengantarkan pesanan, pastikan selalu aktif WhatsApp hingga pesanan tiba,Terimakasih ☺️`);
                 
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'}">
                         <div class="flex justify-between items-start mb-2">
-                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver} | ${item.area}</p></div>
-                            ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-4 rounded-xl font-black shadow-md">✓</button>` : `<i class="fa fa-circle-check text-green-500 text-xl"></i>`}
+                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver || 'No Driver'} | ${item.area || 'JTM'}</p></div>
+                            ${!isDone ? 
+                                `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-4 rounded-xl font-black shadow-md">✓</button>` : 
+                                `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`
+                            }
                         </div>
                         ${!isDone ? `
                         <div class="flex gap-2 mt-3">
@@ -259,7 +257,7 @@
                         <div class="flex gap-4 mt-4 pt-2 border-t border-gray-100 flex justify-center">
                             <button onclick="editData('${k}')" class="text-blue-400 font-black text-[9px] uppercase"><i class="fa fa-edit mr-1"></i>Edit Cepat</button>
                             <button onclick="deleteData('${k}')" class="text-red-300 font-black text-[9px] uppercase"><i class="fa fa-trash mr-1"></i>Hapus (PIN)</button>
-                        </div>` : ''}
+                        </div>` : `<p class="text-[9px] font-bold text-green-600 uppercase italic">Selesai Antar ✓</p>`}
                     </div>`;
                 
                 if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html;
