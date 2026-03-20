@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Custom WA Text</title>
+    <title>TrackCust JTM - Fast Edit</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -173,6 +173,7 @@
             }
         }
 
+        // EDIT SEKARANG LANGSUNG TANPA PIN
         function editData(key) {
             const item = allData[key];
             document.getElementById('editKey').value = key;
@@ -242,8 +243,7 @@
                 if(!searchStr.includes(filter.toLowerCase())) return;
 
                 const isDone = item.status === 'done';
-                // TEKS BARU YANG DIMINTA OCTA
-                const waText = window.encodeURIComponent(`Halo bapak/ibu.......saya dari Domino's pizza mau mengantarkan pesanan, pastikan selalu aktif WhatsApp hingga pesanan tiba,Terimakasih ☺️`);
+                const waText = window.encodeURIComponent(`Halo bapak/ibu... saya ${item.driver} dari Domino's JTM mau mengantarkan pesanan, mohon untuk tetap aktif WhatsApp ya pak/bu hingga pesanan tiba. Terimakasih ☺️`);
                 
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'}">
