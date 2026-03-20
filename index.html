@@ -92,7 +92,7 @@
             </div>
             <div id="chatDisplay" class="chat-container p-4 flex flex-col"></div>
             <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
-                <button id="voiceBtn" onclick="toggleVoiceRecord()" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
+                <button id="voiceBtn" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
                 <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
                 <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
             </div>
@@ -125,16 +125,33 @@
         const driverOnly = allNames.slice(0, 9);
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let firstLoad = true; let currentPage = 'search';
-        let mediaRecorder; let audioChunks = []; let isRecording = false;
 
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+            
             const modal = document.getElementById('crewOptions');
+            modal.innerHTML = "";
             allNames.forEach(name => {
-                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`;
+                let label = "";
+                let bgColor = "bg-white";
+                
+                // Logika Pengelompokan Management & Kasir
+                if (name === "Pak KUR" || name === "Pak Agus" || name === "Pak Ageng") {
+                    label = `<span class="text-[8px] text-red-500 ml-1">(MGMT)</span>`;
+                    bgColor = "bg-gray-50";
+                } else if (name === "Sintiya" || name === "Ridha") {
+                    label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`;
+                }
+
+                modal.innerHTML += `
+                    <button onclick="handleLogin('${name}')" 
+                        class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50 ${bgColor}">
+                        ${name}${label}
+                    </button>`;
             });
+
             if(!currentUser) openProfile(); else setUser(currentUser);
             setInterval(checkAutoDone, 5000);
             setInterval(() => { if(currentPage === 'search') renderContent(allData, document.getElementById('searchInput').value); }, 10000);
