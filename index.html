@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JTM Track Pro - Voice & Search Fixed</title>
+    <title>JTM Track Pro - FINAL STABLE</title>
     
     <meta name="theme-color" content="#006491">
     <meta name="mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
                 <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-90"><i class="fa fa-sync-alt text-[10px]"></i></button>
             </div>
         </div>
-        <div id="onlineStatusCont" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
             <span class="opacity-60 italic uppercase">Online:</span>
             <div id="onlineList" class="flex gap-3"></div>
         </div>
@@ -71,10 +71,7 @@
                 </div>
                 <input type="tel" id="custPhone" placeholder="Nomor WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                 <input type="text" id="custMaps" placeholder="Link Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                <div class="flex gap-2 pt-2">
-                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-[10px]">Batal</button>
-                    <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan</button>
-                </div>
+                <button onclick="checkBeforeSave()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan</button>
             </div>
         </div>
 
@@ -101,10 +98,7 @@
         <button onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></button>
         <button onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>History</span></button>
         <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></button>
-        <button onclick="showPage('chat')" id="nav-chat" class="nav-item">
-            <div id="chatBadge"></div>
-            <i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span>
-        </button>
+        <button onclick="showPage('chat')" id="nav-chat" class="nav-item"><div id="chatBadge"></div><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></button>
         <button onclick="openProfile()" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
     </div>
 
@@ -117,7 +111,6 @@
     </div>
 
     <script>
-        // CONFIG
         const MASTER_PIN = "0972"; 
         const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929", "Pak KUR": "0000", "Pak Agus": "6413", "Pak Ageng": "4444", "Sintiya": "0959", "Ridha": "0968" };
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
@@ -129,7 +122,7 @@
         let audioCtx = null;
         let mediaRecorder; let audioChunks = [];
 
-        // VOICE NOTE LOGIC
+        // FUNGSI VOICE NOTE (AUDIO RECORDING)
         async function toggleRecording() {
             const btn = document.getElementById('micBtn');
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
@@ -146,31 +139,36 @@
                     btn.innerHTML = '<i class="fa fa-stop-circle text-red-600 text-2xl animate-pulse"></i>';
                     if(navigator.vibrate) navigator.vibrate(100);
                 } catch(e) { alert("Butuh izin mikrofon!"); }
-            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
+            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl text-gray-400"></i>'; }
         }
 
-        // AUDIO & NOTIF
+        // AUDIO NOTIFIKASI (CHAT & SELESAI)
         function playBeep(type) {
             if (!audioCtx) return;
             const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain();
             osc.connect(gn); gn.connect(audioCtx.destination);
-            osc.frequency.setValueAtTime(type === 'chat' ? 1500 : 1100, audioCtx.currentTime);
-            gn.gain.setValueAtTime(0.2, audioCtx.currentTime);
-            osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+            if(type === 'chat') { 
+                osc.frequency.setValueAtTime(1500, audioCtx.currentTime); 
+            } else if(type === 'done') {
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
+            } else { 
+                osc.frequency.setValueAtTime(1100, audioCtx.currentTime); 
+            }
+            gn.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            if(navigator.vibrate) navigator.vibrate(50);
         }
 
         function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
 
         window.onload = () => {
-            const drvSel = document.getElementById('driverName');
-            drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
+            const drvSel = document.getElementById('driverName'); drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(d => drvSel.innerHTML += `<option value="${d}">${d}</option>`);
-            const optCont = document.getElementById('crewOptions');
-            optCont.innerHTML = "";
+            const optCont = document.getElementById('crewOptions'); optCont.innerHTML = "";
             Object.keys(userPins).forEach(n => {
-                let lbl = ""; let bg = "bg-white";
-                if(n.includes("Pak")) { lbl=" (MGMT)"; bg="bg-gray-50"; } else if(["Sintiya","Ridha"].includes(n)) { lbl=" (KASIR)"; }
-                optCont.innerHTML += `<button onclick="handleLogin('${n}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50 ${bg}">${n}<span class="text-[8px] opacity-50 ml-1">${lbl}</span></button>`;
+                let lbl = ""; if(n.includes("Pak")) lbl=" (MGMT)"; else if(["Sintiya","Ridha"].includes(n)) lbl=" (KASIR)";
+                optCont.innerHTML += `<button onclick="handleLogin('${n}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${n}<span class="text-[8px] opacity-50 ml-1">${lbl}</span></button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
             setInterval(checkAutoDone, 5000);
@@ -186,18 +184,17 @@
             Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span><span class="online-dot"></span>${u}</span>`); 
         });
 
-        // CHAT RENDER (TEKS & VN)
+        // CHAT LOGIC (TEKS + VOICE NOTE + CENTANG)
         db.ref('chats').limitToLast(25).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
                 Object.keys(s.val()).forEach(k => { 
                     const c = s.val()[k]; const isMe = c.user === currentUser;
                     if(currentPage === 'chat' && !isMe && !c.seen) db.ref('chats/'+k).update({seen:true});
-                    const tick = c.seen ? 'fa-check-double read-blue' : 'fa-check unread-gray';
                     
-                    let msgContent = `<span class="text-[13px] text-gray-700 font-bold">${c.text}</span>`;
+                    let msgBody = `<span class="text-[13px] font-bold">${c.text}</span>`;
                     if(c.type === "voice") {
-                        msgContent = `
+                        msgBody = `
                             <div class="flex items-center gap-2 bg-black/5 p-2 rounded-lg">
                                 <button onclick="new Audio('${c.text}').play()" class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center"><i class="fa fa-play text-[8px] ml-0.5"></i></button>
                                 <span class="text-[9px] font-black italic">Voice Note</span>
@@ -207,85 +204,55 @@
                     d.innerHTML += `
                         <div class="bubble ${isMe?'right':'left'}">
                             ${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}
-                            ${msgContent}
-                            <div class="chat-footer"><span class="chat-time">${c.time}</span>${isMe?`<i class="fa ${tick} text-[10px]"></i>`:''}</div>
+                            ${msgBody}
+                            <div class="chat-footer"><span class="chat-time">${c.time}</span>${isMe?`<i class="fa ${c.seen?'fa-check-double read-blue':'fa-check unread-gray'} text-[10px]"></i>`:''}</div>
                         </div>`; 
                 }); 
             } d.scrollTop = d.scrollHeight; 
         });
 
-        db.ref('chats').limitToLast(1).on('child_added', (snap) => { 
-            if(!firstLoad && snap.val().user !== currentUser) {
-                if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
-                playBeep('chat');
-            }
-        });
+        db.ref('chats').limitToLast(1).on('child_added', snap => { if(!firstLoad && snap.val().user !== currentUser) { if(currentPage !== 'chat') document.getElementById('chatBadge').style.display='block'; playBeep('chat'); } });
 
+        // ANTARAN RENDER + SEARCH (DETAIL)
         db.ref().on('value', s => { const r = s.val() || {}; allData = r.customers || r; render(allData); firstLoad = false; });
-
-        function sendChat(msg, type = "text") { 
-            const inp = document.getElementById('chatInput'); 
-            const content = type === "text" ? inp.value.trim() : msg;
-            if(content) { 
-                db.ref('chats').push({ user: currentUser, text: content, type: type, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), seen: false }); 
-                if(type === "text") inp.value = ""; 
-            } 
-        }
-
-        // RENDER LIST & SEARCH (NAMA/HP/DRIVER)
         function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
 
         function render(data, filter = "") { 
             const act = document.getElementById('activeList'); const hist = document.getElementById('historyList'); 
             act.innerHTML = ""; hist.innerHTML = ""; const now = Date.now();
             Object.keys(data).sort((a,b) => (data[b].startTime||0)-(data[a].startTime||0)).forEach(k => { 
-                const i = data[k]; if(!i.name || typeof i !== 'object') return; 
+                const i = data[k]; if(!i.name) return;
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
                 if(!match) return;
-                
+
                 const isD = i.status === 'done'; const isDel = i.status === 'delivering';
-                let tmr = ""; if (isDel && i.startTime) { const rem = Math.max(0, 1200 - Math.floor((now-i.startTime)/1000)); tmr = `<p class="text-[9px] font-bold text-red-500 mt-1">Estimasi: ${Math.floor(rem/60)}:${(rem%60).toString().padStart(2,'0')}</p>`; }
-                const msg = `Halo bapak/ibu ${i.name}, saya ${currentUser} dari Domino's ingin mengantarkan pesanan ya, terimakasih ☺️`;
+                let tmr = (isDel && i.startTime) ? `<p class="text-[9px] font-bold text-red-500">Estimasi: ${Math.floor((1200-Math.floor((now-i.startTime)/1000))/60)}m</p>` : "";
+                const msg = `Halo bapak/ibu ${i.name}, saya dari Domino's JTM ingin mengantarkan pesanan ya ☺️`;
                 const html = `
-                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200': (isDel ? 'border-blue-500' : 'border-red-500')} mb-3">
+                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':(isDel?'border-blue-500':'border-red-500')} mb-3">
                         <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${i.area || 'JTM'}</p>
-                                <h3 class="font-black text-blue-900 uppercase text-xs">${i.name}</h3>
-                                <p class="text-[9px] font-bold text-gray-400 italic">🛵 ${i.driver || 'No Driver'} | 📱 ${i.phone}</p>
-                                ${tmr}
-                            </div>
+                            <div><p class="text-[9px] font-black text-red-500 italic uppercase">${i.area||'JTM'}</p><h3 class="font-black text-blue-900 text-xs">${i.name}</h3><p class="text-[9px] font-bold text-gray-400 italic">🛵 ${i.driver||'No'} | 📱 ${i.phone}</p>${tmr}</div>
                             <div class="flex gap-2">
                                 ${!isD ? `<button onclick="db.ref('customers/${k}').update({status:'delivering',startTime:Date.now()})" class="btn-action ${isDel?'bg-gray-200 text-gray-400':'bg-blue-600 text-white'}"><i class="fa fa-motorcycle"></i></button><button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-3 rounded-xl font-black text-[9px]">UNDO</button>`}
                             </div>
                         </div>
-                        ${!isD ? `<div class="flex gap-2 mt-3"><a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a><a href="https://wa.me/${i.phone}?text=${window.encodeURIComponent(msg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WA</a></div><div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${k}')" class="text-red-300 text-sm"><i class="fa fa-trash-alt"></i></button></div>` : ''}
+                        ${!isD ? `<div class="flex gap-2 mt-3"><a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a><a href="https://wa.me/${i.phone}?text=${window.encodeURIComponent(msg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px]">WA</a></div><div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button><button onclick="deleteData('${k}')" class="text-red-300 text-sm"><i class="fa fa-trash-alt"></i></button></div>`:''}
                     </div>`; 
                 if(isD) hist.innerHTML += html; else act.innerHTML += html; 
             }); 
         }
 
-        function showPage(id) { 
-            initAudio(); currentPage = id; 
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); 
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
-            document.getElementById('page-'+id).classList.add('active'); 
-            document.getElementById('nav-'+id).classList.add('active'); 
-            if(id === 'chat') {
-                document.getElementById('chatBadge').style.display = 'none';
-                db.ref('chats').limitToLast(10).once('value', s => { s.forEach(c => { if(c.val().user !== currentUser) c.ref.update({seen:true}); }); });
-            }
-        }
-        function checkBeforeSave() { initAudio(); const ph = document.getElementById('custPhone').value; save(ph.startsWith('0')?'62'+ph.slice(1):ph); }
-        function save(ph) { const k = document.getElementById('editKey').value; const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: ph, maps: document.getElementById('custMaps').value, status: 'active' }; if(k) db.ref('customers/'+k).update(d).then(cancelEdit); else db.ref('customers').push(d).then(clearForm); showPage('search'); }
-        function editData(k) { const i = allData[k]; document.getElementById('editKey').value = k; document.getElementById('custArea').value = i.area; document.getElementById('custName').value = i.name; document.getElementById('driverName').value = i.driver; document.getElementById('custPhone').value = i.phone; document.getElementById('custMaps').value = i.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
-        function deleteData(k) { if(prompt("Master PIN:") === MASTER_PIN) db.ref('customers/'+k).remove(); }
+        // CONTROL LOGIC
         function setStatus(k, s) { db.ref('customers/'+k).update({status:s}); if(s==='done') playBeep('done'); }
-        function checkAutoDone() { const n = Date.now(); Object.keys(allData).forEach(k => { const i = allData[k]; if (i.status === 'delivering' && i.startTime && (n-i.startTime)/60000 >= 20) setStatus(k,'done'); }); }
-        function clearHistoryWithPin() { if(prompt("Master PIN:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/'+k).remove(); }); } }
-        function clearAllChatsWithPin() { if(prompt("Master PIN:") === MASTER_PIN) db.ref('chats').remove(); }
-        function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
-        function clearForm() { document.querySelectorAll('#page-add input').forEach(i => i.value = ""); }
+        function checkAutoDone() { const n = Date.now(); Object.keys(allData).forEach(k => { if (allData[k].status === 'delivering' && allData[k].startTime && (n-allData[k].startTime)/60000 >= 20) setStatus(k,'done'); }); }
+        function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value.trim():m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), seen:false}); i.value=""; } }
+        function showPage(id) { initAudio(); currentPage=id; document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id==='chat') document.getElementById('chatBadge').style.display='none'; }
+        function checkBeforeSave() { initAudio(); const ph = document.getElementById('custPhone').value; const k = document.getElementById('editKey').value; const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: ph.startsWith('0')?'62'+ph.slice(1):ph, maps: document.getElementById('custMaps').value, status: 'active' }; if(k) db.ref('customers/'+k).update(d); else db.ref('customers').push(d); showPage('search'); clearForm(); }
+        function editData(k) { const i = allData[k]; document.getElementById('editKey').value=k; document.getElementById('custArea').value=i.area; document.getElementById('custName').value=i.name; document.getElementById('driverName').value=i.driver; document.getElementById('custPhone').value=i.phone; document.getElementById('custMaps').value=i.maps; showPage('add'); }
+        function deleteData(k) { if(prompt("PIN Master:")===MASTER_PIN) db.ref('customers/'+k).remove(); }
+        function clearHistoryWithPin() { if(prompt("PIN Master:")===MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status==='done') db.ref('customers/'+k).remove(); }); } }
+        function clearAllChatsWithPin() { if(prompt("PIN Master:")===MASTER_PIN) db.ref('chats').remove(); }
+        function clearForm() { document.querySelectorAll('#page-add input').forEach(i=>i.value=""); document.getElementById('editKey').value=""; }
     </script>
 </body>
 </html>
