@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Fixed Layout</title>
+    <title>TrackCust JTM - Final Fix</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,25 +18,11 @@
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; position: relative; }
         .nav-item.active { color: #006491; }
         .nav-add { background: #006491; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
-        .page { display: none; } .page.active { display: flex; flex-direction: column; }
+        .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
-        
-        .chat-container {
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
-            background-color: #e5ddd5;
-            flex: 1;
-            overflow-y: auto;
-        }
-        .bubble {
-            max-width: 85%;
-            padding: 7px 10px;
-            border-radius: 12px;
-            margin-bottom: 5px;
-            position: relative;
-            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
-            word-wrap: break-word;
-        }
+        .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; }
+        .bubble { max-width: 85%; padding: 7px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; }
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         .chat-time { font-size: 8px; color: #8e8e8e; text-align: right; display: block; margin-top: 2px; }
@@ -44,11 +30,11 @@
         @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen font-sans text-gray-800 flex flex-col">
+<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
 
     <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
-    <nav class="dominos-blue p-4 text-white sticky top-0 z-50 shadow-md">
+    <nav class="dominos-blue p-4 text-white shadow-md">
         <div class="flex justify-between items-center mb-1">
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
             <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md tracking-tighter">Pilih Nama</button>
@@ -59,8 +45,8 @@
         </div>
     </nav>
 
-    <main class="flex-1 overflow-y-auto p-4 pb-24">
-        <div id="page-search" class="page active space-y-4">
+    <main class="flex-1 overflow-hidden relative">
+        <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
             <div class="relative">
                 <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Driver/No HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
                 <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
@@ -68,7 +54,7 @@
             <div id="activeList" class="space-y-4"></div>
         </div>
 
-        <div id="page-add" class="page space-y-4">
+        <div id="page-add" class="page p-4 overflow-y-auto">
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
                 <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Pengantaran</h2>
                 <input type="hidden" id="editKey">
@@ -86,15 +72,15 @@
             </div>
         </div>
 
-        <div id="page-history" class="page space-y-4">
+        <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2>
                 <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline italic">Clear (PIN)</button>
             </div>
-            <div id="historyList" class="space-y-2"></div>
+            <div id="historyList" class="space-y-2 pb-20"></div>
         </div>
 
-        <div id="page-chat" class="page h-[75vh] -m-4">
+        <div id="page-chat" class="page overflow-hidden">
             <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div>
@@ -102,8 +88,8 @@
                 </div>
                 <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic uppercase">Clear</button>
             </div>
-            <div id="chatDisplay" class="chat-container p-4 space-y-1"></div>
-            <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t">
+            <div id="chatDisplay" class="chat-container p-4 flex flex-col"></div>
+            <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
                 <button id="voiceBtn" onclick="toggleVoiceRecord()" class="w-10 h-10 flex items-center justify-center text-gray-500">
                     <i class="fa fa-microphone text-xl"></i>
                 </button>
@@ -126,7 +112,7 @@
         <button onclick="openProfile()" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
     </div>
 
-    <div id="profileModal" class="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
+    <div id="profileModal" class="fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
         <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto text-center shadow-2xl border-t-8 border-red-500">
             <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Siapa yang bertugas?</h2>
             <div id="crewOptions" class="grid grid-cols-1 gap-1"></div>
@@ -135,208 +121,45 @@
 
     <script>
         const MASTER_PIN = "0972"; 
-        const userPins = {
-            "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", 
-            "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", 
-            "Acong": "0000", "Pak KUR": "0000", "Pak Agus": "0000", 
-            "Pak Ageng": "4444", "Sintiya": "0000", "Ridha": "0000"
-        };
-
-        const firebaseConfig = {
-          apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc",
-          authDomain: "trackcust-jtm.firebaseapp.com",
-          databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app",
-          projectId: "trackcust-jtm",
-          storageBucket: "trackcust-jtm.firebasestorage.app",
-          messagingSenderId: "411585432172",
-          appId: "1:411585432172:web:2d9ae1655d4e3073e4a649"
-        };
-
+        const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0000", "Pak KUR": "0000", "Pak Agus": "0000", "Pak Ageng": "4444", "Sintiya": "0000", "Ridha": "0000" };
+        const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         const allNames = Object.keys(userPins);
         const driverOnly = allNames.slice(0, 9);
-        
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {};
-        let firstLoad = true;
-        let currentPage = 'search';
-
-        let mediaRecorder;
-        let audioChunks = [];
-        let isRecording = false;
+        let allData = {}; let firstLoad = true; let currentPage = 'search';
+        let mediaRecorder; let audioChunks = []; let isRecording = false;
 
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
             const modal = document.getElementById('crewOptions');
-            allNames.forEach(name => {
-                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`;
-            });
+            allNames.forEach(name => { modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`; });
             if(!currentUser) openProfile(); else setUser(currentUser);
         };
 
-        function handleLogin(name) {
-            const pinInput = prompt(`Masukkan PIN untuk ${name}:`);
-            if (pinInput === userPins[name]) setUser(name); else alert("PIN SALAH!");
-        }
-
-        function setUser(name) {
-            currentUser = name;
-            localStorage.setItem('jtm_user', name);
-            document.getElementById('userDisplay').innerText = name;
-            document.getElementById('profileNameChat').innerText = name;
-            document.getElementById('profileModal').classList.add('hidden');
-            if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden');
-            const myPresenceRef = db.ref('presence/' + name);
-            myPresenceRef.onDisconnect().remove();
-            myPresenceRef.set({ status: 'online', time: Date.now() });
-        }
-
+        function handleLogin(name) { const pinInput = prompt(`PIN untuk ${name}:`); if (pinInput === userPins[name]) setUser(name); else alert("PIN SALAH!"); }
+        function setUser(name) { currentUser = name; localStorage.setItem('jtm_user', name); document.getElementById('userDisplay').innerText = name; document.getElementById('profileNameChat').innerText = name; document.getElementById('profileModal').classList.add('hidden'); if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden'); const myPresenceRef = db.ref('presence/' + name); myPresenceRef.onDisconnect().remove(); myPresenceRef.set({ status: 'online', time: Date.now() }); }
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
+        db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
+        db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad) { document.getElementById('chatSound').play(); if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; } });
+        db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = c.text; if(content.startsWith('data:audio')) { content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`; } else { content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`; } d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
 
-        db.ref('presence').on('value', s => {
-            const list = document.getElementById('onlineList');
-            list.innerHTML = "";
-            Object.keys(s.val() || {}).forEach(u => {
-                list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`;
-            });
-        });
+        async function toggleVoiceRecord() { const btn = document.getElementById('voiceBtn'); if (!isRecording) { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.readAsDataURL(audioBlob); reader.onloadend = () => { db.ref('chats').push({ user: currentUser, text: reader.result, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); }; }; mediaRecorder.start(); isRecording = true; btn.classList.add('recording-active'); } catch (err) { alert("Akses Mikrofon Ditolak!"); } } else { mediaRecorder.stop(); isRecording = false; btn.classList.remove('recording-active'); } }
 
-        db.ref('chats').limitToLast(1).on('child_added', () => {
-            if(!firstLoad) {
-                document.getElementById('chatSound').play();
-                if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
-            }
-        });
+        db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
+        function renderContent(data, filter = "") { const activeCont = document.getElementById('activeList'); const historyCont = document.getElementById('historyList'); activeCont.innerHTML = ""; historyCont.innerHTML = ""; Object.keys(data).forEach(k => { const item = data[k]; if(!item.name || typeof item !== 'object') return; if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; const isDone = item.status === 'done'; const msg = `Halo bapak/ibu ${item.name} saya ${item.driver || 'Driver Domino\'s'} mau mengantarkan pesanan...`; const waLink = `https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}`; const html = `<div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3"><div class="flex justify-between items-start mb-2"><div><p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${item.area || 'JTM'}</p><h3 class="font-black text-blue-900 uppercase text-xs leading-none">${item.name}</h3><p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${item.driver || 'No Driver'}</p></div>${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}</div>${!isDone ? `<div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a><a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a></div><div class="flex gap-6 mt-4 pt-3 border-t border-gray-100 justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-edit"></i> Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-trash"></i> Hapus</button></div>` : ''}</div>`; if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html; }); }
 
-        db.ref('chats').limitToLast(25).on('value', s => {
-            const d = document.getElementById('chatDisplay');
-            d.innerHTML = "";
-            if(s.val()) {
-                Object.values(s.val()).forEach(c => { 
-                    const isMe = c.user === currentUser;
-                    let content = c.text;
-                    if(content.startsWith('data:audio')) {
-                        content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`;
-                    } else {
-                        content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`;
-                    }
-
-                    d.innerHTML += `
-                        <div class="bubble ${isMe ? 'right' : 'left'}">
-                            ${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}
-                            ${content}
-                            <span class="chat-time">${c.time || ''}</span>
-                        </div>`;
-                });
-            }
-            d.scrollTop = d.scrollHeight;
-        });
-
-        async function toggleVoiceRecord() {
-            const btn = document.getElementById('voiceBtn');
-            if (!isRecording) {
-                try {
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                    mediaRecorder = new MediaRecorder(stream);
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = () => {
-                        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                        const reader = new FileReader();
-                        reader.readAsDataURL(audioBlob);
-                        reader.onloadend = () => {
-                            db.ref('chats').push({ 
-                                user: currentUser, 
-                                text: reader.result,
-                                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                            });
-                        };
-                    };
-                    mediaRecorder.start();
-                    isRecording = true;
-                    btn.classList.add('recording-active');
-                } catch (err) { alert("Akses Mikrofon Ditolak!"); }
-            } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                btn.classList.remove('recording-active');
-            }
-        }
-
-        db.ref().on('value', s => { 
-            const raw = s.val() || {};
-            allData = raw.customers || raw; 
-            renderContent(allData); 
-            firstLoad = false; 
-        });
-
-        function renderContent(data, filter = "") {
-            const activeCont = document.getElementById('activeList');
-            const historyCont = document.getElementById('historyList');
-            activeCont.innerHTML = ""; historyCont.innerHTML = "";
-            
-            Object.keys(data).forEach(k => {
-                const item = data[k];
-                if(!item.name || typeof item !== 'object') return;
-                if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return;
-                
-                const isDone = item.status === 'done';
-                const msg = `Halo bapak/ibu ${item.name} saya ${item.driver || 'Driver Domino\'s'} mau mengantarkan pesanan, mohon tetap aktif WhatsApp hingga pesanan tiba, terimakasih ☺️`;
-                const waLink = `https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}`;
-                
-                const html = `
-                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3">
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${item.area || 'JTM'}</p>
-                                <h3 class="font-black text-blue-900 uppercase text-xs leading-none">${item.name}</h3>
-                                <p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${item.driver || 'No Driver'}</p>
-                            </div>
-                            ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}
-                        </div>
-                        ${!isDone ? `
-                        <div class="flex gap-2 mt-3">
-                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a>
-                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a>
-                        </div>
-                        <div class="flex gap-6 mt-4 pt-3 border-t border-gray-100 justify-center">
-                            <button onclick="editData('${k}')" class="text-blue-500 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-edit"></i> Edit</button>
-                            <button onclick="deleteData('${k}')" class="text-red-400 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-trash"></i> Hapus</button>
-                        </div>` : ''}
-                    </div>`;
-                if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html;
-            });
-        }
-
-        function showPage(id) { 
-            currentPage = id; 
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); 
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
-            document.getElementById('page-'+id).classList.add('active'); 
-            document.getElementById('nav-'+id).classList.add('active'); 
-            if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; 
-        }
-
+        function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') { document.getElementById('chatBadge').style.display = 'none'; setTimeout(() => { const d = document.getElementById('chatDisplay'); d.scrollTop = d.scrollHeight; }, 100); } }
         function checkBeforeSave() { const phone = document.getElementById('custPhone').value; if (!phone) return alert("WA Wajib!"); saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase() || "JTM", name: document.getElementById('custName').value || "Cust", driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); else db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
         function editData(key) { const item = allData[key]; document.getElementById('editKey').value = key; document.getElementById('custArea').value = item.area || ""; document.getElementById('custName').value = item.name; document.getElementById('driverName').value = item.driver; document.getElementById('custPhone').value = item.phone; document.getElementById('custMaps').value = item.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
         function deleteData(key) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + key).remove(); }
         function clearHistoryWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); }); } }
         function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-        function sendChat() { 
-            const input = document.getElementById('chatInput'); 
-            if(input.value) { 
-                db.ref('chats').push({ 
-                    user: currentUser, 
-                    text: input.value,
-                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                }); 
-                input.value = ""; 
-            } 
-        }
+        function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); input.value = ""; } }
         function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
         function clearForm() { document.querySelectorAll('#page-add input').forEach(i => i.value = ""); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
