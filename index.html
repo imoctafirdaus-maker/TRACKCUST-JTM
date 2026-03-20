@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Management Update</title>
+    <title>TrackCust JTM - Notification Update</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -33,6 +33,7 @@
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
 
     <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
+    <audio id="doneSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
 
     <nav class="dominos-blue p-4 text-white shadow-md">
         <div class="flex justify-between items-center mb-1">
@@ -123,7 +124,6 @@
     <script>
         const MASTER_PIN = "0972"; 
         const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0000", "Pak KUR": "0000", "Pak Agus": "0000", "Pak Ageng": "4444", "Sintiya": "0000", "Ridha": "0000" };
-        
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -137,22 +137,11 @@
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
-            
             const modal = document.getElementById('crewOptions');
             allNames.forEach(name => {
-                let bgColor = "bg-white";
-                let label = "";
-                
-                // Logika Warna & Label Management
-                if (name === "Pak KUR" || name === "Pak Agus" || name === "Pak Ageng") {
-                    bgColor = "bg-gray-100";
-                    label = `<span class="text-[8px] text-red-500 ml-1">(MANAGEMENT)</span>`;
-                } 
-                // Logika Label Kasir
-                else if (name === "Sintiya" || name === "Ridha") {
-                    label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`;
-                }
-
+                let bgColor = "bg-white"; let label = "";
+                if (name === "Pak KUR" || name === "Pak Agus" || name === "Pak Ageng") { bgColor = "bg-gray-100"; label = `<span class="text-[8px] text-red-500 ml-1">(MANAGEMENT)</span>`; } 
+                else if (name === "Sintiya" || name === "Ridha") { label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`; }
                 modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase ${bgColor} active:bg-blue-50">${name}${label}</button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
@@ -166,8 +155,33 @@
         db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad) { document.getElementById('chatSound').play(); if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; } });
         db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = c.text; if(content.startsWith('data:audio')) { content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`; } else { content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`; } d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
         async function toggleVoiceRecord() { const btn = document.getElementById('voiceBtn'); if (!isRecording) { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.readAsDataURL(audioBlob); reader.onloadend = () => { db.ref('chats').push({ user: currentUser, text: reader.result, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); }; }; mediaRecorder.start(); isRecording = true; btn.classList.add('recording-active'); } catch (err) { alert("Akses Mikrofon Ditolak!"); } } else { mediaRecorder.stop(); isRecording = false; btn.classList.remove('recording-active'); } }
+        
+        // Listener untuk suara "Selesai" (Berjalan di semua perangkat)
+        db.ref('customers').on('child_changed', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.status === 'done' && !firstLoad) {
+                document.getElementById('doneSound').play().catch(e => console.log("Audio play blocked"));
+            }
+        });
+
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
-        function renderContent(data, filter = "") { const activeCont = document.getElementById('activeList'); const historyCont = document.getElementById('historyList'); activeCont.innerHTML = ""; historyCont.innerHTML = ""; Object.keys(data).forEach(k => { const item = data[k]; if(!item.name || typeof item !== 'object') return; if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; const isDone = item.status === 'done'; const msg = `Halo bapak/ibu ${item.name} saya ${item.driver || 'Driver Domino\'s'} mau mengantarkan pesanan...`; const waLink = `https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}`; const html = `<div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3"><div class="flex justify-between items-start mb-2"><div><p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${item.area || 'JTM'}</p><h3 class="font-black text-blue-900 uppercase text-xs leading-none">${item.name}</h3><p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${item.driver || 'No Driver'}</p></div>${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}</div>${!isDone ? `<div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a><a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a></div><div class="flex gap-6 mt-4 pt-3 border-t border-gray-100 justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-edit"></i> Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-trash"></i> Hapus</button></div>` : ''}</div>`; if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html; }); }
+        
+        function renderContent(data, filter = "") { 
+            const activeCont = document.getElementById('activeList'); 
+            const historyCont = document.getElementById('historyList'); 
+            activeCont.innerHTML = ""; historyCont.innerHTML = ""; 
+            Object.keys(data).forEach(k => { 
+                const item = data[k]; 
+                if(!item.name || typeof item !== 'object') return; 
+                if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; 
+                const isDone = item.status === 'done'; 
+                const msg = `Halo bapak/ibu ${item.name}, saya ${currentUser} ingin mengantarkan pesanan, mohon sedia menunggu dan untuk tetap aktif WhatsApp ya, terimakasih ☺️`;
+                const waLink = `https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}`; 
+                const html = `<div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3"><div class="flex justify-between items-start mb-2"><div><p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${item.area || 'JTM'}</p><h3 class="font-black text-blue-900 uppercase text-xs leading-none">${item.name}</h3><p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${item.driver || 'No Driver'}</p></div>${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}</div>${!isDone ? `<div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a><a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a></div><div class="flex gap-6 mt-4 pt-3 border-t border-gray-100 justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-edit"></i> Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-trash"></i> Hapus</button></div>` : ''}</div>`; 
+                if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html; 
+            }); 
+        }
+
         function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') { document.getElementById('chatBadge').style.display = 'none'; setTimeout(() => { const d = document.getElementById('chatDisplay'); d.scrollTop = d.scrollHeight; }, 100); } }
         function checkBeforeSave() { const phone = document.getElementById('custPhone').value; if (!phone) return alert("WA Wajib!"); saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase() || "JTM", name: document.getElementById('custName').value || "Cust", driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); else db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
