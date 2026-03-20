@@ -29,6 +29,10 @@
         .recording-active { animation: pulse-red 1.5s infinite; color: #e31837 !important; }
         @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .timer-text { font-family: monospace; font-weight: bold; color: #e31837; }
+        
+        /* Style tombol aksi supaya seragam */
+        .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transition: all 0.1s; }
+        .btn-action:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -39,7 +43,7 @@
     <nav class="dominos-blue p-4 text-white shadow-md">
         <div class="flex justify-between items-center mb-1">
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md tracking-tighter tracking-tighter">Pilih Nama</button>
+            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md tracking-tighter">Pilih Nama</button>
         </div>
         <div id="onlineStatusCont" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
             <span class="opacity-60 italic uppercase">Online:</span>
@@ -141,9 +145,8 @@
                 modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase ${bgColor} active:bg-blue-50">${name}${label}</button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
-            
-            // Jalankan cek timer setiap 5 detik
             setInterval(checkAutoDone, 5000);
+            setInterval(() => { if(currentPage === 'search') renderContent(allData, document.getElementById('searchInput').value); }, 10000); // Update timer visual tiap 10 detik
         };
 
         function handleLogin(name) { const pinInput = prompt(`PIN untuk ${name}:`); if (pinInput === userPins[name]) { playFallbackSound(1); setUser(name); } else alert("PIN SALAH!"); }
@@ -159,7 +162,6 @@
         
         async function toggleVoiceRecord() { const btn = document.getElementById('voiceBtn'); if (!isRecording) { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.readAsDataURL(audioBlob); reader.onloadend = () => { db.ref('chats').push({ user: currentUser, text: reader.result, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); }; }; mediaRecorder.start(); isRecording = true; btn.classList.add('recording-active'); } catch (err) { alert("Mikrofon diblokir!"); } } else { mediaRecorder.stop(); isRecording = false; btn.classList.remove('recording-active'); } }
 
-        // FUNGSI BARU: Mulai Antar (Timer 20 Menit)
         function startDelivery(key) {
             db.ref('customers/' + key).update({ 
                 status: 'delivering',
@@ -167,16 +169,13 @@
             });
         }
 
-        // FUNGSI BARU: Cek Auto-Done
         function checkAutoDone() {
             const now = Date.now();
             Object.keys(allData).forEach(key => {
                 const item = allData[key];
                 if (item.status === 'delivering' && item.startTime) {
                     const diffMinutes = (now - item.startTime) / (1000 * 60);
-                    if (diffMinutes >= 20) {
-                        setStatus(key, 'done'); // Otomatis pindah ke history
-                    }
+                    if (diffMinutes >= 20) { setStatus(key, 'done'); }
                 }
             });
         }
@@ -200,14 +199,13 @@
                 const isDone = item.status === 'done'; 
                 const isDelivering = item.status === 'delivering';
                 
-                // Hitung sisa waktu jika sedang diantar
                 let timerHtml = "";
                 if (isDelivering && item.startTime) {
                     const elapsed = Math.floor((now - item.startTime) / 1000);
                     const remaining = Math.max(0, (20 * 60) - elapsed);
                     const min = Math.floor(remaining / 60);
                     const sec = remaining % 60;
-                    timerHtml = `<p class="text-[10px] timer-text">Estimasi: ${min}:${sec < 10 ? '0'+sec : sec}</p>`;
+                    timerHtml = `<p class="text-[9px] timer-text mt-1">Sisa: ${min}:${sec < 10 ? '0'+sec : sec}</p>`;
                 }
 
                 const msg = `Halo bapak/ibu ${item.name}, saya ${currentUser} ingin mengantarkan pesanan, mohon sedia menunggu dan untuk tetap aktif WhatsApp ya, terimakasih ☺️`;
@@ -215,19 +213,38 @@
                 
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60': (isDelivering ? 'border-blue-500' : 'border-red-500')} mb-3">
-                        <div class="flex justify-between items-start mb-2">
+                        <div class="flex justify-between items-center mb-2">
                             <div>
                                 <p class="text-[9px] font-black text-red-500 uppercase italic mb-0.5">${item.area || 'JTM'}</p>
                                 <h3 class="font-black text-blue-900 uppercase text-xs leading-none">${item.name}</h3>
                                 <p class="text-[9px] font-bold text-gray-400 uppercase italic mt-1">🛵 ${item.driver || 'No Driver'}</p>
                                 ${timerHtml}
                             </div>
-                            <div class="flex flex-col gap-2 items-end">
-                                ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}
-                                ${(!isDone && !isDelivering) ? `<button onclick="startDelivery('${k}')" class="bg-blue-600 text-white px-3 py-1 rounded-lg font-black text-[8px] uppercase">Mulai Antar</button>` : ''}
+                            <div class="flex gap-2">
+                                ${!isDone ? `
+                                    <button onclick="startDelivery('${k}')" 
+                                        class="btn-action ${isDelivering ? 'bg-gray-300 text-gray-500 shadow-none' : 'bg-blue-600 text-white shadow-blue-800'}"
+                                        ${isDelivering ? 'disabled' : ''}>
+                                        <i class="fa fa-motorcycle"></i>
+                                    </button>
+                                    <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-yellow-600">
+                                        <i class="fa fa-check"></i>
+                                    </button>
+                                ` : `
+                                    <button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>
+                                `}
                             </div>
                         </div>
-                        ${!isDone ? `<div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a><a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a></div>` : ''}
+                        ${!isDone ? `
+                        <div class="flex gap-2 mt-3">
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a>
+                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a>
+                        </div>
+                        <div class="flex gap-6 mt-4 pt-3 border-t border-gray-100 justify-center">
+                            <button onclick="editData('${k}')" class="text-blue-500 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-edit"></i> Edit</button>
+                            <button onclick="deleteData('${k}')" class="text-red-400 font-black text-[9px] uppercase flex items-center gap-1"><i class="fa fa-trash"></i> Hapus</button>
+                        </div>
+                        ` : ''}
                     </div>`; 
                 if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html; 
             }); 
