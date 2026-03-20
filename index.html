@@ -86,7 +86,7 @@
             <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div>
-                    <h3 id="profileNameChat" class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3>
+                    <h3 class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3>
                 </div>
                 <button onclick="clearAllChatsWithPin()" class="text-red-500 text-[10px] font-bold underline italic uppercase">Hapus Chat</button>
             </div>
@@ -145,32 +145,51 @@
         };
 
         function handleLogin(name) { const pinInput = prompt(`PIN untuk ${name}:`); if (pinInput === userPins[name]) setUser(name); else alert("PIN SALAH!"); }
-        function setUser(name) { currentUser = name; localStorage.setItem('jtm_user', name); document.getElementById('userDisplay').innerText = name; closeProfile(); const myPresenceRef = db.ref('presence/' + name); myPresenceRef.onDisconnect().remove(); myPresenceRef.set({ status: 'online', time: Date.now() }); }
+        
+        function unlockAudio() {
+            const sounds = [document.getElementById('chatSound'), document.getElementById('doneSound')];
+            sounds.forEach(s => { s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => {}); });
+        }
+
+        function setUser(name) { 
+            currentUser = name; localStorage.setItem('jtm_user', name); 
+            document.getElementById('userDisplay').innerText = name; 
+            unlockAudio();
+            closeProfile(); 
+            const myPresenceRef = db.ref('presence/' + name); 
+            myPresenceRef.onDisconnect().remove(); 
+            myPresenceRef.set({ status: 'online', time: Date.now() }); 
+        }
+
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function closeProfile() { if(!currentUser) return; document.getElementById('profileModal').classList.add('hidden'); }
 
         db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
+        
+        // Logika Suara Chat Baru
         db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
-            if(!firstLoad && currentPage !== 'chat') {
-                document.getElementById('chatBadge').style.display = 'block';
-                document.getElementById('chatSound').play();
+            const newMsg = snapshot.val();
+            if(!firstLoad && newMsg.user !== currentUser) {
+                if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
+                const s = document.getElementById('chatSound'); s.currentTime = 0; s.play();
             }
         });
+
         db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}<span class="text-[13px] font-bold text-gray-700">${c.text}</span><span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
 
         function startDelivery(key) { db.ref('customers/' + key).update({ status: 'delivering', startTime: Date.now() }); }
+        
         function setStatus(k, s) { 
             db.ref('customers/' + k).update({ status: s }); 
-            if(s === 'done') document.getElementById('doneSound').play();
+            if(s === 'done') { const ds = document.getElementById('doneSound'); ds.currentTime = 0; ds.play(); }
         }
+
         function checkAutoDone() { const now = Date.now(); Object.keys(allData).forEach(key => { const item = allData[key]; if (item.status === 'delivering' && item.startTime) { if ((now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); } }); }
 
         function renderContent(data, filter = "") { 
-            const activeCont = document.getElementById('activeList'); 
-            const historyCont = document.getElementById('historyList'); 
-            activeCont.innerHTML = ""; historyCont.innerHTML = ""; 
-            const now = Date.now();
+            const activeCont = document.getElementById('activeList'); const historyCont = document.getElementById('historyList'); 
+            activeCont.innerHTML = ""; historyCont.innerHTML = ""; const now = Date.now();
             Object.keys(data).forEach(k => { 
                 const item = data[k]; if(!item.name || typeof item !== 'object') return; 
                 if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; 
@@ -200,8 +219,8 @@
                         </div>
                         ${!isDone ? `
                         <div class="flex gap-2 mt-3">
-                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">Maps</a>
-                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">WhatsApp</a>
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a>
+                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WhatsApp</a>
                         </div>
                         <div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-bold text-[9px] uppercase italic">Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-bold text-[9px] uppercase italic">Hapus</button></div>
                         ` : ''}
@@ -213,25 +232,20 @@
         function toggleVoiceRecord() {
             if (!isRecording) {
                 navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                    mediaRecorder = new MediaRecorder(stream);
-                    mediaRecorder.start();
-                    isRecording = true;
-                    document.getElementById('voiceBtn').classList.add('text-red-500');
-                    audioChunks = [];
-                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder = new MediaRecorder(stream); mediaRecorder.start(); isRecording = true;
+                    document.getElementById('voiceBtn').classList.replace('text-gray-400', 'text-red-500');
+                    audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
                 });
             } else {
-                mediaRecorder.stop();
-                isRecording = false;
-                document.getElementById('voiceBtn').classList.remove('text-red-500');
-                alert("Pesan suara direkam (Fitur kirim audio dalam pengembangan)");
+                mediaRecorder.stop(); isRecording = false;
+                document.getElementById('voiceBtn').classList.replace('text-red-500', 'text-gray-400');
             }
         }
 
-        function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { db.ref('chats').remove(); alert("Chat Terhapus!"); } }
-        function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; }
+        function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) db.ref('chats').remove(); }
+        function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; unlockAudio(); }
         function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); input.value = ""; } }
-        function checkBeforeSave() { const phone = document.getElementById('custPhone').value; saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
+        function checkBeforeSave() { unlockAudio(); const phone = document.getElementById('custPhone').value; saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(cancelEdit); else db.ref('customers').push(data).then(clearForm); showPage('search'); }
         function editData(key) { const item = allData[key]; document.getElementById('editKey').value = key; document.getElementById('custArea').value = item.area; document.getElementById('custName').value = item.name; document.getElementById('driverName').value = item.driver; document.getElementById('custPhone').value = item.phone; document.getElementById('custMaps').value = item.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
         function deleteData(key) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + key).remove(); }
