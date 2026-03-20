@@ -3,8 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JTM Track Pro - WA Voice Style</title>
+    <title>JTM Track Pro - Final Version</title>
     
+    <meta name="theme-color" content="#006491">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -15,73 +19,98 @@
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; width: 20%; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; position: relative; width: 20%; }
         .nav-item.active { color: #006491; }
         .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
+        .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; }
         
         /* CHAT STYLE */
         .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 4px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+        .bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; }
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         
         /* WA VOICE NOTE STYLE */
-        .vn-container { display: flex; align-items: center; gap: 10px; min-width: 180px; padding: 5px 0; }
-        .vn-play-btn { width: 35px; height: 35px; display: flex; align-items: center; justify-content: center; color: #54656f; font-size: 18px; }
+        .vn-container { display: flex; align-items: center; gap: 8px; min-width: 180px; padding: 4px 0; }
+        .vn-play-btn { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: #54656f; font-size: 16px; }
         .vn-waveform { flex: 1; height: 3px; background: #cbd5e1; position: relative; border-radius: 2px; }
         .vn-progress { position: absolute; left: 0; top: 0; height: 100%; background: #34b7f1; width: 0%; border-radius: 2px; }
-        .vn-mic-icon { color: #94a3b8; font-size: 16px; margin-left: auto; }
+        .vn-mic-icon { color: #94a3b8; font-size: 14px; margin-left: auto; }
         
         .chat-footer { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 2px; }
-        .chat-time { font-size: 9px; color: #667781; }
-        #chatBadge { position: absolute; top: -2px; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
+        .chat-time { font-size: 8px; color: #8e8e8e; }
+        #chatBadge { position: absolute; top: -2px; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; z-index: 50; }
+        .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-gray-50 h-screen flex flex-col overflow-hidden" onclick="initAudio()">
+<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden" onclick="initAudio()">
 
     <nav class="dominos-blue p-4 text-white shadow-md">
-        <div class="flex justify-between items-center">
-            <h1 class="font-black italic uppercase text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">Pilih Nama</button>
+        <div class="flex justify-between items-center mb-1">
+            <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
+            <div class="flex items-center gap-2">
+                <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">Pilih Nama</button>
+                <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-90"><i class="fa fa-sync-alt text-[10px]"></i></button>
+            </div>
+        </div>
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
+            <span class="opacity-60 italic uppercase">Online:</span>
+            <div id="onlineList" class="flex gap-3"></div>
         </div>
     </nav>
 
     <main class="flex-1 overflow-hidden relative">
+        
         <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-            <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none font-bold italic bg-white">
-            <div id="activeList" class="pb-32"></div>
+            <div class="relative">
+                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama / No HP / Driver..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
+                <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
+            </div>
+            <div id="activeList" class="space-y-4 pb-32"></div>
+        </div>
+
+        <div id="page-add" class="page p-4 overflow-y-auto">
+            <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
+                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Antaran</h2>
+                <input type="hidden" id="editKey">
+                <input type="text" id="custArea" placeholder="Area (JATIMAKMUR / JATIKRAMAT / DLL)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                    <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
+                </div>
+                <input type="tel" id="custPhone" placeholder="Nomor WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                <input type="text" id="custMaps" placeholder="Link Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                <button onclick="checkBeforeSave()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan</button>
+            </div>
+        </div>
+
+        <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-gray-400 font-black text-[10px] uppercase italic">History Done</h2>
+                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline">Hapus Riwayat</button>
+            </div>
+            <div id="historyList" class="space-y-2 pb-32"></div>
         </div>
 
         <div id="page-chat" class="page overflow-hidden">
+            <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div>
+                    <h3 class="font-black text-blue-900 uppercase text-[10px] italic">Crew Chat</h3>
+                </div>
+                <button onclick="clearAllChatsWithPin()" class="text-red-500 text-[10px] font-bold underline italic">Reset Chat</button>
+            </div>
             <div id="chatDisplay" class="chat-container p-4"></div>
             <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
-                <button id="micBtn" onclick="toggleRecording()" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
-                <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none">
-                <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
+                <button id="micBtn" onclick="toggleRecording()" class="w-10 h-10 flex items-center justify-center text-gray-500 active:scale-90"><i class="fa fa-microphone text-xl"></i></button>
+                <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
+                <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md active:scale-90"><i class="fa fa-paper-plane text-xs"></i></button>
             </div>
-        </div>
-
-        <div id="page-add" class="page p-4">
-            <div class="bg-white rounded-3xl p-6 shadow-xl space-y-4">
-                <input type="hidden" id="editKey">
-                <input type="text" id="custArea" placeholder="Area" class="w-full bg-gray-50 p-4 rounded-xl font-bold uppercase outline-none">
-                <div class="grid grid-cols-2 gap-2">
-                    <input type="text" id="custName" placeholder="Nama" class="bg-gray-50 p-4 rounded-xl font-bold outline-none">
-                    <select id="driverName" class="bg-blue-50 p-4 rounded-xl font-bold outline-none uppercase"></select>
-                </div>
-                <input type="tel" id="custPhone" placeholder="Nomor WA" class="w-full bg-gray-50 p-4 rounded-xl font-bold outline-none">
-                <input type="text" id="custMaps" placeholder="Link Maps" class="w-full bg-gray-50 p-4 rounded-xl outline-none">
-                <button onclick="checkBeforeSave()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase">Simpan</button>
-            </div>
-        </div>
-
-        <div id="page-history" class="page p-4 overflow-y-auto">
-            <div id="historyList" class="pb-32"></div>
         </div>
     </main>
 
-    <div class="bottom-nav">
+    <div class="bottom-nav shadow-2xl">
         <button onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></button>
         <button onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>History</span></button>
         <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></button>
@@ -89,124 +118,188 @@
         <button onclick="openProfile()" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
     </div>
 
-    <div id="profileModal" class="fixed inset-0 bg-black/80 z-[2000] flex items-center justify-center hidden p-8">
-        <div class="bg-white w-full rounded-3xl p-6 max-h-[70vh] overflow-y-auto text-center">
-            <h2 class="font-black mb-4 uppercase">Pilih Petugas</h2>
-            <div id="crewOptions"></div>
+    <div id="profileModal" class="fixed inset-0 bg-black/90 z-[2000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
+        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto text-center shadow-2xl border-t-8 border-red-500">
+            <h2 class="font-black text-blue-900 mb-6 italic uppercase text-sm">Pilih Petugas</h2>
+            <div id="crewOptions" class="grid grid-cols-1 gap-1"></div>
+            <button onclick="closeProfile()" class="mt-4 w-full p-3 bg-gray-100 text-gray-500 rounded-2xl font-black text-[10px] uppercase">Batal</button>
         </div>
     </div>
 
     <script>
-        const MASTER_PIN = "0972";
+        // CONFIGURATION & DATABASE
+        const MASTER_PIN = "0972"; 
         const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929", "Pak KUR": "0000", "Pak Agus": "6413", "Pak Ageng": "4444", "Sintiya": "0959", "Ridha": "0968" };
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
+        
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        
+        const driverOnly = Object.keys(userPins).slice(0, 9);
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let audioCtx, mediaRecorder, audioChunks = [];
+        let allData = {}; let firstLoad = true; let currentPage = 'search';
+        let audioCtx = null; let mediaRecorder; let audioChunks = [];
 
-        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        // SYSTEM: NOTIFICATION SOUNDS (BEEPS)
+        function initAudio() { 
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
+            if(audioCtx.state === 'suspended') audioCtx.resume(); 
+        }
+        
+        function playBeep(type) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain();
+            osc.connect(gn); gn.connect(audioCtx.destination);
+            if(type === 'chat') { osc.frequency.setValueAtTime(1500, audioCtx.currentTime); }
+            else if(type === 'done') { osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1); }
+            gn.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            if(navigator.vibrate) navigator.vibrate(50);
+        }
 
-        // VOICE NOTE WA STYLE
+        // CHAT: VOICE NOTE RECORDING LOGIC
         async function toggleRecording() {
             const btn = document.getElementById('micBtn');
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream); audioChunks = [];
-                mediaRecorder.start();
-                btn.innerHTML = '<i class="fa fa-stop-circle text-red-600 text-2xl animate-pulse"></i>';
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const reader = new FileReader(); reader.readAsDataURL(blob);
-                    reader.onloadend = () => sendChat(reader.result, "voice");
-                };
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl text-gray-500"></i>'; }
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream); audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                        const reader = new FileReader(); reader.readAsDataURL(blob);
+                        reader.onloadend = () => sendChat(reader.result, "voice");
+                    };
+                    mediaRecorder.start();
+                    btn.innerHTML = '<i class="fa fa-stop-circle text-red-600 text-2xl animate-pulse"></i>';
+                } catch(e) { alert("Butuh izin mikrofon!"); }
+            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
         }
 
         function playVN(id, url) {
             const audio = new Audio(url);
-            const playBtn = document.getElementById('btn-'+id);
-            const progress = document.getElementById('prog-'+id);
-            
-            audio.play();
-            playBtn.innerHTML = '<i class="fa fa-pause"></i>';
-            audio.ontimeupdate = () => progress.style.width = (audio.currentTime / audio.duration * 100) + "%";
-            audio.onended = () => { playBtn.innerHTML = '<i class="fa fa-play"></i>'; progress.style.width = "0%"; };
+            const btn = document.getElementById('btn-'+id);
+            const prog = document.getElementById('prog-'+id);
+            audio.play(); btn.innerHTML = '<i class="fa fa-pause"></i>';
+            audio.ontimeupdate = () => prog.style.width = (audio.currentTime / audio.duration * 100) + "%";
+            audio.onended = () => { btn.innerHTML = '<i class="fa fa-play"></i>'; prog.style.width = "0%"; };
         }
 
-        // CHAT RENDER
-        db.ref('chats').limitToLast(20).on('value', s => {
-            const d = document.getElementById('chatDisplay'); d.innerHTML = "";
-            Object.keys(s.val()||{}).forEach(k => {
-                const c = s.val()[k]; const isMe = c.user === currentUser;
-                let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
-                
-                if(c.type === "voice") {
-                    content = `
-                        <div class="vn-container">
-                            <button id="btn-${k}" onclick="playVN('${k}', '${c.text}')" class="vn-play-btn"><i class="fa fa-play"></i></button>
-                            <div class="vn-waveform"><div id="prog-${k}" class="vn-progress"></div></div>
-                            <i class="fa fa-microphone vn-mic-icon"></i>
-                        </div>`;
-                }
-                
-                d.innerHTML += `
-                    <div class="bubble ${isMe?'right':'left'}">
-                        ${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}
-                        ${content}
-                        <div class="chat-footer"><span class="chat-time">${c.time}</span>${isMe?`<i class="fa fa-check-double ${c.seen?'text-blue-400':'text-gray-400'} text-[10px]"></i>`:''}</div>
-                    </div>`;
-            });
-            d.scrollTop = d.scrollHeight;
-        });
-
-        // LOGIN & SYSTEM
-        function handleLogin(n) { if(prompt(`PIN ${n}:`)===userPins[n]) { currentUser = n; localStorage.setItem('jtm_user', n); document.getElementById('userDisplay').innerText = n; document.getElementById('profileModal').classList.add('hidden'); } }
-        function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
+        // CORE: APP INITIALIZATION
         window.onload = () => {
-            const opt = document.getElementById('crewOptions'); Object.keys(userPins).forEach(n => opt.innerHTML += `<button onclick="handleLogin('${n}')" class="w-full p-4 border-b font-bold uppercase">${n}</button>`);
-            const drv = document.getElementById('driverName'); Object.keys(userPins).slice(0,9).forEach(n => drv.innerHTML += `<option value="${n}">${n}</option>`);
-            if(!currentUser) openProfile(); else document.getElementById('userDisplay').innerText = currentUser;
+            const drvSel = document.getElementById('driverName'); drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
+            driverOnly.forEach(d => drvSel.innerHTML += `<option value="${d}">${d}</option>`);
+            const optCont = document.getElementById('crewOptions'); optCont.innerHTML = "";
+            Object.keys(userPins).forEach(n => {
+                optCont.innerHTML += `<button onclick="handleLogin('${n}')" class="w-full p-4 text-center font-black text-xs border-b uppercase">${n}</button>`;
+            });
+            if(!currentUser) openProfile(); else setUser(currentUser);
+            setInterval(checkAutoDone, 5000);
         };
 
-        function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); }
-        function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value:m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), seen:false}); i.value=""; } }
+        function handleLogin(n) { const p = prompt(`PIN ${n}:`); if(p===userPins[n]) { initAudio(); setUser(n); } else alert("PIN SALAH!"); }
+        function setUser(n) { currentUser = n; localStorage.setItem('jtm_user', n); document.getElementById('userDisplay').innerText = n; closeProfile(); db.ref('presence/'+n).onDisconnect().remove(); db.ref('presence/'+n).set({status:'online'}); }
+        function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
+        function closeProfile() { if(currentUser) document.getElementById('profileModal').classList.add('hidden'); }
 
-        // RENDER ANTARAN
-        db.ref('customers').on('value', s => {
-            const act = document.getElementById('activeList'); act.innerHTML = "";
-            Object.keys(s.val()||{}).forEach(k => {
-                const i = s.val()[k]; if(i.status === 'done') return;
-                const textWA = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
-                act.innerHTML += `
-                    <div class="bg-white p-5 rounded-2xl shadow-sm border-l-8 border-blue-500 mb-3">
-                        <div class="flex justify-between">
-                            <div><p class="text-[10px] font-black text-red-500 uppercase">${i.area}</p><h3 class="font-bold text-blue-900">${i.name}</h3></div>
-                            <button onclick="db.ref('customers/${k}').update({status:'done'})" class="w-10 h-10 bg-yellow-400 text-white rounded-xl shadow-md"><i class="fa fa-check"></i></button>
-                        </div>
-                        <div class="flex gap-2 mt-4">
-                            <a href="${i.maps}" class="flex-1 bg-blue-900 text-white py-2 rounded-lg text-center text-[10px] font-bold">MAPS</a>
-                            <a href="https://wa.me/${i.phone}?text=${window.encodeURIComponent(textWA)}" class="flex-1 bg-green-500 text-white py-2 rounded-lg text-center text-[10px] font-bold">WA</a>
-                        </div>
-                    </div>`;
-            });
+        // REALTIME: PRESENCE & CHAT
+        db.ref('presence').on('value', s => { 
+            const l = document.getElementById('onlineList'); l.innerHTML = ""; 
+            Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span><span class="online-dot"></span>${u}</span>`); 
         });
 
-        function checkBeforeSave() {
-            const ph = document.getElementById('custPhone').value;
-            const data = { 
-                area: document.getElementById('custArea').value, 
-                name: document.getElementById('custName').value, 
-                driver: document.getElementById('driverName').value, 
-                phone: ph.startsWith('0') ? '62'+ph.slice(1) : ph, 
-                maps: document.getElementById('custMaps').value, 
-                status: 'active' 
-            };
-            db.ref('customers').push(data);
-            showPage('search');
+        db.ref('chats').limitToLast(25).on('value', s => { 
+            const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
+            if(s.val()) { 
+                Object.keys(s.val()).forEach(k => { 
+                    const c = s.val()[k]; const isMe = c.user === currentUser;
+                    if(currentPage === 'chat' && !isMe && !c.seen) db.ref('chats/'+k).update({seen:true});
+                    let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
+                    if(c.type === "voice") {
+                        content = `<div class="vn-container">
+                                    <button id="btn-${k}" onclick="playVN('${k}', '${c.text}')" class="vn-play-btn"><i class="fa fa-play"></i></button>
+                                    <div class="vn-waveform"><div id="prog-${k}" class="vn-progress"></div></div>
+                                    <i class="fa fa-microphone vn-mic-icon"></i>
+                                  </div>`;
+                    }
+                    d.innerHTML += `<div class="bubble ${isMe?'right':'left'}">${!isMe?`<span class="text-[9px] block font-black uppercase mb-1 text-blue-900">${c.user}</span>`:''}${content}<div class="chat-footer"><span class="chat-time">${c.time}</span>${isMe?`<i class="fa ${c.seen?'fa-check-double text-blue-400':'fa-check text-gray-400'} text-[10px]"></i>`:''}</div></div>`; 
+                }); 
+            } d.scrollTop = d.scrollHeight; 
+        });
+
+        db.ref('chats').limitToLast(1).on('child_added', snap => { 
+            if(!firstLoad && snap.val().user !== currentUser) { 
+                if(currentPage !== 'chat') document.getElementById('chatBadge').style.display='block'; 
+                playBeep('chat'); 
+            } 
+        });
+
+        // TRACKING: RENDER ACTIVE & HISTORY
+        db.ref().on('value', s => { const r = s.val() || {}; allData = r.customers || r; render(allData); firstLoad = false; });
+        function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
+
+        function render(data, filter = "") { 
+            const act = document.getElementById('activeList'); const hist = document.getElementById('historyList'); 
+            act.innerHTML = ""; hist.innerHTML = ""; const now = Date.now();
+            Object.keys(data).sort((a,b) => (data[b].startTime||0)-(data[a].startTime||0)).forEach(k => { 
+                const i = data[k]; if(!i.name) return;
+                const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
+                if(!match) return;
+
+                const isD = i.status === 'done'; const isDel = i.status === 'delivering';
+                let tmr = (isDel && i.startTime) ? `<p class="text-[9px] font-bold text-red-500">Estimasi: ${Math.floor((1200-Math.floor((now-i.startTime)/1000))/60)}m</p>` : "";
+                const textWA = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
+
+                const html = `
+                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':(isDel?'border-blue-500':'border-red-500')} mb-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-[9px] font-black text-red-500 italic uppercase">${i.area||'AREA'}</p>
+                                <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
+                                <p class="text-[9px] font-bold text-gray-400 italic">🛵 ${i.driver||'No'} | 📱 ${i.phone}</p>
+                                ${tmr}
+                            </div>
+                            <div class="flex gap-2">
+                                ${!isD ? `
+                                    <button onclick="db.ref('customers/${k}').update({status:'delivering',startTime:Date.now()})" class="btn-action ${isDel?'bg-gray-200 text-gray-400':'bg-blue-600 text-white'}"><i class="fa fa-motorcycle"></i></button>
+                                    <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>
+                                ` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-3 rounded-xl font-black text-[9px]">UNDO</button>`}
+                            </div>
+                        </div>
+                        ${!isD ? `
+                            <div class="flex gap-2 mt-3">
+                                <a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
+                                <a href="https://wa.me/${i.phone}?text=${window.encodeURIComponent(textWA)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px]">WA</a>
+                            </div>
+                            <div class="flex gap-4 mt-3 pt-2 border-t justify-center">
+                                <button onclick="editData('${k}')" class="text-blue-400 text-sm"><i class="fa fa-edit"></i></button>
+                                <button onclick="deleteData('${k}')" class="text-red-300 text-sm"><i class="fa fa-trash-alt"></i></button>
+                            </div>
+                        `:''}
+                    </div>`; 
+                if(isD) hist.innerHTML += html; else act.innerHTML += html; 
+            }); 
         }
+
+        // ACTIONS: STATUS, SAVE, DELETE
+        function setStatus(k, s) { db.ref('customers/'+k).update({status:s}); if(s==='done') playBeep('done'); }
+        function checkAutoDone() { const n = Date.now(); Object.keys(allData).forEach(k => { if (allData[k].status === 'delivering' && allData[k].startTime && (n-allData[k].startTime)/60000 >= 20) setStatus(k,'done'); }); }
+        function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value.trim():m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), seen:false}); i.value=""; } }
+        function showPage(id) { initAudio(); currentPage=id; document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id==='chat') document.getElementById('chatBadge').style.display='none'; }
+        
+        function checkBeforeSave() { 
+            initAudio(); 
+            const ph = document.getElementById('custPhone').value; 
+            const k = document.getElementById('editKey').value; 
+            const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: ph.startsWith('0')?'62'+ph.slice(1):ph, maps: document.getElementById('custMaps').value, status: 'active' }; 
+            if(k) db.ref('customers/'+k).update(d); else db.ref('customers').push(d); 
+            showPage('search'); clearForm(); 
+        }
+        
+        function editData(k) { const i = allData[k]; document.getElementById('editKey').value=k; document.getElementById('custArea').value=i.area; document.getElementById('custName').value=i.name; document.getElementById('driverName').value=i.driver; document.getElementById('custPhone').value=i.phone; document.getElementById('custMaps').value=i.maps; showPage('add'); }
+        function deleteData(k) { if(prompt("PIN Master:")===MASTER_PIN) db.ref('customers/'+k).remove(); }
+        function clearHistoryWithPin() { if(prompt("PIN Master:")===MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status==='done') db.ref('customers/'+k).remove(); }); } }
+        function clearAllChatsWithPin() { if(prompt("PIN Master:")===MASTER_PIN) db.ref('chats').remove(); }
+        function clearForm() { document.querySelectorAll('#page-add input').forEach(i=>i.value=""); document.getElementById('editKey').value=""; }
     </script>
 </body>
 </html>
