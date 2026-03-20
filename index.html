@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JTM Track Pro - Full Features</title>
+    <title>JTM Track Pro - Full Audio & Management</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -20,10 +20,15 @@
         .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        
+        /* WA STYLE CHAT */
         .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; }
+        .bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
+        .vn-container { display: flex; align-items: center; gap: 8px; min-width: 180px; padding: 4px 0; }
+        .vn-waveform { flex: 1; height: 3px; background: #cbd5e1; position: relative; border-radius: 2px; }
+        .vn-progress { position: absolute; left: 0; top: 0; height: 100%; background: #34b7f1; width: 0%; border-radius: 2px; }
         #chatBadge { position: absolute; top: -2px; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; z-index: 50; }
         .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); }
     </style>
@@ -43,7 +48,10 @@
 
     <main class="flex-1 overflow-hidden relative">
         <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-            <input type="text" id="searchInput" onkeyup="render(allData, this.value.toLowerCase())" placeholder="Cari..." class="w-full p-4 rounded-2xl shadow-sm text-sm font-bold bg-white italic outline-none">
+            <div class="relative">
+                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama / Driver / HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
+                <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
+            </div>
             <div id="activeList" class="space-y-4 pb-32"></div>
         </div>
 
@@ -55,23 +63,20 @@
                     <input type="text" id="custName" placeholder="Nama" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
                 </div>
-                <input type="tel" id="custPhone" placeholder="Nomor WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                <input type="tel" id="custPhone" placeholder="08..." class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                 <input type="text" id="custMaps" placeholder="Link Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
                 <button onclick="saveData()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan</button>
             </div>
         </div>
 
         <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-gray-400 font-black text-[10px] uppercase italic">History Done</h2>
-                <button onclick="clearHistory()" class="text-red-500 font-black text-[10px] uppercase underline">Hapus</button>
-            </div>
             <div id="historyList" class="space-y-2 pb-32"></div>
         </div>
 
         <div id="page-chat" class="page overflow-hidden">
             <div id="chatDisplay" class="chat-container p-4"></div>
             <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
+                <button id="micBtn" onclick="toggleRecording()" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
                 <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
                 <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
             </div>
@@ -107,9 +112,23 @@
         const db = firebase.database();
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let firstLoad = true; let audioCtx = null;
+        let mediaRecorder; let audioChunks = [];
 
+        // FITUR SUARA NOTIFIKASI
         function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
-        function playBeep(type) { if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); osc.connect(gn); gn.connect(audioCtx.destination); if(type==='chat') osc.frequency.setValueAtTime(1500, audioCtx.currentTime); else osc.frequency.setValueAtTime(880, audioCtx.currentTime); gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime+0.2); }
+        function playBeep(type) { 
+            if(!audioCtx) return; 
+            const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); 
+            osc.connect(gn); gn.connect(audioCtx.destination); 
+            if(type==='chat') { 
+                osc.frequency.setValueAtTime(1500, audioCtx.currentTime); 
+                osc.frequency.setValueAtTime(1000, audioCtx.currentTime + 0.1); 
+            } else { 
+                osc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+            }
+            gn.gain.setValueAtTime(0.1, audioCtx.currentTime); 
+            osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
+        }
 
         window.onload = () => {
             const drvSel = document.getElementById('driverName'); drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
@@ -129,42 +148,74 @@
 
         db.ref('presence').on('value', s => { const l = document.getElementById('onlineList'); l.innerHTML = ""; Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span class="whitespace-nowrap"><span class="online-dot"></span>${u}</span>`); });
         db.ref('chats').limitToLast(1).on('child_added', snap => { if(!firstLoad && snap.val().user !== currentUser) { document.getElementById('chatBadge').style.display='block'; playBeep('chat'); } });
+        
+        db.ref('chats').limitToLast(25).on('value', s => { 
+            const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
+            if(s.val()) { 
+                Object.keys(s.val()).forEach(k => { 
+                    const c = s.val()[k]; const isMe = c.user === currentUser;
+                    let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
+                    if(c.type === "voice") {
+                        content = `<div class="vn-container">
+                                    <button id="btn-${k}" onclick="playVN('${k}', '${c.text}')" class="vn-play-btn"><i class="fa fa-play text-sm"></i></button>
+                                    <div class="vn-waveform"><div id="prog-${k}" class="vn-progress"></div></div>
+                                  </div>`;
+                    }
+                    d.innerHTML += `<div class="bubble ${isMe?'right':'left'}">${!isMe?`<span class="text-[9px] block font-black uppercase mb-1 text-blue-900">${c.user}</span>`:''}${content}</div>`; 
+                }); 
+            } d.scrollTop = d.scrollHeight; 
+        });
+
         db.ref().on('value', s => { allData = s.val().customers || {}; render(allData); firstLoad = false; });
+
+        function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
 
         function render(data, filter = "") {
             const act = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             act.innerHTML = ""; hist.innerHTML = "";
             Object.keys(data).sort((a,b) => (data[b].time||0)-(data[a].time||0)).forEach(k => {
-                const i = data[k]; if(!i.name || !i.name.toLowerCase().includes(filter)) return;
+                const i = data[k]; 
+                const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
+                if(!i.name || !match) return;
                 const isD = i.status === 'done';
-                // AUTO TEXT WA LOGIC
                 const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start">
-                            <div>
-                                <p class="text-[9px] font-black text-red-500 italic uppercase">${i.area||'AREA'}</p>
-                                <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
-                                <p class="text-[9px] font-bold text-gray-400 italic">🛵 ${i.driver||'--'} | 📱 ${i.phone}</p>
-                            </div>
+                            <div><p class="text-[9px] font-black text-red-500 uppercase italic">${i.area||'AREA'}</p><h3 class="font-black text-blue-900 text-xs">${i.name}</h3><p class="text-[9px] font-bold text-gray-400">🛵 ${i.driver||'--'} | 📱 ${i.phone}</p></div>
                             <div class="flex gap-2">
                                 ${!isD ? `<button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 rounded-xl text-[9px]">UNDO</button>`}
                             </div>
                         </div>
-                        ${!isD ? `<div class="flex gap-2 mt-3">
-                            <a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
-                            <a href="https://wa.me/${i.phone.startsWith('0')?'62'+i.phone.slice(1):i.phone}?text=${encodeURIComponent(waMsg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px]">WA</a>
-                        </div>` : ''}
+                        ${!isD ? `<div class="flex gap-2 mt-3"><a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a><a href="https://wa.me/${i.phone.startsWith('0')?'62'+i.phone.slice(1):i.phone}?text=${encodeURIComponent(waMsg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px]">WA</a></div>` : ''}
                     </div>`;
                 if(isD) hist.innerHTML += html; else act.innerHTML += html;
             });
         }
 
+        async function toggleRecording() {
+            const btn = document.getElementById('micBtn');
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream); audioChunks = [];
+                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                    const reader = new FileReader(); reader.readAsDataURL(blob);
+                    reader.onloadend = () => sendChat(reader.result, "voice");
+                };
+                mediaRecorder.start(); btn.innerHTML = '<i class="fa fa-stop text-red-500 text-xl"></i>';
+            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
+        }
+
+        function playVN(id, url) { const a = new Audio(url); a.play(); a.ontimeupdate = () => document.getElementById('prog-'+id).style.width = (a.currentTime/a.duration*100)+'%'; }
         function setStatus(k, s) { db.ref('customers/'+k).update({status:s}); if(s==='done') playBeep('done'); }
         function saveData() { 
-            const d = { area: document.getElementById('custArea').value, name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, status: 'active', time: Date.now() };
+            const ph = document.getElementById('custPhone').value;
+            const d = { area: document.getElementById('custArea').value, name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: ph, maps: document.getElementById('custMaps').value, status: 'active', time: Date.now() };
             db.ref('customers').push(d); showPage('search'); 
         }
+        function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value.trim():m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString()}); i.value=""; } }
         function showPage(id) { document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); if(id==='chat') document.getElementById('chatBadge').style.display='none'; }
     </script>
 </body>
