@@ -17,7 +17,7 @@
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; }
         .nav-item.active { color: #006491; }
-        .nav-add { background: #006491; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
+        .nav-add { background: #006491 !important; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
@@ -92,7 +92,7 @@
             </div>
             <div id="chatDisplay" class="chat-container p-4 flex flex-col"></div>
             <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
-                <button id="voiceBtn" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
+                <button id="voiceBtn" onclick="toggleVoiceRecord()" class="w-10 h-10 flex items-center justify-center text-gray-400"><i class="fa fa-microphone text-xl"></i></button>
                 <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
                 <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
             </div>
@@ -125,33 +125,20 @@
         const driverOnly = allNames.slice(0, 9);
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let firstLoad = true; let currentPage = 'search';
+        let mediaRecorder; let audioChunks = []; let isRecording = false;
 
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
-            
             const modal = document.getElementById('crewOptions');
             modal.innerHTML = "";
             allNames.forEach(name => {
-                let label = "";
-                let bgColor = "bg-white";
-                
-                // Logika Pengelompokan Management & Kasir
-                if (name === "Pak KUR" || name === "Pak Agus" || name === "Pak Ageng") {
-                    label = `<span class="text-[8px] text-red-500 ml-1">(MGMT)</span>`;
-                    bgColor = "bg-gray-50";
-                } else if (name === "Sintiya" || name === "Ridha") {
-                    label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`;
-                }
-
-                modal.innerHTML += `
-                    <button onclick="handleLogin('${name}')" 
-                        class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50 ${bgColor}">
-                        ${name}${label}
-                    </button>`;
+                let label = ""; let bgColor = "bg-white";
+                if (["Pak KUR", "Pak Agus", "Pak Ageng"].includes(name)) { label = `<span class="text-[8px] text-red-500 ml-1">(MGMT)</span>`; bgColor = "bg-gray-50"; } 
+                else if (["Sintiya", "Ridha"].includes(name)) { label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`; }
+                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50 ${bgColor}">${name}${label}</button>`;
             });
-
             if(!currentUser) openProfile(); else setUser(currentUser);
             setInterval(checkAutoDone, 5000);
             setInterval(() => { if(currentPage === 'search') renderContent(allData, document.getElementById('searchInput').value); }, 10000);
@@ -163,42 +150,38 @@
         function closeProfile() { if(!currentUser) return; document.getElementById('profileModal').classList.add('hidden'); }
 
         db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
-        db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad && currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; });
+        db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
+            if(!firstLoad && currentPage !== 'chat') {
+                document.getElementById('chatBadge').style.display = 'block';
+                document.getElementById('chatSound').play();
+            }
+        });
         db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}<span class="text-[13px] font-bold text-gray-700">${c.text}</span><span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
 
         function startDelivery(key) { db.ref('customers/' + key).update({ status: 'delivering', startTime: Date.now() }); }
-        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-
-        function checkAutoDone() {
-            const now = Date.now();
-            Object.keys(allData).forEach(key => {
-                const item = allData[key];
-                if (item.status === 'delivering' && item.startTime) {
-                    if ((now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done');
-                }
-            });
+        function setStatus(k, s) { 
+            db.ref('customers/' + k).update({ status: s }); 
+            if(s === 'done') document.getElementById('doneSound').play();
         }
+        function checkAutoDone() { const now = Date.now(); Object.keys(allData).forEach(key => { const item = allData[key]; if (item.status === 'delivering' && item.startTime) { if ((now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); } }); }
 
         function renderContent(data, filter = "") { 
             const activeCont = document.getElementById('activeList'); 
             const historyCont = document.getElementById('historyList'); 
             activeCont.innerHTML = ""; historyCont.innerHTML = ""; 
             const now = Date.now();
-
             Object.keys(data).forEach(k => { 
                 const item = data[k]; if(!item.name || typeof item !== 'object') return; 
                 if(!(`${item.name} ${item.driver || ''} ${item.area || ''}`.toLowerCase().includes(filter.toLowerCase()))) return; 
-                
-                const isDone = item.status === 'done'; 
-                const isDelivering = item.status === 'delivering';
+                const isDone = item.status === 'done'; const isDelivering = item.status === 'delivering';
                 let timerHtml = "";
-
                 if (isDelivering && item.startTime) {
                     const remaining = Math.max(0, (20 * 60) - Math.floor((now - item.startTime) / 1000));
                     timerHtml = `<p class="text-[9px] timer-text mt-1">Sisa: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}</p>`;
                 }
-
+                const msg = `Halo bapak/ibu ${item.name}, saya ${currentUser} ingin mengantarkan pesanan, mohon sedia menunggu dan untuk tetap aktif WhatsApp ya, terimakasih ☺️`;
+                const waLink = `https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}`;
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60': (isDelivering ? 'border-blue-500' : 'border-red-500')} mb-3">
                         <div class="flex justify-between items-center mb-2">
@@ -216,12 +199,33 @@
                             </div>
                         </div>
                         ${!isDone ? `
-                        <div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a><a href="https://wa.me/${item.phone}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WA</a></div>
+                        <div class="flex gap-2 mt-3">
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">Maps</a>
+                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">WhatsApp</a>
+                        </div>
                         <div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-bold text-[9px] uppercase italic">Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-bold text-[9px] uppercase italic">Hapus</button></div>
                         ` : ''}
                     </div>`; 
                 if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html; 
             }); 
+        }
+
+        function toggleVoiceRecord() {
+            if (!isRecording) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    isRecording = true;
+                    document.getElementById('voiceBtn').classList.add('text-red-500');
+                    audioChunks = [];
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                });
+            } else {
+                mediaRecorder.stop();
+                isRecording = false;
+                document.getElementById('voiceBtn').classList.remove('text-red-500');
+                alert("Pesan suara direkam (Fitur kirim audio dalam pengembangan)");
+            }
         }
 
         function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { db.ref('chats').remove(); alert("Chat Terhapus!"); } }
