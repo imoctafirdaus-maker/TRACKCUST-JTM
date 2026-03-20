@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - WA Style & Voice</title>
+    <title>TrackCust JTM - Fixed Layout</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -18,16 +18,15 @@
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; position: relative; }
         .nav-item.active { color: #006491; }
         .nav-add { background: #006491; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
-        .page { display: none; } .page.active { display: block; }
+        .page { display: none; } .page.active { display: flex; flex-direction: column; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
         
-        /* Style Chat ala WhatsApp */
         .chat-container {
             background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
             background-color: #e5ddd5;
-            display: flex;
-            flex-direction: column;
+            flex: 1;
+            overflow-y: auto;
         }
         .bubble {
             max-width: 85%;
@@ -45,7 +44,7 @@
         @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen pb-24 font-sans text-gray-800">
+<body class="bg-gray-50 min-h-screen font-sans text-gray-800 flex flex-col">
 
     <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
@@ -60,7 +59,7 @@
         </div>
     </nav>
 
-    <main class="p-4">
+    <main class="flex-1 overflow-y-auto p-4 pb-24">
         <div id="page-search" class="page active space-y-4">
             <div class="relative">
                 <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Driver/No HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
@@ -69,7 +68,7 @@
             <div id="activeList" class="space-y-4"></div>
         </div>
 
-        <div id="page-add" class="page">
+        <div id="page-add" class="page space-y-4">
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
                 <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Pengantaran</h2>
                 <input type="hidden" id="editKey">
@@ -95,16 +94,16 @@
             <div id="historyList" class="space-y-2"></div>
         </div>
 
-        <div id="page-chat" class="page h-[78vh] flex flex-col -m-4">
+        <div id="page-chat" class="page h-[75vh] -m-4">
             <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
                 <div class="flex items-center gap-2">
                     <div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div>
-                    <h3 id="profileName" class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3>
+                    <h3 id="profileNameChat" class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3>
                 </div>
                 <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic uppercase">Clear</button>
             </div>
-            <div id="chatDisplay" class="chat-container flex-1 overflow-y-auto p-4 space-y-1"></div>
-            <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center sticky bottom-0">
+            <div id="chatDisplay" class="chat-container p-4 space-y-1"></div>
+            <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t">
                 <button id="voiceBtn" onclick="toggleVoiceRecord()" class="w-10 h-10 flex items-center justify-center text-gray-500">
                     <i class="fa fa-microphone text-xl"></i>
                 </button>
@@ -163,7 +162,6 @@
         let firstLoad = true;
         let currentPage = 'search';
 
-        // VOICE NOTE VARS
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
@@ -188,7 +186,7 @@
             currentUser = name;
             localStorage.setItem('jtm_user', name);
             document.getElementById('userDisplay').innerText = name;
-            document.getElementById('profileName').innerText = name;
+            document.getElementById('profileNameChat').innerText = name;
             document.getElementById('profileModal').classList.add('hidden');
             if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden');
             const myPresenceRef = db.ref('presence/' + name);
@@ -213,7 +211,6 @@
             }
         });
 
-        // RENDER CHATS WA STYLE
         db.ref('chats').limitToLast(25).on('value', s => {
             const d = document.getElementById('chatDisplay');
             d.innerHTML = "";
@@ -314,7 +311,15 @@
             });
         }
 
-        function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; }
+        function showPage(id) { 
+            currentPage = id; 
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); 
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); 
+            document.getElementById('page-'+id).classList.add('active'); 
+            document.getElementById('nav-'+id).classList.add('active'); 
+            if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; 
+        }
+
         function checkBeforeSave() { const phone = document.getElementById('custPhone').value; if (!phone) return alert("WA Wajib!"); saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase() || "JTM", name: document.getElementById('custName').value || "Cust", driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); else db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
         function editData(key) { const item = allData[key]; document.getElementById('editKey').value = key; document.getElementById('custArea').value = item.area || ""; document.getElementById('custName').value = item.name; document.getElementById('driverName').value = item.driver; document.getElementById('custPhone').value = item.phone; document.getElementById('custMaps').value = item.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
