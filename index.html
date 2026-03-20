@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Pro Fixed</title>
+    <title>TrackCust JTM - Ultimate Pro</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,9 +20,12 @@
         .nav-add { background: #006491; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; } .page.active { display: block; }
         .online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; }
+        .btn-action { font-size: 10px; font-weight: 900; padding: 6px 12px; border-radius: 8px; text-transform: uppercase; }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen pb-24 font-sans text-gray-800">
+
+    <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
 
     <nav class="dominos-blue p-4 text-white sticky top-0 z-50 shadow-md">
         <div class="flex justify-between items-center mb-2">
@@ -40,7 +43,8 @@
 
         <div id="page-add" class="page">
             <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-4">
-                <h2 class="font-black text-blue-900 text-xs uppercase italic">Input Baru</h2>
+                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic">Input Baru</h2>
+                <input type="hidden" id="editKey">
                 <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase">
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none">
@@ -48,24 +52,30 @@
                 </div>
                 <input type="tel" id="custPhone" placeholder="No WA (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
                 <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                <button onclick="checkBeforeSave()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Simpan Ke Cloud</button>
+                <div class="flex gap-2">
+                    <button id="btnCancelEdit" onclick="cancelEdit()" class="hidden flex-1 bg-gray-200 py-4 rounded-2xl font-black uppercase text-xs">Batal</button>
+                    <button onclick="checkBeforeSave()" class="flex-[2] dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Simpan Data</button>
+                </div>
             </div>
         </div>
 
         <div id="page-history" class="page space-y-4">
-            <h2 class="text-center text-gray-400 font-black text-[10px] uppercase tracking-widest italic">Riwayat Selesai</h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2>
+                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline">Hapus Riwayat</button>
+            </div>
             <div id="historyList" class="space-y-2"></div>
         </div>
 
         <div id="page-chat" class="page space-y-4">
-            <div class="bg-white p-4 rounded-2xl shadow-sm">
-                <div class="flex justify-between items-center mb-2">
-                    <h3 id="profileName" class="font-black text-blue-900 uppercase text-xs">User JTM</h3>
-                    <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic">Hapus Semua Chat</button>
-                </div>
-                <div id="chatDisplay" class="h-60 overflow-y-auto text-[11px] mb-3 space-y-2 pr-2 border-t pt-2"></div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
+                <h3 id="profileName" class="font-black text-blue-900 uppercase text-xs italic">User JTM</h3>
+                <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic">Clear Chat</button>
+            </div>
+            <div class="bg-white rounded-3xl p-4 shadow-sm">
+                <div id="chatDisplay" class="h-64 overflow-y-auto text-[11px] mb-3 space-y-2 border-t pt-2"></div>
                 <div class="flex gap-2">
-                    <input type="text" id="chatInput" placeholder="Ketik info..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none">
+                    <input type="text" id="chatInput" placeholder="Info penting..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none">
                     <button onclick="sendChat()" class="dominos-blue text-white px-4 rounded-xl"><i class="fa fa-paper-plane"></i></button>
                 </div>
             </div>
@@ -81,14 +91,14 @@
     </div>
 
     <div id="profileModal" class="fixed inset-0 bg-black/90 z-[1000] flex items-center justify-center hidden p-8 backdrop-blur-sm">
-        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto shadow-2xl">
-            <h2 class="font-black text-center text-blue-900 mb-6 italic uppercase tracking-widest text-sm">Pilih Nama Kamu</h2>
+        <div class="bg-white w-full rounded-[2.5rem] p-6 max-h-[80vh] overflow-y-auto shadow-2xl text-center">
+            <h2 class="font-black text-blue-900 mb-6 italic uppercase tracking-widest text-sm">Siapa Kamu?</h2>
             <div id="crewOptions" class="grid grid-cols-1 gap-2"></div>
         </div>
     </div>
 
     <script>
-        // CONFIG FIREBASE
+        const PIN_RAHASIA = "147852";
         const firebaseConfig = {
             apiKey: "AIzaSyAZ7twf8SbcK-HqniDnVqT6k8IM3shFtgc",
             authDomain: "trackcust-jtm.firebaseapp.com",
@@ -104,6 +114,7 @@
         const mgmtList = ["Pak KUR", "Pak Agus", "Pak Ageng", "Sintya", "Ridha"];
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {};
+        let firstLoad = true;
 
         window.onload = () => {
             const select = document.getElementById('driverName');
@@ -111,7 +122,7 @@
             crewList.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
             const modal = document.getElementById('crewOptions');
             [...crewList, ...mgmtList].forEach(name => {
-                modal.innerHTML += `<button onclick="setUser('${name}')" class="w-full p-4 text-left font-black text-xs border-b-2 uppercase active:bg-blue-50">${name}</button>`;
+                modal.innerHTML += `<button onclick="setUser('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`;
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
         };
@@ -136,48 +147,86 @@
 
         function checkBeforeSave() {
             const phone = document.getElementById('custPhone').value;
-            if (!phone) return alert("Isi No WA!");
+            if (!phone) return alert("Nomor WA Wajib!");
             const fmtPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
-            let dup = false;
-            Object.keys(allData).forEach(k => { if(allData[k].phone === fmtPhone && allData[k].status === 'active') dup = true; });
-            if(dup) alert("NOMOR INI SUDAH ADA DI ANTARAN AKTIF!"); else saveToCloud(fmtPhone);
+            saveToCloud(fmtPhone);
         }
 
         function saveToCloud(phone) {
+            const key = document.getElementById('editKey').value;
             const data = {
                 area: document.getElementById('custArea').value.toUpperCase() || "JATIMAKMUR",
-                name: document.getElementById('custName').value || "Customer",
+                name: document.getElementById('custName').value || "Customer JTM",
                 driver: document.getElementById('driverName').value,
                 phone: phone,
                 maps: document.getElementById('custMaps').value,
                 status: 'active'
             };
-            if(data.maps && data.driver) db.ref('customers').push(data).then(() => { 
-                clearForm(); showPage('search'); 
-            }); else alert("Lengkapi Driver & Maps!");
+            if(!data.driver || !data.maps) return alert("Pilih Driver & Link Maps!");
+            
+            if(key) {
+                db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); });
+            } else {
+                db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); });
+            }
         }
 
-        db.ref('presence').on('value', s => {
-            const list = document.getElementById('onlineList');
-            list.innerHTML = "";
-            if(s.val()) Object.keys(s.val()).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; });
-        });
+        function editData(key) {
+            const pin = prompt("Masukkan PIN untuk Edit:");
+            if(pin !== PIN_RAHASIA) return alert("PIN Salah!");
+            const item = allData[key];
+            document.getElementById('editKey').value = key;
+            document.getElementById('custArea').value = item.area;
+            document.getElementById('custName').value = item.name;
+            document.getElementById('driverName').value = item.driver;
+            document.getElementById('custPhone').value = item.phone;
+            document.getElementById('custMaps').value = item.maps;
+            document.getElementById('formTitle').innerText = "Edit Data Antaran";
+            document.getElementById('btnCancelEdit').classList.remove('hidden');
+            showPage('add');
+        }
 
+        function deleteData(key) {
+            const pin = prompt("Masukkan PIN untuk Hapus:");
+            if(pin === PIN_RAHASIA) { if(confirm("Hapus antaran ini?")) db.ref('customers/' + key).remove(); } 
+            else { alert("PIN Salah!"); }
+        }
+
+        function clearHistoryWithPin() {
+            const pin = prompt("Masukkan PIN untuk Bersihkan History:");
+            if(pin === PIN_RAHASIA) {
+                if(confirm("Hapus semua riwayat selesai?")) {
+                    Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); });
+                }
+            } else { alert("PIN Salah!"); }
+        }
+
+        function cancelEdit() {
+            document.getElementById('editKey').value = "";
+            document.getElementById('formTitle').innerText = "Input Baru";
+            document.getElementById('btnCancelEdit').classList.add('hidden');
+            clearForm();
+        }
+
+        // CHAT & NOTIF
         function sendChat() {
             const input = document.getElementById('chatInput');
-            if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; }
+            if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value, time: Date.now() }); input.value = ""; }
         }
 
-        function clearAllChats() { if(confirm("Hapus semua chat?")) db.ref('chats').remove(); }
+        db.ref('chats').limitToLast(1).on('child_added', s => {
+            if(!firstLoad) document.getElementById('chatSound').play();
+        });
 
         db.ref('chats').limitToLast(20).on('value', s => {
             const d = document.getElementById('chatDisplay');
             d.innerHTML = "";
-            if(s.val()) Object.values(s.val()).forEach(c => { d.innerHTML += `<div class="mb-1"><span class="font-black text-blue-900 uppercase text-[9px]">${c.user}:</span> <span class="text-gray-700">${c.text}</span></div>`; });
+            if(s.val()) Object.values(s.val()).forEach(c => { d.innerHTML += `<div class="mb-2"><span class="font-black text-blue-900 uppercase text-[9px]">${c.user}:</span> <span class="text-gray-700">${c.text}</span></div>`; });
             d.scrollTop = d.scrollHeight;
+            firstLoad = false;
         });
 
-        // BAGIAN PENTING: AGAR DATA LAMA MUNCUL
+        // RENDER DATA
         db.ref('customers').on('value', s => { allData = s.val() || {}; renderContent(allData); });
 
         function renderContent(data, filter = "") {
@@ -188,27 +237,37 @@
             Object.keys(data).forEach(k => {
                 const item = data[k];
                 const search = ((item.name||'') + (item.area||'') + (item.driver||'')).toLowerCase();
+                if(!search.includes(filter.toLowerCase())) return;
+
+                const isDone = item.status === 'done';
+                const waText = window.encodeURIComponent(`Halo bapak/ibu... saya ${item.driver} dari Domino's Jatimakmur mau mengantarkan pesanan, mohon untuk tetap aktif WhatsApp ya pak/bu hingga pesanan tiba. Terimakasih ☺️`);
                 
-                if(search.includes(filter.toLowerCase())) {
-                    const isDone = item.status === 'done';
-                    const html = `<div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'}">
-                        <div class="flex justify-between items-start mb-3">
-                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name || 'Domino Customer'}</h3><p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver || 'Driver'} | ${item.area || 'JTM'}</p></div>
-                            ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 rounded-xl px-4 font-black shadow-md">✓</button>` : `<i class="fa fa-circle-check text-green-500 text-xl"></i>`}
+                const html = `
+                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400">🛵 ${item.driver} | ${item.area}</p></div>
+                            ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-4 rounded-xl font-black shadow-md">✓</button>` : `<i class="fa fa-circle-check text-green-500 text-xl"></i>`}
                         </div>
-                        ${!isDone ? `<div class="flex gap-2 mt-2"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">MAPS</a><a href="https://wa.me/${item.phone}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md">WA</a></div>` : ''}
+                        ${!isDone ? `
+                        <div class="flex gap-2 mt-3">
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a>
+                            <a href="https://wa.me/${item.phone}?text=${waText}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a>
+                        </div>
+                        <div class="flex gap-2 mt-2 pt-2 border-t border-gray-100">
+                            <button onclick="editData('${k}')" class="flex-1 text-blue-400 font-black text-[9px] uppercase">Edit Data</button>
+                            <button onclick="deleteData('${k}')" class="flex-1 text-red-300 font-black text-[9px] uppercase">Hapus</button>
+                        </div>` : ''}
                     </div>`;
-                    
-                    if(isDone) historyCont.innerHTML += html; 
-                    else activeCont.innerHTML += html; // Data tanpa status otomatis masuk sini
-                }
+                
+                if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html;
             });
         }
 
         function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); }
+        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; }
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
+        function clearAllChats() { if(confirm("Hapus Chat?")) db.ref('chats').remove(); }
     </script>
 </body>
 </html>
