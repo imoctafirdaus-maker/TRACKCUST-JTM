@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Sound Fix</title>
+    <title>TrackCust JTM - Final Sound</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -26,14 +26,12 @@
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         .chat-time { font-size: 8px; color: #8e8e8e; text-align: right; display: block; margin-top: 2px; }
-        .recording-active { animation: pulse-red 1.5s infinite; color: #e31837 !important; }
-        @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
 
-    <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio>
-    <audio id="doneSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto"></audio>
+    <audio id="chatSound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto" crossorigin="anonymous"></audio>
+    <audio id="doneSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" preload="auto" crossorigin="anonymous"></audio>
 
     <nav class="dominos-blue p-4 text-white shadow-md">
         <div class="flex justify-between items-center mb-1">
@@ -91,9 +89,6 @@
             </div>
             <div id="chatDisplay" class="chat-container p-4 flex flex-col"></div>
             <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
-                <button id="voiceBtn" onclick="toggleVoiceRecord()" class="w-10 h-10 flex items-center justify-center text-gray-500">
-                    <i class="fa fa-microphone text-xl"></i>
-                </button>
                 <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
                 <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md">
                     <i class="fa fa-paper-plane text-xs"></i>
@@ -131,7 +126,37 @@
         const driverOnly = allNames.slice(0, 9);
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let firstLoad = true; let currentPage = 'search';
-        let mediaRecorder; let audioChunks = []; let isRecording = false;
+
+        // FUNGSI SUARA CADANGAN (Jika Audio File Gagal)
+        function playFallbackSound(freq = 440, type = 'sine') {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.5);
+            } catch(e) { console.log("Web Audio Not Supported"); }
+        }
+
+        // Pemicu Suara Selesai
+        function playDoneSound() {
+            const snd = document.getElementById('doneSound');
+            snd.currentTime = 0;
+            snd.play().catch(() => playFallbackSound(880, 'square')); // Jika gagal, bunyi 'BEEP' tajam
+        }
+
+        // Pemicu Suara Chat
+        function playChatSound() {
+            const snd = document.getElementById('chatSound');
+            snd.currentTime = 0;
+            snd.play().catch(() => playFallbackSound(440, 'sine')); // Jika gagal, bunyi 'TET' halus
+        }
 
         window.onload = () => {
             const select = document.getElementById('driverName');
@@ -147,33 +172,42 @@
             if(!currentUser) openProfile(); else setUser(currentUser);
         };
 
-        function handleLogin(name) { const pinInput = prompt(`PIN untuk ${name}:`); if (pinInput === userPins[name]) setUser(name); else alert("PIN SALAH!"); }
+        function handleLogin(name) { 
+            const pinInput = prompt(`PIN untuk ${name}:`); 
+            if (pinInput === userPins[name]) {
+                // UNLOCK AUDIO: Browser mengizinkan suara setelah klik ini
+                playFallbackSound(1, 'sine'); 
+                setUser(name); 
+            } else alert("PIN SALAH!"); 
+        }
+
         function setUser(name) { currentUser = name; localStorage.setItem('jtm_user', name); document.getElementById('userDisplay').innerText = name; document.getElementById('profileNameChat').innerText = name; closeProfile(); if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden'); const myPresenceRef = db.ref('presence/' + name); myPresenceRef.onDisconnect().remove(); myPresenceRef.set({ status: 'online', time: Date.now() }); }
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function closeProfile() { if(!currentUser) { alert("Pilih user dulu!"); return; } document.getElementById('profileModal').classList.add('hidden'); }
         
         db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
         
-        // Suara Chat Masuk
+        // Listener Chat Masuk
         db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
             if(!firstLoad) { 
-                const snd = document.getElementById('chatSound');
-                snd.currentTime = 0;
-                snd.play().catch(e => console.log("Sound block"));
+                playChatSound();
                 if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; 
             } 
         });
 
-        db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = c.text; if(content.startsWith('data:audio')) { content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`; } else { content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`; } d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
-        
+        // Listener jika ada orang lain yang menyelesaikan pesanan
+        db.ref('customers').on('child_changed', (snapshot) => {
+            const data = snapshot.val();
+            if (data && data.status === 'done' && !firstLoad) {
+                playDoneSound();
+            }
+        });
+
+        db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = `<span class="text-[13px] font-bold text-gray-700">${c.text}</span>`; d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
         
         function setStatus(k, s) { 
-            if(s === 'done') {
-                const snd = document.getElementById('doneSound');
-                snd.currentTime = 0;
-                snd.play().catch(e => console.log("Sound block"));
-            }
+            if(s === 'done') playDoneSound();
             db.ref('customers/' + k).update({ status: s }); 
         }
 
@@ -193,7 +227,6 @@
             }); 
         }
 
-        // Fungsi Lainnya Tetap Sama...
         function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') { document.getElementById('chatBadge').style.display = 'none'; setTimeout(() => { const d = document.getElementById('chatDisplay'); d.scrollTop = d.scrollHeight; }, 100); } }
         function checkBeforeSave() { const phone = document.getElementById('custPhone').value; if (!phone) return alert("WA Wajib!"); saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase() || "JTM", name: document.getElementById('custName').value || "Cust", driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); else db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
@@ -205,7 +238,6 @@
         function clearForm() { document.querySelectorAll('#page-add input').forEach(i => i.value = ""); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
         function clearAllChats() { if(confirm("Hapus Chat?")) db.ref('chats').remove(); }
-        async function toggleVoiceRecord() { const btn = document.getElementById('voiceBtn'); if (!isRecording) { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); mediaRecorder = new MediaRecorder(stream); audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data); mediaRecorder.onstop = () => { const audioBlob = new Blob(audioChunks, { type: 'audio/webm' }); const reader = new FileReader(); reader.readAsDataURL(audioBlob); reader.onloadend = () => { db.ref('chats').push({ user: currentUser, text: reader.result, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); }; }; mediaRecorder.start(); isRecording = true; btn.classList.add('recording-active'); } catch (err) { alert("Akses Mikrofon Ditolak!"); } } else { mediaRecorder.stop(); isRecording = false; btn.classList.remove('recording-active'); } }
     </script>
 </body>
 </html>
