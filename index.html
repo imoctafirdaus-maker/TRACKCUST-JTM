@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Notification Version</title>
+    <title>TrackCust JTM - PIN Secure</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,7 +20,6 @@
         .nav-add { background: #006491; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; } .page.active { display: block; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
-        /* Badge Merah Chat */
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
     </style>
 </head>
@@ -35,9 +34,7 @@
         </div>
         <div id="onlineStatusCont" class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
             <span class="text-[8px] font-black uppercase opacity-60 italic whitespace-nowrap">Online:</span>
-            <div id="onlineList" class="flex gap-3 text-[9px] font-bold whitespace-nowrap">
-                <span class="opacity-50">Memuat...</span>
-            </div>
+            <div id="onlineList" class="flex gap-3 text-[9px] font-bold whitespace-nowrap"></div>
         </div>
     </nav>
 
@@ -110,7 +107,27 @@
     </div>
 
     <script>
-        const PIN_RAHASIA = "147852";
+        // PIN untuk menghapus data history atau chat admin
+        const MASTER_PIN = "0972"; 
+        
+        // --- DAFTAR PIN SESUAI PERMINTAAN ---
+        const userPins = {
+            "Okta": "0972",
+            "Dendy": "0960",
+            "Arif": "0000",
+            "Rian": "0971",
+            "Gemilang": "0967",
+            "Sadewa": "0976",
+            "Fahran": "0975",
+            "Rafli": "0974",
+            "Acong": "0000",
+            "Pak KUR": "0000",
+            "Pak Agus": "0000",
+            "Pak Ageng": "4444",
+            "Sintiya": "0000",
+            "Ridha": "0000"
+        };
+
         const firebaseConfig = {
           apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc",
           authDomain: "trackcust-jtm.firebaseapp.com",
@@ -123,8 +140,11 @@
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        const crewList = ["Okta", "Dendy", "Arif", "Rian", "Gemilang", "Sadewa", "Fahran", "Rafli", "Acong"];
-        const mgmtList = ["Pak KUR", "Pak Agus", "Pak Ageng", "Sintya", "Ridha"];
+        
+        // Memisahkan Driver dan Manajemen untuk tampilan
+        const allNames = Object.keys(userPins);
+        const driverOnly = allNames.slice(0, 9);
+        
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {};
         let firstLoad = true;
@@ -133,22 +153,23 @@
         window.onload = () => {
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
-            crewList.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+            driverOnly.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+            
             const modal = document.getElementById('crewOptions');
-            [...crewList, ...mgmtList].forEach(name => {
-                modal.innerHTML += `<button onclick="setUser('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`;
+            allNames.forEach(name => {
+                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`;
             });
+            
             if(!currentUser) openProfile(); else setUser(currentUser);
         };
 
-        function showPage(id) {
-            currentPage = id;
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('page-'+id).classList.add('active');
-            document.getElementById('nav-'+id).classList.add('active');
-            // Hilangkan badge jika masuk menu chat
-            if(id === 'chat') { document.getElementById('chatBadge').style.display = 'none'; }
+        function handleLogin(name) {
+            const pinInput = prompt(`Masukkan PIN untuk ${name}:`);
+            if (pinInput === userPins[name]) {
+                setUser(name);
+            } else {
+                alert("PIN SALAH!");
+            }
         }
 
         function setUser(name) {
@@ -163,6 +184,9 @@
             myPresenceRef.set({ status: 'online', time: Date.now() });
         }
 
+        function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
+
+        // Logic Notifikasi & Realtime
         db.ref('presence').on('value', s => {
             const list = document.getElementById('onlineList');
             list.innerHTML = "";
@@ -171,67 +195,10 @@
             });
         });
 
-        function checkBeforeSave() {
-            const phone = document.getElementById('custPhone').value;
-            const editKey = document.getElementById('editKey').value;
-            if (!phone) return alert("Nomor WA Wajib!");
-            const fmtPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
-            const isDuplicate = Object.keys(allData).some(k => k !== editKey && allData[k].phone === fmtPhone && allData[k].status === 'active');
-            if (isDuplicate) { alert("Nomor ini SEDANG AKTIF!"); } else { saveToCloud(fmtPhone); }
-        }
-
-        function saveToCloud(phone) {
-            const key = document.getElementById('editKey').value;
-            const data = {
-                area: document.getElementById('custArea').value.toUpperCase() || "JATIMAKMUR",
-                name: document.getElementById('custName').value || "Customer",
-                driver: document.getElementById('driverName').value,
-                phone: phone,
-                maps: document.getElementById('custMaps').value,
-                status: 'active'
-            };
-            if(!data.driver || !data.maps) return alert("Lengkapi Driver & Maps!");
-            if(key) { db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); }
-            else { db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
-        }
-
-        function editData(key) {
-            const item = allData[key];
-            document.getElementById('editKey').value = key;
-            document.getElementById('custArea').value = item.area;
-            document.getElementById('custName').value = item.name;
-            document.getElementById('driverName').value = item.driver;
-            document.getElementById('custPhone').value = item.phone;
-            document.getElementById('custMaps').value = item.maps;
-            document.getElementById('formTitle').innerText = "Edit Antaran";
-            document.getElementById('btnCancelEdit').classList.remove('hidden');
-            showPage('add');
-        }
-
-        function deleteData(key) {
-            const pin = prompt("PIN Hapus:");
-            if(pin === PIN_RAHASIA && confirm("Hapus antaran?")) db.ref('customers/' + key).remove();
-        }
-
-        function clearHistoryWithPin() {
-            const pin = prompt("PIN Clear History:");
-            if(pin === PIN_RAHASIA && confirm("Hapus semua history?")) {
-                Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); });
-            }
-        }
-
-        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-        function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
-        function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; } }
-
-        // --- SISTEM NOTIFIKASI CHAT ---
-        db.ref('chats').limitToLast(1).on('child_added', (snap) => {
+        db.ref('chats').limitToLast(1).on('child_added', () => {
             if(!firstLoad) {
                 document.getElementById('chatSound').play();
-                // Jika user sedang tidak di halaman chat, tampilkan badge merah
-                if(currentPage !== 'chat') {
-                    document.getElementById('chatBadge').style.display = 'block';
-                }
+                if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
             }
         });
 
@@ -253,38 +220,33 @@
             const activeCont = document.getElementById('activeList');
             const historyCont = document.getElementById('historyList');
             activeCont.innerHTML = ""; historyCont.innerHTML = "";
-            
             Object.keys(data).forEach(k => {
                 const item = data[k];
                 if(!item.name || typeof item !== 'object') return;
-                const searchStr = `${item.name} ${item.driver || ''} ${item.phone || ''}`.toLowerCase();
-                if(!searchStr.includes(filter.toLowerCase())) return;
+                if(!(`${item.name} ${item.driver || ''}`.toLowerCase().includes(filter.toLowerCase()))) return;
                 const isDone = item.status === 'done';
                 const msg = `Halo bapak/ibu ${item.name} saya ${item.driver || 'Driver Domino\'s'} mau mengantarkan pesanan, mohon tetap aktif WhatsApp hingga pesanan tiba, terimakasih ☺️`;
-                const waText = window.encodeURIComponent(msg);
-                
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start mb-2">
-                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400 uppercase italic">🛵 ${item.driver || 'No Driver'} | ${item.area || 'JTM'}</p></div>
+                            <div><h3 class="font-black text-blue-900 uppercase text-xs">${item.name}</h3><p class="text-[10px] font-bold text-gray-400 uppercase italic">🛵 ${item.driver || 'No Driver'}</p></div>
                             ${!isDone ? `<button onclick="setStatus('${k}','done')" class="bg-yellow-400 text-white p-2 px-5 rounded-xl font-black shadow-md border-b-4 border-yellow-600 active:translate-y-1">✓</button>` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black shadow-md italic text-[9px]">UNDO</button>`}
                         </div>
-                        ${!isDone ? `
-                        <div class="flex gap-2 mt-3">
-                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a>
-                            <a href="https://wa.me/${item.phone}?text=${waText}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a>
-                        </div>
-                        <div class="flex gap-4 mt-4 pt-2 border-t border-gray-100 flex justify-center">
-                            <button onclick="editData('${k}')" class="text-blue-400 font-black text-[9px] uppercase"><i class="fa fa-edit mr-1"></i>Edit</button>
-                            <button onclick="deleteData('${k}')" class="text-red-300 font-black text-[9px] uppercase"><i class="fa fa-trash mr-1"></i>Hapus (PIN)</button>
-                        </div>` : ''}
+                        ${!isDone ? `<div class="flex gap-2 mt-3"><a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">Maps</a><a href="https://wa.me/${item.phone}?text=${window.encodeURIComponent(msg)}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] shadow-md uppercase">WhatsApp</a></div>` : ''}
                     </div>`;
                 if(isDone) historyCont.innerHTML += html; else activeCont.innerHTML += html;
             });
         }
 
-        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; }
-        function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
+        // Navigation & Actions
+        function showPage(id) { currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; }
+        function checkBeforeSave() { const phone = document.getElementById('custPhone').value; if (!phone) return alert("WA Wajib!"); saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
+        function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase() || "JTM", name: document.getElementById('custName').value || "Cust", driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(() => { cancelEdit(); showPage('search'); }); else db.ref('customers').push(data).then(() => { clearForm(); showPage('search'); }); }
+        function clearHistoryWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); }); } }
+        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
+        function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; } }
+        function cancelEdit() { document.getElementById('editKey').value = ""; clearForm(); }
+        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
         function clearAllChats() { if(confirm("Hapus Chat?")) db.ref('chats').remove(); }
     </script>
