@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TrackCust JTM - Ultimate</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
@@ -19,7 +17,7 @@
         .nav-item.active { color: #006491; }
         .nav-add { background: #006491 !important; color: white !important; width: 55px; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
-        .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
+        .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; }
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
         .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; }
         .bubble { max-width: 85%; padding: 7px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; }
@@ -27,14 +25,17 @@
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         .chat-time { font-size: 8px; color: #8e8e8e; text-align: right; display: block; margin-top: 2px; }
         .timer-text { font-family: monospace; font-weight: bold; color: #e31837; }
-        .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transition: all 0.1s; }
-        .btn-action:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.1); }
+        .btn-action { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; box-shadow: 0 4px 0 rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden" onclick="unlockAudio()">
+<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden" onclick="forceUnlockAudio()">
 
-    <audio id="chatSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_7303c73441.mp3" preload="auto"></audio>
-    <audio id="doneSound" src="https://cdn.pixabay.com/audio/2021/08/04/audio_06250b570e.mp3" preload="auto"></audio>
+    <audio id="chatSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="doneSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
+    </audio>
 
     <nav class="dominos-blue p-4 text-white shadow-md">
         <div class="flex justify-between items-center mb-1">
@@ -54,10 +55,7 @@
 
     <main class="flex-1 overflow-hidden relative">
         <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-            <div class="relative">
-                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Driver..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
-                <i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i>
-            </div>
+            <div class="relative"><input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Driver..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic"><i class="fa fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-300"></i></div>
             <div id="activeList" class="space-y-4 pb-24"></div>
         </div>
 
@@ -80,19 +78,13 @@
         </div>
 
         <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
-            <div class="flex justify-between items-center">
-                <h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2>
-                <button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline italic">Clear (PIN)</button>
-            </div>
+            <div class="flex justify-between items-center"><h2 class="text-gray-400 font-black text-[10px] uppercase italic">Riwayat Selesai</h2><button onclick="clearHistoryWithPin()" class="text-red-500 font-black text-[10px] uppercase underline italic">Clear (PIN)</button></div>
             <div id="historyList" class="space-y-2 pb-24"></div>
         </div>
 
         <div id="page-chat" class="page overflow-hidden">
             <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div>
-                    <h3 class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3>
-                </div>
+                <div class="flex items-center gap-2"><div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div><h3 class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3></div>
                 <button onclick="clearAllChatsWithPin()" class="text-red-500 text-[10px] font-bold underline italic uppercase">Hapus Chat</button>
             </div>
             <div id="chatDisplay" class="chat-container p-4 flex flex-col"></div>
@@ -130,14 +122,16 @@
         const driverOnly = allNames.slice(0, 9);
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let firstLoad = true; let currentPage = 'search';
-        let mediaRecorder; let audioChunks = []; let isRecording = false;
+        let isAudioUnlocked = false;
 
-        // FUNGSI KRUSIAL UNTUK SUARA
-        function unlockAudio() {
+        // FUNGSI PAKSA UNLOCK AUDIO (HANYA SEKALI KLIK PER LOGIN)
+        function forceUnlockAudio() {
+            if (isAudioUnlocked) return;
             const sounds = [document.getElementById('chatSound'), document.getElementById('doneSound')];
             sounds.forEach(s => {
-                s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(() => {});
+                s.play().then(() => { s.pause(); s.currentTime = 0; }).catch(e => console.log("Unlock Audio Fail"));
             });
+            isAudioUnlocked = true;
         }
 
         window.onload = () => {
@@ -154,13 +148,12 @@
             });
             if(!currentUser) openProfile(); else setUser(currentUser);
             setInterval(checkAutoDone, 5000);
-            setInterval(() => { if(currentPage === 'search') renderContent(allData, document.getElementById('searchInput').value); }, 10000);
         };
 
         function handleLogin(name) { 
             const pinInput = prompt(`PIN untuk ${name}:`); 
             if (pinInput === userPins[name]) {
-                unlockAudio(); // Aktifkan suara saat login
+                forceUnlockAudio();
                 setUser(name); 
             } else alert("PIN SALAH!"); 
         }
@@ -169,9 +162,8 @@
             currentUser = name; localStorage.setItem('jtm_user', name); 
             document.getElementById('userDisplay').innerText = name; 
             closeProfile(); 
-            const myPresenceRef = db.ref('presence/' + name); 
-            myPresenceRef.onDisconnect().remove(); 
-            myPresenceRef.set({ status: 'online', time: Date.now() }); 
+            db.ref('presence/' + name).onDisconnect().remove(); 
+            db.ref('presence/' + name).set({ status: 'online', time: Date.now() }); 
         }
 
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
@@ -182,17 +174,12 @@
             Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); 
         });
         
-        // LOGIKA SUARA CHAT - DIPERBAIKI TOTAL
         db.ref('chats').limitToLast(1).on('child_added', (snapshot) => { 
             const newMsg = snapshot.val();
             if(!firstLoad && newMsg.user !== currentUser) {
                 if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block';
                 const s = document.getElementById('chatSound');
-                s.currentTime = 0;
-                let playPromise = s.play();
-                if (playPromise !== undefined) {
-                    playPromise.catch(() => { console.log("Menunggu klik user untuk suara"); });
-                }
+                s.currentTime = 0; s.play().catch(e => console.log("Sound blocked by browser"));
             }
         });
 
@@ -208,23 +195,16 @@
 
         db.ref().on('value', s => { const raw = s.val() || {}; allData = raw.customers || raw; renderContent(allData); firstLoad = false; });
 
-        function startDelivery(key) { db.ref('customers/' + key).update({ status: 'delivering', startTime: Date.now() }); }
-        
         function setStatus(k, s) { 
             db.ref('customers/' + k).update({ status: s }); 
-            if(s === 'done') { 
-                const ds = document.getElementById('doneSound'); 
-                ds.currentTime = 0; ds.play(); 
-            }
+            if(s === 'done') { const ds = document.getElementById('doneSound'); ds.currentTime = 0; ds.play(); }
         }
 
         function checkAutoDone() { 
             const now = Date.now(); 
             Object.keys(allData).forEach(key => { 
                 const item = allData[key]; 
-                if (item.status === 'delivering' && item.startTime) { 
-                    if ((now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); 
-                } 
+                if (item.status === 'delivering' && item.startTime && (now - item.startTime) / (1000 * 60) >= 20) setStatus(key, 'done'); 
             }); 
         }
 
@@ -253,15 +233,15 @@
                             </div>
                             <div class="flex gap-2">
                                 ${!isDone ? `
-                                    <button onclick="startDelivery('${k}')" class="btn-action ${isDelivering ? 'bg-gray-300 text-gray-500 shadow-none' : 'bg-blue-600 text-white shadow-blue-800'}" ${isDelivering ? 'disabled' : ''}><i class="fa fa-motorcycle"></i></button>
-                                    <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-yellow-600"><i class="fa fa-check"></i></button>
+                                    <button onclick="db.ref('customers/${k}').update({status:'delivering',startTime:Date.now()})" class="btn-action ${isDelivering ? 'bg-gray-300 text-gray-500' : 'bg-blue-600 text-white'}"><i class="fa fa-motorcycle"></i></button>
+                                    <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></button>
                                 ` : `<button onclick="setStatus('${k}','active')" class="bg-blue-400 text-white p-2 px-4 rounded-xl font-black italic text-[9px]">UNDO</button>`}
                             </div>
                         </div>
                         ${!isDone ? `
                         <div class="flex gap-2 mt-3">
-                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md flex items-center justify-center">Maps</a>
-                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase shadow-md flex items-center justify-center">WhatsApp</a>
+                            <a href="${item.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">Maps</a>
+                            <a href="${waLink}" target="_blank" class="flex-1 bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] uppercase">WhatsApp</a>
                         </div>
                         <div class="flex gap-4 mt-3 pt-2 border-t justify-center"><button onclick="editData('${k}')" class="text-blue-500 font-bold text-[9px] uppercase italic">Edit</button><button onclick="deleteData('${k}')" class="text-red-400 font-bold text-[9px] uppercase italic">Hapus</button></div>
                         ` : ''}
@@ -270,30 +250,18 @@
             }); 
         }
 
-        function toggleVoiceRecord() {
-            if (!isRecording) {
-                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-                    mediaRecorder = new MediaRecorder(stream); mediaRecorder.start(); isRecording = true;
-                    document.getElementById('voiceBtn').classList.replace('text-gray-400', 'text-red-500');
-                    audioChunks = []; mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                });
-            } else {
-                mediaRecorder.stop(); isRecording = false;
-                document.getElementById('voiceBtn').classList.replace('text-red-500', 'text-gray-400');
-            }
-        }
-
-        function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) db.ref('chats').remove(); }
-        function showPage(id) { unlockAudio(); currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; }
+        function showPage(id) { forceUnlockAudio(); currentPage = id; document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active'); if(id === 'chat') document.getElementById('chatBadge').style.display = 'none'; }
         function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }); input.value = ""; } }
-        function checkBeforeSave() { unlockAudio(); const phone = document.getElementById('custPhone').value; saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
+        function checkBeforeSave() { forceUnlockAudio(); const phone = document.getElementById('custPhone').value; saveToCloud(phone.startsWith('0')?'62'+phone.slice(1):phone); }
         function saveToCloud(phone) { const key = document.getElementById('editKey').value; const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: phone, maps: document.getElementById('custMaps').value, status: 'active' }; if(key) db.ref('customers/' + key).update(data).then(cancelEdit); else db.ref('customers').push(data).then(clearForm); showPage('search'); }
         function editData(key) { const item = allData[key]; document.getElementById('editKey').value = key; document.getElementById('custArea').value = item.area; document.getElementById('custName').value = item.name; document.getElementById('driverName').value = item.driver; document.getElementById('custPhone').value = item.phone; document.getElementById('custMaps').value = item.maps; document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('btnCancelEdit').classList.remove('hidden'); showPage('add'); }
         function deleteData(key) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + key).remove(); }
         function clearHistoryWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); }); } }
+        function clearAllChatsWithPin() { if(prompt("PIN Master:") === MASTER_PIN) db.ref('chats').remove(); }
         function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
         function clearForm() { document.querySelectorAll('#page-add input').forEach(i => i.value = ""); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
+        function toggleVoiceRecord() { alert("Voice Record aktif (Pesan suara dalam pengembangan)"); }
     </script>
 </body>
 </html>
