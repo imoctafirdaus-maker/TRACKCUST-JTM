@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Pro + Chat Manager</title>
+    <title>TrackCust JTM - Modern UI</title>
     
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="#006491">
-    <link rel="apple-touch-icon" href="logo.png">
     <link rel="icon" type="image/png" href="logo.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,70 +17,126 @@
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
-        .online-dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block; margin-right: 4px; }
-        .chat-bubble { border-radius: 15px; padding: 8px 12px; margin-bottom: 4px; max-width: 85%; }
+        
+        /* Gaya Navigasi Bawah */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            border-top: 1px solid #eee;
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .nav-item.active { color: #006491; }
+        .nav-item i { font-size: 20px; margin-bottom: 2px; }
+        
+        /* Tombol Tambah Tengah */
+        .nav-add {
+            background: #006491;
+            color: white !important;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-top: -25px;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,100,145,0.4);
+        }
+        
+        .page { display: none; }
+        .page.active { display: block; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-24 font-sans text-gray-800">
+<body class="bg-gray-50 min-h-screen pb-24 font-sans text-gray-800">
 
-    <nav class="dominos-blue p-4 text-white sticky top-0 z-50 shadow-lg">
-        <div class="flex justify-between items-center mb-2">
-            <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter shadow-md">Pilih Nama</button>
-        </div>
-        <div id="onlineList" class="text-[9px] font-bold opacity-90 flex gap-3 overflow-x-auto whitespace-nowrap scroll-hide"></div>
+    <nav class="dominos-blue p-4 text-white flex justify-between items-center shadow-md">
+        <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
+        <span id="userTag" class="text-[10px] font-bold opacity-80"></span>
     </nav>
 
-    <div id="profileModal" class="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center hidden p-6 backdrop-blur-sm">
-        <div class="bg-white w-full rounded-[2.5rem] p-8 max-h-[85vh] overflow-y-auto shadow-2xl">
-            <h2 class="font-black text-center text-blue-900 mb-6 italic tracking-widest uppercase">Pilih Identitas</h2>
-            <div class="grid grid-cols-1 gap-3" id="crewOptions"></div>
-            <button onclick="closeProfile()" class="w-full mt-8 py-3 text-gray-400 font-bold text-xs uppercase tracking-widest">Tutup</button>
-        </div>
-    </div>
-
-    <div class="p-4">
-        <div id="chatBox" class="bg-white rounded-[1.5rem] p-4 shadow-xl mb-6 border-t-4 border-yellow-400">
-            <div class="flex justify-between items-center mb-3">
-                <span class="text-[10px] font-black text-blue-900 italic uppercase tracking-widest">Internal Chat JTM</span>
-                <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-lg font-bold"><i class="fa fa-trash-can mr-1"></i> Bersihkan</button>
+    <main class="p-4">
+        
+        <div id="page-search" class="page active space-y-4">
+            <div class="relative">
+                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/Area/No HP..." class="w-full p-4 pl-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white">
+                <i class="fa fa-search absolute left-4 top-4 text-blue-900 opacity-20"></i>
             </div>
-            <div id="chatDisplay" class="h-32 overflow-y-auto text-[11px] mb-3 space-y-2 pr-2"></div>
-            <div class="flex gap-2">
-                <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 border-none rounded-xl p-3 text-xs outline-none focus:ring-2 ring-blue-500">
-                <button onclick="sendChat()" class="dominos-blue text-white w-12 h-12 rounded-xl shadow-lg active:scale-90 transition-transform"><i class="fa fa-paper-plane"></i></button>
-            </div>
+            <div id="activeList" class="space-y-4"></div>
         </div>
 
-        <div id="adminPanel" class="hidden bg-white rounded-[1.5rem] p-5 shadow-xl mb-6 space-y-4 border-b-4 border-blue-900">
-            <div class="flex justify-between items-center">
-                <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic tracking-tighter">Input Antaran Baru</h2>
-                <button onclick="cancelEdit()" id="cancelBtn" class="hidden text-[10px] text-red-500 font-black underline">BATAL EDIT</button>
+        <div id="page-add" class="page space-y-4">
+            <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900">
+                <h2 class="font-black text-blue-900 text-xs mb-4 uppercase italic">Input Antaran Baru</h2>
+                <div class="space-y-3">
+                    <input type="text" id="custArea" placeholder="Area Pengantaran" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                    <select id="driverName" class="w-full bg-blue-50 p-4 rounded-xl text-sm outline-none font-bold text-blue-900"></select>
+                    <input type="tel" id="custPhone" placeholder="No WhatsApp (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                    <button onclick="checkBeforeSave()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Kirim Ke Cloud</button>
+                </div>
             </div>
-            <input type="hidden" id="editKey">
-            <input type="text" id="custArea" placeholder="Area (Jatikramat/Jatimakmur/Benih)" class="w-full border-none bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase placeholder:text-gray-300">
-            <div class="grid grid-cols-2 gap-3">
-                <input type="text" id="custName" placeholder="Nama Customer" class="bg-gray-50 p-4 rounded-xl text-sm outline-none border-none">
-                <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm outline-none border-none font-bold text-blue-900"></select>
-            </div>
-            <input type="tel" id="custPhone" placeholder="No WhatsApp (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none border-none">
-            <input type="text" id="custMaps" placeholder="Tempel Link Google Maps di sini" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none border-none">
-            <button id="submitBtn" onclick="checkBeforeSave()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-blue-900/20 shadow-lg active:scale-95 transition-all">Kirim Ke Cloud</button>
         </div>
 
-        <div class="relative mb-6">
-            <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Antaran..." class="w-full p-5 pl-14 rounded-2xl shadow-lg outline-none border-none text-sm font-bold italic bg-white">
-            <i class="fa fa-search absolute left-5 top-5 text-blue-900 opacity-20 text-lg"></i>
+        <div id="page-history" class="page space-y-4">
+            <h2 class="text-center text-gray-400 font-black text-[10px] uppercase tracking-widest">History Success</h2>
+            <div id="historyList" class="space-y-2"></div>
         </div>
 
-        <div id="activeList" class="space-y-8 mb-10"></div>
-        <div id="historySection" class="border-t-4 border-dotted border-gray-200 pt-8">
-            <h2 class="text-center text-gray-300 font-black text-[10px] uppercase tracking-[0.3em] mb-6 italic">History Success</h2>
-            <div id="historyList" class="space-y-3"></div>
+        <div id="page-profile" class="page space-y-4 text-center">
+            <div class="bg-white p-8 rounded-3xl shadow-sm">
+                <i class="fa fa-user-circle text-5xl text-blue-900 mb-2"></i>
+                <h3 id="profileName" class="font-black text-lg uppercase">User JTM</h3>
+                <button onclick="openProfile()" class="text-blue-500 font-bold text-xs underline mt-2">Ganti Identitas</button>
+            </div>
+            <div class="bg-white rounded-3xl p-4 shadow-sm text-left">
+                <div id="chatDisplay" class="h-40 overflow-y-auto text-[11px] mb-3 space-y-2"></div>
+                <div class="flex gap-2">
+                    <input type="text" id="chatInput" placeholder="Pesan..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none">
+                    <button onclick="sendChat()" class="dominos-blue text-white px-4 rounded-xl"><i class="fa fa-paper-plane"></i></button>
+                </div>
+            </div>
         </div>
+
+    </main>
+
+    <div class="bottom-nav">
+        <button onclick="showPage('search')" id="nav-search" class="nav-item active">
+            <i class="fa fa-search"></i>
+            <span>Cari</span>
+        </button>
+        <button onclick="showPage('history')" id="nav-history" class="nav-item">
+            <i class="fa fa-clock-rotate-left"></i>
+            <span>Riwayat</span>
+        </button>
+        <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add">
+            <i class="fa fa-plus"></i>
+            <span>Tambah</span>
+        </button>
+        <button onclick="showPage('profile')" id="nav-profile" class="nav-item">
+            <i class="fa fa-comments"></i>
+            <span>Chat</span>
+        </button>
+        <button onclick="openProfile()" class="nav-item">
+            <i class="fa fa-gear"></i>
+            <span>Settings</span>
+        </button>
     </div>
 
     <script>
+        // Konfigurasi Firebase Anda
         const firebaseConfig = {
             apiKey: "AIzaSyAZ7twf8SbcK-HqniDnVqT6k8IM3shFtgc",
             authDomain: "trackcust-jtm.firebaseapp.com",
@@ -97,184 +150,23 @@
         const db = firebase.database();
         
         const crewList = ["Okta", "Dendy", "Arif", "Rian", "Gemilang", "Sadewa", "Fahran", "Rafli", "Acong"];
-        const managementList = ["Pak KUR", "Pak Agus", "Pak Ageng", "Sintya", "Ridha"];
-        
+        const mgmtList = ["Pak KUR", "Pak Agus", "Pak Ageng", "Sintya", "Ridha"];
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {};
 
-        window.onload = () => {
-            const select = document.getElementById('driverName');
-            select.innerHTML = '<option value="">PILIH CREW</option>';
-            crewList.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
-            
-            const modalOptions = document.getElementById('crewOptions');
-            [...crewList, ...managementList].forEach(name => {
-                const isMgmt = managementList.includes(name);
-                modalOptions.innerHTML += `<button onclick="setUser('${name}')" class="w-full p-5 text-left font-black text-sm rounded-2xl border-2 mb-2 uppercase transition-all ${isMgmt ? 'border-red-50 text-red-600 bg-red-50/30' : 'border-blue-50 text-blue-900 bg-blue-50/30'} active:scale-95">${name} ${isMgmt ? '🏢' : '🛵'}</button>`;
-            });
-
-            if(!currentUser) openProfile();
-            else setUser(currentUser);
-        };
-
-        function setUser(name) {
-            currentUser = name;
-            localStorage.setItem('jtm_user', name);
-            document.getElementById('userDisplay').innerText = name;
-            closeProfile();
-            
-            db.ref('presence/' + name).set({ status: 'online', time: Date.now() });
-            db.ref('presence/' + name).onDisconnect().remove();
-
-            // Hanya Okta yang bisa hapus chat massal
-            if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden');
-            else document.getElementById('adminDelChat').classList.add('hidden');
-
-            if(managementList.includes(name)) {
-                document.getElementById('adminPanel').classList.add('hidden');
-                document.getElementById('activeList').classList.add('hidden');
-            } else {
-                document.getElementById('adminPanel').classList.remove('hidden');
-                document.getElementById('activeList').classList.remove('hidden');
-            }
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.getElementById('nav-' + pageId).classList.add('active');
         }
 
-        // Presence & Chat Logic
-        db.ref('presence').on('value', s => {
-            const container = document.getElementById('onlineList');
-            container.innerHTML = "";
-            if(s.val()) Object.keys(s.val()).forEach(user => {
-                container.innerHTML += `<span class="bg-white/20 px-2 py-1 rounded-md"><span class="online-dot"></span>${user}</span>`;
-            });
-        });
+        // Isi Dropdown Driver
+        const select = document.getElementById('driverName');
+        select.innerHTML = '<option value="">Pilih Crew</option>';
+        crewList.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
 
-        function sendChat() {
-            const input = document.getElementById('chatInput');
-            if(input.value.trim()) {
-                db.ref('chats').push({ user: currentUser, text: input.value, time: Date.now() });
-                input.value = "";
-            }
-        }
-
-        function clearAllChats() {
-            if(confirm("Hapus semua history chat?")) {
-                db.ref('chats').remove();
-            }
-        }
-
-        db.ref('chats').on('value', s => {
-            const display = document.getElementById('chatDisplay');
-            display.innerHTML = "";
-            if(s.val()) {
-                Object.values(s.val()).forEach(c => {
-                    const isMe = c.user === currentUser;
-                    display.innerHTML += `<div class="${isMe ? 'text-right' : 'text-left'}">
-                        <div class="chat-bubble inline-block ${isMe ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}">
-                            <span class="font-black block text-[8px] uppercase opacity-70">${c.user}</span>
-                            ${c.text}
-                        </div>
-                    </div>`;
-                });
-                display.scrollTop = display.scrollHeight;
-            } else {
-                display.innerHTML = '<p class="text-center text-gray-300 mt-10 italic">Belum ada obrolan...</p>';
-            }
-        });
-
-        // Main App Logic (Save, Search, Render)
-        db.ref('customers').on('value', s => { allData = s.val() || {}; renderContent(allData); });
-
-        function checkBeforeSave() {
-            const phone = document.getElementById('custPhone').value;
-            const editKey = document.getElementById('editKey').value;
-            if (!phone) return alert("Nomor WA wajib diisi!");
-            const fmtPhone = phone.startsWith('0') ? '62' + phone.slice(1) : phone;
-            let dup = false;
-            Object.keys(allData).forEach(k => {
-                if (allData[k].phone === fmtPhone && allData[k].status === 'active' && k !== editKey) dup = true;
-            });
-            if (dup) alert("⚠️ NOMOR TELAH TERDAFTAR & MASIH AKTIF!");
-            else saveToCloud(fmtPhone);
-        }
-
-        function saveToCloud(phone) {
-            const area = document.getElementById('custArea').value.toUpperCase();
-            const name = document.getElementById('custName').value;
-            const driver = document.getElementById('driverName').value;
-            const maps = document.getElementById('custMaps').value;
-            const key = document.getElementById('editKey').value;
-            if (maps && driver) {
-                const data = { area, name, driver, phone, maps, status: 'active', timestamp: Date.now() };
-                if (key) db.ref('customers/' + key).update(data).then(() => cancelEdit());
-                else db.ref('customers').push(data).then(() => clearForm());
-            } else alert("Pilih Driver & Link Maps!");
-        }
-
-        function renderContent(data, filter = "") {
-            const activeCont = document.getElementById('activeList');
-            const historyCont = document.getElementById('historyList');
-            activeCont.innerHTML = ""; historyCont.innerHTML = "";
-            const activeGroups = {}; const historyItems = [];
-
-            Object.keys(data).forEach(k => {
-                const item = data[k];
-                const s = (item.area + item.name + item.driver + item.phone).toLowerCase();
-                if (s.includes(filter.toLowerCase())) {
-                    if (item.status === 'done') historyItems.push({ k, ...item });
-                    else {
-                        const a = item.area || "LAINNYA";
-                        if (!activeGroups[a]) activeGroups[a] = [];
-                        activeGroups[a].push({ k, ...item });
-                    }
-                }
-            });
-
-            if(!managementList.includes(currentUser)) {
-                Object.keys(activeGroups).sort().forEach(a => {
-                    let h = `<div class="space-y-4"><h2 class="font-black text-blue-900 text-[10px] uppercase tracking-widest bg-blue-50 w-max px-3 py-1 rounded-full">${a}</h2>`;
-                    activeGroups[a].reverse().forEach(c => {
-                        const wa = `Halo ${c.name}, Saya dari Domino's Jatimakmur sedang mengantar pesanan Anda, mohon standby ya ☺️`;
-                        h += `<div class="bg-white rounded-[2rem] shadow-lg border-l-[8px] border-red-500 p-5">
-                            <div class="flex justify-between items-start mb-4">
-                                <div><h3 class="font-black text-blue-900 text-sm uppercase">${c.name}</h3><p class="text-[10px] font-bold text-gray-400 uppercase">🛵 ${c.driver}</p></div>
-                                <button onclick="editCustomer('${c.k}', '${c.area}', '${c.name}', '${c.driver}', '${c.phone}', '${c.maps}')" class="text-gray-200"><i class="fa fa-pencil text-sm"></i></button>
-                            </div>
-                            <div class="flex gap-2">
-                                <a href="${c.maps}" target="_blank" class="flex-1 dominos-blue text-white py-4 rounded-2xl text-center font-black text-[10px] uppercase shadow-lg shadow-blue-900/20">📍 Maps</a>
-                                <a href="https://wa.me/${c.phone}?text=${encodeURIComponent(wa)}" target="_blank" class="flex-1 bg-green-500 text-white py-4 rounded-2xl text-center font-black text-[10px] uppercase shadow-lg shadow-green-900/20">💬 WA</a>
-                                <button onclick="setStatus('${c.k}', 'done')" class="bg-yellow-400 text-white px-5 rounded-2xl font-black text-lg shadow-lg">✓</button>
-                            </div>
-                        </div>`;
-                    });
-                    activeCont.innerHTML += h + `</div>`;
-                });
-            }
-
-            historyItems.reverse().forEach(c => {
-                historyCont.innerHTML += `<div class="bg-white rounded-2xl p-4 flex justify-between items-center shadow-md border-b-2 border-gray-100 opacity-60">
-                    <div><p class="font-black text-gray-800 uppercase text-[10px]">${c.name}</p><p class="text-[8px] font-bold text-gray-400 uppercase">${c.area} • BY ${c.driver}</p></div>
-                    ${!managementList.includes(currentUser) ? `<button onclick="setStatus('${c.k}', 'active')" class="text-blue-400"><i class="fa fa-rotate-left"></i></button>` : '<i class="fa fa-check-double text-green-500"></i>'}
-                </div>`;
-            });
-        }
-
-        function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-        function editCustomer(k, a, n, d, p, m) {
-            document.getElementById('editKey').value = k;
-            document.getElementById('custArea').value = a;
-            document.getElementById('custName').value = n;
-            document.getElementById('driverName').value = d;
-            document.getElementById('custPhone').value = p;
-            document.getElementById('custMaps').value = m;
-            document.getElementById('formTitle').innerText = "EDIT MODE ON";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-        function clearForm() { document.querySelectorAll('input').forEach(i => i.value = ""); document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran Baru"; document.getElementById('cancelBtn').classList.add('hidden'); }
-        function cancelEdit() { clearForm(); }
-        function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
-        function closeProfile() { document.getElementById('profileModal').classList.add('hidden'); }
-        function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
+        // ... Sisa fungsi (checkBeforeSave, saveToCloud, renderContent, sendChat) ...
+        // Tambahkan di bawah sini sama seperti kode sebelumnya
     </script>
 </body>
 </html>
