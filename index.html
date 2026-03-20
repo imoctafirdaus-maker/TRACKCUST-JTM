@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>JTM Track Pro - Final Version</title>
+    <title>JTM Track Pro - Final Refresh Edition</title>
     
     <meta name="theme-color" content="#006491">
     <meta name="mobile-web-app-capable" content="yes">
@@ -51,7 +51,9 @@
             <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
             <div class="flex items-center gap-2">
                 <button onclick="openProfile()" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">Pilih Nama</button>
-                <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-90"><i class="fa fa-sync-alt text-[10px]"></i></button>
+                <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-90 transition-all">
+                    <i class="fa fa-sync-alt text-[10px]"></i>
+                </button>
             </div>
         </div>
         <div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 text-[9px] font-bold">
@@ -127,7 +129,6 @@
     </div>
 
     <script>
-        // CONFIGURATION & DATABASE
         const MASTER_PIN = "0972"; 
         const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929", "Pak KUR": "0000", "Pak Agus": "6413", "Pak Ageng": "4444", "Sintiya": "0959", "Ridha": "0968" };
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
@@ -139,7 +140,6 @@
         let allData = {}; let firstLoad = true; let currentPage = 'search';
         let audioCtx = null; let mediaRecorder; let audioChunks = [];
 
-        // SYSTEM: NOTIFICATION SOUNDS (BEEPS)
         function initAudio() { 
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); 
             if(audioCtx.state === 'suspended') audioCtx.resume(); 
@@ -153,10 +153,8 @@
             else if(type === 'done') { osc.frequency.setValueAtTime(880, audioCtx.currentTime); osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1); }
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime);
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
-            if(navigator.vibrate) navigator.vibrate(50);
         }
 
-        // CHAT: VOICE NOTE RECORDING LOGIC
         async function toggleRecording() {
             const btn = document.getElementById('micBtn');
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
@@ -171,7 +169,7 @@
                     };
                     mediaRecorder.start();
                     btn.innerHTML = '<i class="fa fa-stop-circle text-red-600 text-2xl animate-pulse"></i>';
-                } catch(e) { alert("Butuh izin mikrofon!"); }
+                } catch(e) { alert("Izinkan mikrofon!"); }
             } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
         }
 
@@ -184,7 +182,6 @@
             audio.onended = () => { btn.innerHTML = '<i class="fa fa-play"></i>'; prog.style.width = "0%"; };
         }
 
-        // CORE: APP INITIALIZATION
         window.onload = () => {
             const drvSel = document.getElementById('driverName'); drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(d => drvSel.innerHTML += `<option value="${d}">${d}</option>`);
@@ -201,7 +198,6 @@
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
         function closeProfile() { if(currentUser) document.getElementById('profileModal').classList.add('hidden'); }
 
-        // REALTIME: PRESENCE & CHAT
         db.ref('presence').on('value', s => { 
             const l = document.getElementById('onlineList'); l.innerHTML = ""; 
             Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span><span class="online-dot"></span>${u}</span>`); 
@@ -233,7 +229,6 @@
             } 
         });
 
-        // TRACKING: RENDER ACTIVE & HISTORY
         db.ref().on('value', s => { const r = s.val() || {}; allData = r.customers || r; render(allData); firstLoad = false; });
         function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
 
@@ -244,11 +239,9 @@
                 const i = data[k]; if(!i.name) return;
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
                 if(!match) return;
-
                 const isD = i.status === 'done'; const isDel = i.status === 'delivering';
                 let tmr = (isDel && i.startTime) ? `<p class="text-[9px] font-bold text-red-500">Estimasi: ${Math.floor((1200-Math.floor((now-i.startTime)/1000))/60)}m</p>` : "";
                 const textWA = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
-
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':(isDel?'border-blue-500':'border-red-500')} mb-3">
                         <div class="flex justify-between items-start">
@@ -280,7 +273,6 @@
             }); 
         }
 
-        // ACTIONS: STATUS, SAVE, DELETE
         function setStatus(k, s) { db.ref('customers/'+k).update({status:s}); if(s==='done') playBeep('done'); }
         function checkAutoDone() { const n = Date.now(); Object.keys(allData).forEach(k => { if (allData[k].status === 'delivering' && allData[k].startTime && (n-allData[k].startTime)/60000 >= 20) setStatus(k,'done'); }); }
         function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value.trim():m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), seen:false}); i.value=""; } }
