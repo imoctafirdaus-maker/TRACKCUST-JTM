@@ -127,16 +127,21 @@
             const gain = audioCtx.createGain();
             osc.connect(gain);
             gain.connect(audioCtx.destination);
+            
             if (type === 'chat') {
-                osc.type = 'sine'; osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1500, audioCtx.currentTime); 
+                osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
                 gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
             } else {
-                osc.type = 'square'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
                 gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
             }
-            if ("vibrate" in navigator) navigator.vibrate([100, 50, 100]);
+            if ("vibrate" in navigator) navigator.vibrate([80, 40, 80]);
         }
 
         function initAudio() {
@@ -227,10 +232,7 @@
                     const remaining = Math.max(0, (20 * 60) - Math.floor((now - item.startTime) / 1000));
                     timerHtml = `<p class="text-[9px] timer-text mt-1">Sisa: ${Math.floor(remaining/60)}:${(remaining%60).toString().padStart(2,'0')}</p>`;
                 }
-                
-                // --- TEKS WHATSAPP OTOMATIS (VERSI ASLI) ---
                 const msg = `Halo bapak/ibu ${item.name}, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, mohon sedia menunggu dan untuk tetap aktif WhatsApp ya, terimakasih ☺️`;
-                
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isDone?'border-gray-200 opacity-60': (isDelivering ? 'border-blue-500' : 'border-red-500')} mb-3">
                         <div class="flex justify-between items-center mb-2">
