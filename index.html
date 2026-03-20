@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Area & Controls Fixed</title>
+    <title>TrackCust JTM - WA Style & Voice</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,7 +21,26 @@
         .page { display: none; } .page.active { display: block; }
         .online-dot { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; margin-right: 4px; box-shadow: 0 0 8px #4ade80; }
         #chatBadge { position: absolute; top: -2px; right: 12px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; }
-        /* Style tambahan untuk voice record */
+        
+        /* Style Chat ala WhatsApp */
+        .chat-container {
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-color: #e5ddd5;
+            display: flex;
+            flex-direction: column;
+        }
+        .bubble {
+            max-width: 85%;
+            padding: 7px 10px;
+            border-radius: 12px;
+            margin-bottom: 5px;
+            position: relative;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+            word-wrap: break-word;
+        }
+        .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
+        .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
+        .chat-time { font-size: 8px; color: #8e8e8e; text-align: right; display: block; margin-top: 2px; }
         .recording-active { animation: pulse-red 1.5s infinite; color: #e31837 !important; }
         @keyframes pulse-red { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
@@ -76,20 +95,23 @@
             <div id="historyList" class="space-y-2"></div>
         </div>
 
-        <div id="page-chat" class="page space-y-4">
-            <div class="bg-white p-4 rounded-2xl shadow-sm flex justify-between items-center">
-                <h3 id="profileName" class="font-black text-blue-900 uppercase text-xs italic">Crew JTM</h3>
-                <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic uppercase">Clear Chat</button>
-            </div>
-            <div class="bg-white rounded-3xl p-4 shadow-sm border-b-4 border-blue-900">
-                <div id="chatDisplay" class="h-64 overflow-y-auto text-[11px] mb-3 space-y-2 border-t pt-2"></div>
-                <div class="flex gap-2 items-center">
-                    <button id="voiceBtn" onclick="toggleVoiceRecord()" class="bg-gray-100 text-gray-500 w-12 h-12 rounded-xl flex items-center justify-center transition-all">
-                        <i class="fa fa-microphone text-lg"></i>
-                    </button>
-                    <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-gray-100 rounded-xl p-3 text-xs outline-none font-bold">
-                    <button onclick="sendChat()" class="dominos-blue text-white px-5 h-12 rounded-xl shadow-lg"><i class="fa fa-paper-plane"></i></button>
+        <div id="page-chat" class="page h-[78vh] flex flex-col -m-4">
+            <div class="bg-white p-3 shadow-sm flex justify-between items-center border-b">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 dominos-blue rounded-full flex items-center justify-center text-white font-black italic text-xs">JTM</div>
+                    <h3 id="profileName" class="font-black text-blue-900 uppercase text-[10px] italic leading-none">Crew Jatimakmur</h3>
                 </div>
+                <button onclick="clearAllChats()" id="adminDelChat" class="hidden text-red-500 text-[10px] font-bold underline italic uppercase">Clear</button>
+            </div>
+            <div id="chatDisplay" class="chat-container flex-1 overflow-y-auto p-4 space-y-1"></div>
+            <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center sticky bottom-0">
+                <button id="voiceBtn" onclick="toggleVoiceRecord()" class="w-10 h-10 flex items-center justify-center text-gray-500">
+                    <i class="fa fa-microphone text-xl"></i>
+                </button>
+                <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
+                <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md">
+                    <i class="fa fa-paper-plane text-xs"></i>
+                </button>
             </div>
         </div>
     </main>
@@ -141,7 +163,7 @@
         let firstLoad = true;
         let currentPage = 'search';
 
-        // Variabel untuk Voice Note
+        // VOICE NOTE VARS
         let mediaRecorder;
         let audioChunks = [];
         let isRecording = false;
@@ -191,23 +213,31 @@
             }
         });
 
-        db.ref('chats').limitToLast(20).on('value', s => {
+        // RENDER CHATS WA STYLE
+        db.ref('chats').limitToLast(25).on('value', s => {
             const d = document.getElementById('chatDisplay');
             d.innerHTML = "";
             if(s.val()) {
                 Object.values(s.val()).forEach(c => { 
+                    const isMe = c.user === currentUser;
                     let content = c.text;
-                    // Deteksi jika pesan adalah audio base64
                     if(content.startsWith('data:audio')) {
-                        content = `<audio controls src="${c.text}" class="max-w-full"></audio>`;
+                        content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`;
+                    } else {
+                        content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`;
                     }
-                    d.innerHTML += `<div class="mb-2"><span class="font-black text-blue-900 uppercase text-[9px]">${c.user}:</span> <span class="text-gray-700 font-bold">${content}</span></div>`; 
+
+                    d.innerHTML += `
+                        <div class="bubble ${isMe ? 'right' : 'left'}">
+                            ${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}
+                            ${content}
+                            <span class="chat-time">${c.time || ''}</span>
+                        </div>`;
                 });
             }
             d.scrollTop = d.scrollHeight;
         });
 
-        // Fitur Voice Note
         async function toggleVoiceRecord() {
             const btn = document.getElementById('voiceBtn');
             if (!isRecording) {
@@ -216,21 +246,22 @@
                     mediaRecorder = new MediaRecorder(stream);
                     audioChunks = [];
                     mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                    mediaRecorder.onstop = async () => {
+                    mediaRecorder.onstop = () => {
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const reader = new FileReader();
                         reader.readAsDataURL(audioBlob);
                         reader.onloadend = () => {
-                            const base64Audio = reader.result;
-                            db.ref('chats').push({ user: currentUser, text: base64Audio });
+                            db.ref('chats').push({ 
+                                user: currentUser, 
+                                text: reader.result,
+                                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            });
                         };
                     };
                     mediaRecorder.start();
                     isRecording = true;
                     btn.classList.add('recording-active');
-                } catch (err) {
-                    alert("Akses Mikrofon Ditolak!");
-                }
+                } catch (err) { alert("Akses Mikrofon Ditolak!"); }
             } else {
                 mediaRecorder.stop();
                 isRecording = false;
@@ -290,7 +321,17 @@
         function deleteData(key) { if(prompt("PIN Master:") === MASTER_PIN) db.ref('customers/' + key).remove(); }
         function clearHistoryWithPin() { if(prompt("PIN Master:") === MASTER_PIN) { Object.keys(allData).forEach(k => { if(allData[k].status === 'done') db.ref('customers/' + k).remove(); }); } }
         function setStatus(k, s) { db.ref('customers/' + k).update({ status: s }); }
-        function sendChat() { const input = document.getElementById('chatInput'); if(input.value) { db.ref('chats').push({ user: currentUser, text: input.value }); input.value = ""; } }
+        function sendChat() { 
+            const input = document.getElementById('chatInput'); 
+            if(input.value) { 
+                db.ref('chats').push({ 
+                    user: currentUser, 
+                    text: input.value,
+                    time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                }); 
+                input.value = ""; 
+            } 
+        }
         function cancelEdit() { document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Pengantaran"; document.getElementById('btnCancelEdit').classList.add('hidden'); clearForm(); }
         function clearForm() { document.querySelectorAll('#page-add input').forEach(i => i.value = ""); }
         function searchData() { renderContent(allData, document.getElementById('searchInput').value); }
