@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Final Fix</title>
+    <title>TrackCust JTM - Management Update</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#006491">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -123,6 +123,7 @@
     <script>
         const MASTER_PIN = "0972"; 
         const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967", "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0000", "Pak KUR": "0000", "Pak Agus": "0000", "Pak Ageng": "4444", "Sintiya": "0000", "Ridha": "0000" };
+        
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -136,21 +137,31 @@
             const select = document.getElementById('driverName');
             select.innerHTML = '<option value="">PILIH DRIVER</option>';
             driverOnly.forEach(c => select.innerHTML += `<option value="${c}">${c}</option>`);
+            
             const modal = document.getElementById('crewOptions');
-            allNames.forEach(name => { modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase active:bg-blue-50">${name}</button>`; });
+            allNames.forEach(name => {
+                let bgColor = "bg-white";
+                let label = "";
+                
+                // Logika Warna & Label Management
+                if (name === "Pak KUR" || name === "Pak Agus" || name === "Pak Ageng") {
+                    bgColor = "bg-gray-100";
+                    label = `<span class="text-[8px] text-red-500 ml-1">(MANAGEMENT)</span>`;
+                } 
+                // Logika Label Kasir
+                else if (name === "Sintiya" || name === "Ridha") {
+                    label = `<span class="text-[8px] text-blue-500 ml-1">(KASIR)</span>`;
+                }
+
+                modal.innerHTML += `<button onclick="handleLogin('${name}')" class="w-full p-4 text-center font-black text-xs border-b uppercase ${bgColor} active:bg-blue-50">${name}${label}</button>`;
+            });
             if(!currentUser) openProfile(); else setUser(currentUser);
         };
 
         function handleLogin(name) { const pinInput = prompt(`PIN untuk ${name}:`); if (pinInput === userPins[name]) setUser(name); else alert("PIN SALAH!"); }
         function setUser(name) { currentUser = name; localStorage.setItem('jtm_user', name); document.getElementById('userDisplay').innerText = name; document.getElementById('profileNameChat').innerText = name; closeProfile(); if(name === "Okta") document.getElementById('adminDelChat').classList.remove('hidden'); const myPresenceRef = db.ref('presence/' + name); myPresenceRef.onDisconnect().remove(); myPresenceRef.set({ status: 'online', time: Date.now() }); }
-        
-        // FUNGSI BUKA & TUTUP MODAL
         function openProfile() { document.getElementById('profileModal').classList.remove('hidden'); }
-        function closeProfile() { 
-            if(!currentUser) { alert("Pilih user dulu!"); return; }
-            document.getElementById('profileModal').classList.add('hidden'); 
-        }
-
+        function closeProfile() { if(!currentUser) { alert("Pilih user dulu!"); return; } document.getElementById('profileModal').classList.add('hidden'); }
         db.ref('presence').on('value', s => { const list = document.getElementById('onlineList'); list.innerHTML = ""; Object.keys(s.val() || {}).forEach(u => { list.innerHTML += `<span><span class="online-dot"></span>${u}</span>`; }); });
         db.ref('chats').limitToLast(1).on('child_added', () => { if(!firstLoad) { document.getElementById('chatSound').play(); if(currentPage !== 'chat') document.getElementById('chatBadge').style.display = 'block'; } });
         db.ref('chats').limitToLast(25).on('value', s => { const d = document.getElementById('chatDisplay'); d.innerHTML = ""; if(s.val()) { Object.values(s.val()).forEach(c => { const isMe = c.user === currentUser; let content = c.text; if(content.startsWith('data:audio')) { content = `<audio controls src="${c.text}" class="w-48 scale-90 origin-left"></audio>`; } else { content = `<span class="text-[13px] font-bold text-gray-700">${content}</span>`; } d.innerHTML += `<div class="bubble ${isMe ? 'right' : 'left'}">${!isMe ? `<span class="text-[9px] font-black text-blue-900 block uppercase mb-1">${c.user}</span>` : ''}${content}<span class="chat-time">${c.time || ''}</span></div>`; }); } d.scrollTop = d.scrollHeight; });
@@ -172,4 +183,3 @@
     </script>
 </body>
 </html>
-
