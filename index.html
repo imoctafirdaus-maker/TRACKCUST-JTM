@@ -7,6 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     
@@ -29,6 +30,9 @@
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         .tick { font-size: 10px; margin-left: 4px; }
         #pinOverlay { position: fixed; inset: 0; background: #006491; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        
+        /* TAMBAHAN: Style Loader OCR */
+        #ocrLoader { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; color: white; flex-direction: column; border-radius: 2rem; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -64,9 +68,21 @@
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
-            <div id="page-add" class="page p-4 overflow-y-auto">
+            <div id="page-add" class="page p-4 overflow-y-auto relative">
+                <div id="ocrLoader">
+                    <i class="fa fa-circle-notch fa-spin text-4xl mb-3 text-red-500"></i>
+                    <p class="font-black italic text-xs uppercase">Sedang Membaca Struk...</p>
+                </div>
+
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
-                    <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Antaran</h2>
+                    <div class="flex justify-between items-center mb-1">
+                        <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic">Input Antaran</h2>
+                        <label class="bg-blue-100 text-blue-600 px-3 py-2 rounded-full text-[9px] font-black uppercase italic cursor-pointer flex items-center gap-2 shadow-sm active:scale-95 transition-all">
+                            <i class="fa fa-camera"></i> SCAN STRUK
+                            <input type="file" accept="image/*" capture="environment" onchange="runOCR(this)" class="hidden">
+                        </label>
+                    </div>
+
                     <input type="hidden" id="editKey">
                     <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase border-2 border-yellow-100 italic">
                     <div class="grid grid-cols-2 gap-2">
@@ -126,6 +142,44 @@
             else if(type==='error') osc.frequency.setValueAtTime(200, audioCtx.currentTime);
             else osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
+        }
+
+        // --- TAMBAHAN: FUNGSI LOGIKA OCR ---
+        async function runOCR(input) {
+            if (!input.files || !input.files[0]) return;
+            const loader = document.getElementById('ocrLoader');
+            loader.style.display = 'flex';
+            
+            try {
+                const result = await Tesseract.recognize(input.files[0], 'eng+ind');
+                const text = result.data.text;
+                console.log("OCR Result Raw:", text);
+                
+                // Cari Nomor HP (Pola angka 10-13 digit diawali 08/62)
+                const phoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
+                if (phoneMatch) document.getElementById('custPhone').value = phoneMatch[0];
+
+                // Cari Nama (Logika: Baris setelah kata 'Customer' atau 'Nama' atau 'Sold to')
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+                for(let i=0; i<lines.length; i++) {
+                    const l = lines[i].toLowerCase();
+                    if(l.includes('nama') || l.includes('customer') || l.includes('sold to')) {
+                        // Ambil baris yang sama setelah tanda titik dua, atau baris berikutnya
+                        let nameVal = lines[i].split(/[:\-]/).pop().trim();
+                        if(nameVal.length < 3 && lines[i+1]) nameVal = lines[i+1];
+                        document.getElementById('custName').value = nameVal;
+                        break;
+                    }
+                }
+                
+                playBeep('done');
+            } catch (e) {
+                console.error(e);
+                alert("Gagal membaca gambar. Pastikan foto struk tegak dan terang.");
+            } finally {
+                loader.style.display = 'none';
+                input.value = ""; 
+            }
         }
 
         window.onload = () => {
@@ -219,7 +273,6 @@
         function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
         function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
         
-        // --- FITUR SAVE DENGAN CEK ANTI-DOUBLE DATA ---
         function saveData() { 
             const key = document.getElementById('editKey').value;
             const inputPhone = document.getElementById('custPhone').value.trim();
@@ -228,7 +281,6 @@
 
             if(!inputPhone || !inputName || !inputDriver) return alert("Data Nama, HP, dan Driver Wajib Diisi!");
 
-            // CEK DUPLIKAT NOMOR HP (Hanya untuk input baru)
             if(!key) {
                 const isDuplicate = Object.values(allData).some(item => 
                     item.phone === inputPhone && item.status !== 'done'
@@ -282,7 +334,6 @@
             });
         }
 
-        // --- FITUR CHAT LENGKAP (VN, TICKS, DELETE) ---
         db.ref('chats').limitToLast(25).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
