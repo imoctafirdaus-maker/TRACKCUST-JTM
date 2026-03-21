@@ -20,7 +20,7 @@
         .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
         .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .bubble { max-width: 85%; padding: 6px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+        .bubble { max-width: 85%; padding: 6px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
         #chatBadge { position: absolute; top: -2px; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; z-index: 50; }
@@ -66,7 +66,6 @@
         </div>
 
         <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
-            <h2 class="text-gray-400 font-black text-[10px] uppercase italic ml-2">Riwayat Pengantaran</h2>
             <div id="historyList" class="space-y-2 pb-32"></div>
         </div>
 
@@ -222,7 +221,7 @@
             ["custArea","custName","custPhone","custMaps"].forEach(id => document.getElementById(id).value = "");
         }
 
-        // CHAT LOGIC
+        // CHAT LOGIC WITH DELETE FEATURE
         db.ref('chats').limitToLast(25).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
@@ -231,7 +230,10 @@
                     const ticks = isMe ? (c.readByAll ? '<i class="fa fa-check-double text-blue-500 tick"></i>' : '<i class="fa fa-check text-gray-400 tick"></i>') : '';
                     let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
                     if(c.type === "voice") content = `<div class="flex items-center gap-3 min-w-[180px]"><button onclick="playVN('${k}', '${c.text}')" class="text-gray-500"><i class="fa fa-play"></i></button><div class="flex-1 h-1 bg-gray-200 relative rounded"><div id="prog-${k}" class="absolute h-full bg-blue-400 rounded" style="width:0%"></div></div></div>`;
-                    d.innerHTML += `<div class="bubble ${isMe?'right':'left'}">
+                    
+                    d.innerHTML += `<div class="bubble ${isMe?'right':'left'}" 
+                        oncontextmenu="deleteChat('${k}', event)" 
+                        onclick="handleBubbleTap('${k}', event)">
                         ${!isMe?`<span class="text-[8px] font-black uppercase text-blue-900 mb-1">${c.user}</span>`:''}
                         ${content}
                         <div class="text-[7px] text-right text-gray-500 mt-1">${c.time} ${ticks}</div>
@@ -240,6 +242,20 @@
                 }); 
             } d.scrollTop = d.scrollHeight; 
         });
+
+        // Hapus Chat Function
+        function deleteChat(id, e) {
+            if(e) e.preventDefault();
+            if(confirm("Hapus pesan ini?")) {
+                db.ref('chats/'+id).remove();
+            }
+        }
+
+        // Untuk mobile (Tap lama)
+        let tapTimer;
+        function handleBubbleTap(id, e) {
+            // Jika butuh trigger khusus di mobile bisa pakai ini
+        }
 
         async function toggleRecording() {
             const btn = document.getElementById('micBtn');
