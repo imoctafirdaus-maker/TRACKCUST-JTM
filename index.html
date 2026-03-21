@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Full System</title>
+    <title>TrackCust JTM - Ultimate System</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -39,10 +39,10 @@
             <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Track System</p>
         </div>
         <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
-            <h2 class="font-black text-blue-900 text-[10px] uppercase mb-4 italic">Pilih Nama & Masukkan PIN</h2>
+            <h2 class="font-black text-blue-900 text-[10px] uppercase mb-4 italic">Verifikasi Petugas</h2>
             <select id="selectUser" class="w-full p-4 bg-gray-100 rounded-2xl mb-4 font-bold text-blue-900 outline-none uppercase text-xs"></select>
-            <input type="password" id="inputPin" maxlength="4" placeholder="PIN 4 DIGIT" inputmode="numeric" class="w-full text-center text-2xl font-black p-4 bg-gray-100 rounded-2xl mb-6 outline-none border-2 border-transparent focus:border-blue-500">
-            <button onclick="prosesLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Masuk Aplikasi</button>
+            <input type="password" id="inputPin" maxlength="4" placeholder="PIN" inputmode="numeric" class="w-full text-center text-2xl font-black p-4 bg-gray-100 rounded-2xl mb-6 outline-none border-2 border-transparent focus:border-blue-500">
+            <button onclick="prosesLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Masuk</button>
         </div>
     </div>
 
@@ -51,7 +51,7 @@
             <div class="flex justify-between items-center mb-1">
                 <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
                 <div class="flex items-center gap-2">
-                    <button id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">User</button>
+                    <button id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center italic">User</button>
                     <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center active:scale-90"><i class="fa fa-sync-alt text-[10px]"></i></button>
                 </div>
             </div>
@@ -60,7 +60,7 @@
 
         <main class="flex-1 overflow-hidden relative">
             <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
+                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/No HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
@@ -68,15 +68,15 @@
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
                     <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Antaran</h2>
                     <input type="hidden" id="editKey">
-                    <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase border-2 border-yellow-100">
+                    <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase border-2 border-yellow-100 italic">
                     <div class="grid grid-cols-2 gap-2">
                         <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                        <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
+                        <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase italic"></select>
                     </div>
-                    <input type="tel" id="custPhone" placeholder="Nomor HP (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                    <input type="tel" id="custPhone" placeholder="Nomor HP (Contoh: 0812...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold italic">
                     <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan Data</button>
-                    <button onclick="cancelEdit()" id="cancelBtn" class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black uppercase text-[10px] hidden">Batal</button>
+                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm italic">Simpan Data</button>
+                    <button onclick="cancelEdit()" id="cancelBtn" class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black uppercase text-[10px] hidden">Batal Edit</button>
                 </div>
             </div>
 
@@ -123,6 +123,7 @@
         function playBeep(type) { if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); osc.connect(gn); gn.connect(audioCtx.destination); 
             if(type==='chat') osc.frequency.setValueAtTime(1200, audioCtx.currentTime); 
             else if(type==='done') osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            else if(type==='error') osc.frequency.setValueAtTime(200, audioCtx.currentTime);
             else osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
         }
@@ -145,7 +146,7 @@
         function prosesLogin() {
             const user = document.getElementById('selectUser').value;
             const pin = document.getElementById('inputPin').value;
-            if(!user) return alert("Pilih Nama!");
+            if(!user) return alert("Pilih Nama Dulu!");
             if(pin === userPins[user]) { initAudio(); bukaApp(user); } else { alert("PIN SALAH!"); }
         }
 
@@ -159,7 +160,7 @@
             startSystem();
         }
 
-        function handleLogout() { if(confirm("Keluar aplikasi?")) { localStorage.removeItem('jtm_user'); location.reload(); } }
+        function handleLogout() { if(confirm("Yakin ingin Logout?")) { localStorage.removeItem('jtm_user'); location.reload(); } }
 
         function startSystem() {
             db.ref('presence').on('value', s => { 
@@ -201,7 +202,7 @@
                         ${!isD ? `<div class="flex gap-2 mt-4">
                             <div class="flex flex-col gap-1 flex-1">
                                 <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
-                                <button onclick="editData('${k}')" class="text-blue-900 bg-blue-50 py-1 rounded-lg text-[8px] font-black uppercase italic">Edit</button>
+                                <button onclick="editData('${k}')" class="text-blue-900 bg-blue-50 py-1 rounded-lg text-[8px] font-black uppercase italic">Edit Data</button>
                             </div>
                             <div class="flex flex-col gap-1 flex-1">
                                 <a href="https://wa.me/${i.phone.startsWith('0')?'62'+i.phone.slice(1):i.phone}?text=${encodeURIComponent(waMsg)}" 
@@ -218,9 +219,36 @@
         function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
         function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
         
+        // --- FITUR SAVE DENGAN CEK ANTI-DOUBLE DATA ---
         function saveData() { 
             const key = document.getElementById('editKey').value;
-            const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, status: 'active', time: Date.now() };
+            const inputPhone = document.getElementById('custPhone').value.trim();
+            const inputName = document.getElementById('custName').value;
+            const inputDriver = document.getElementById('driverName').value;
+
+            if(!inputPhone || !inputName || !inputDriver) return alert("Data Nama, HP, dan Driver Wajib Diisi!");
+
+            // CEK DUPLIKAT NOMOR HP (Hanya untuk input baru)
+            if(!key) {
+                const isDuplicate = Object.values(allData).some(item => 
+                    item.phone === inputPhone && item.status !== 'done'
+                );
+                if(isDuplicate) {
+                    playBeep('error');
+                    return alert("⚠️ DATA DOUBLE! Nomor " + inputPhone + " sedang ada dalam antaran aktif!");
+                }
+            }
+
+            const d = { 
+                area: document.getElementById('custArea').value.toUpperCase(), 
+                name: inputName, 
+                driver: inputDriver, 
+                phone: inputPhone, 
+                maps: document.getElementById('custMaps').value, 
+                status: 'active', 
+                time: Date.now() 
+            };
+
             if(key) db.ref('customers/'+key).update(d); else db.ref('customers').push(d);
             cancelEdit(); showPage('search'); 
         }
@@ -254,7 +282,7 @@
             });
         }
 
-        // CHAT SYSTEM (VN, TICKETS, DELETE)
+        // --- FITUR CHAT LENGKAP (VN, TICKS, DELETE) ---
         db.ref('chats').limitToLast(25).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
@@ -262,19 +290,19 @@
                     const c = s.val()[k]; const isMe = c.user === currentUser;
                     const ticks = isMe ? (c.readByAll ? '<i class="fa fa-check-double text-blue-500 tick"></i>' : '<i class="fa fa-check text-gray-400 tick"></i>') : '';
                     let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
-                    if(c.type === "voice") content = `<div class="flex items-center gap-3 min-w-[180px]"><button onclick="playVN('${k}', '${c.text}')" class="text-gray-500"><i class="fa fa-play"></i></button><div class="flex-1 h-1 bg-gray-200 relative rounded"><div id="prog-${k}" class="absolute h-full bg-blue-400 rounded" style="width:0%"></div></div></div>`;
+                    if(c.type === "voice") content = `<div class="flex items-center gap-3 min-w-[180px]"><button onclick="playVN('${k}', '${c.text}')" class="text-gray-500"><i class="fa fa-play text-lg"></i></button><div class="flex-1 h-1 bg-gray-200 relative rounded"><div id="prog-${k}" class="absolute h-full bg-blue-400 rounded" style="width:0%"></div></div></div>`;
                     
                     d.innerHTML += `<div class="bubble ${isMe?'right':'left'}" oncontextmenu="deleteChat('${k}', event)">
                         ${!isMe?`<span class="text-[8px] font-black uppercase text-blue-900 mb-1 block">${c.user}</span>`:''}
                         ${content}
-                        <div class="text-[7px] text-right text-gray-500 mt-1">${c.time} ${ticks}</div>
+                        <div class="text-[7px] text-right text-gray-500 mt-1 italic">${c.time} ${ticks}</div>
                     </div>`; 
                     if(!isMe && !c.readByAll) db.ref('chats/'+k).update({readByAll: true});
                 }); 
             } d.scrollTop = d.scrollHeight; 
         });
 
-        function deleteChat(id, e) { e.preventDefault(); if(confirm("Hapus pesan?")) db.ref('chats/'+id).remove(); }
+        function deleteChat(id, e) { e.preventDefault(); if(confirm("Hapus pesan ini?")) db.ref('chats/'+id).remove(); }
         async function toggleRecording() {
             const btn = document.getElementById('micBtn');
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
