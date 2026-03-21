@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Official</title>
+    <title>TrackCust JTM - Pro</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -14,65 +14,58 @@
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; position: relative; width: 20%; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 50; padding-bottom: env(safe-area-inset-bottom); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; width: 20%; cursor: pointer; }
         .nav-item.active { color: #006491; }
-        .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
-        .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
-        .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .bubble { max-width: 85%; padding: 6px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
+        .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); z-index: 60; }
+        .page { display: none; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; } 
+        .page.active { display: flex; flex-direction: column; }
+        .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding-bottom: 100px; }
+        .bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); z-index: 10; }
         .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
         .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
-        #chatBadge { position: absolute; top: -2px; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; z-index: 50; }
-        .btn-action { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; }
+        #chatBadge { position: absolute; top: -2px; right: 18px; width: 10px; height: 10px; background: #e31837; border-radius: 50%; border: 2px solid white; display: none; z-index: 70; }
+        .btn-action { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; cursor: pointer; z-index: 20; position: relative; }
         .timer-blink { animation: blink 1s infinite; color: #e31837; }
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        .tick { font-size: 10px; margin-left: 4px; }
-        
-        /* Login Screen Style */
-        #loginScreen { position: fixed; inset: 0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; }
+        #loginScreen { position: fixed; inset: 0; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; transition: all 0.5s ease; }
     </style>
 </head>
-<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden" onclick="initAudio()">
+<body class="bg-gray-50 h-screen font-sans text-gray-800 overflow-hidden">
 
     <div id="loginScreen" class="dominos-blue">
-        <div class="mb-10 text-center">
+        <div class="mb-8 text-center">
             <h1 class="text-white font-black italic text-4xl tracking-tighter uppercase">Domino's</h1>
             <p class="text-red-400 font-black italic text-xl uppercase tracking-widest">JTM TRACK PRO</p>
         </div>
-        
         <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center">
             <h2 class="font-black text-blue-900 text-lg uppercase italic mb-2">Log In</h2>
             <p class="text-gray-400 text-[10px] font-bold uppercase mb-6">Masukkan ID Kerja Kamu</p>
-            
-            <input type="password" id="inputPin" maxlength="4" placeholder="••••" 
-                class="w-full text-center text-3xl tracking-[1rem] font-black p-4 bg-gray-100 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500 mb-6">
-            
-            <button onclick="checkPinLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Masuk Sekarang</button>
-            
-            <p class="mt-6 text-[9px] text-gray-300 font-bold italic uppercase">Official Jatimakmur System</p>
+            <input type="password" id="inputPin" maxlength="4" placeholder="••••" inputmode="numeric"
+                class="w-full text-center text-3xl tracking-[1rem] font-black p-4 bg-gray-100 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500 mb-6 text-blue-900">
+            <button onclick="checkPinLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg active:scale-95 transition-all">Masuk</button>
         </div>
     </div>
 
-    <div id="mainApp" class="hidden h-screen flex flex-col">
-        <nav class="dominos-blue p-4 text-white shadow-md">
+    <div id="mainApp" class="hidden h-screen flex flex-col opacity-0 transition-opacity duration-500">
+        <nav class="dominos-blue p-4 text-white shadow-md shrink-0">
             <div class="flex justify-between items-center mb-1">
                 <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
                 <div class="flex items-center gap-2">
-                    <button onclick="showPage('user')" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">User</button>
-                    <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center"><i class="fa fa-sync-alt text-[10px]"></i></button>
+                    <button onclick="showPage('user')" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase h-7 flex items-center shadow">User</button>
+                    <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center active:scale-90"><i class="fa fa-sync-alt text-[10px]"></i></button>
                 </div>
             </div>
-            <div id="onlineList" class="flex gap-2 overflow-x-auto py-1 text-[9px] font-bold italic"></div>
+            <div id="onlineList" class="flex gap-2 overflow-x-auto py-1 text-[9px] font-bold italic no-scrollbar"></div>
         </nav>
 
         <main class="flex-1 overflow-hidden relative">
-            <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
+            <div id="page-search" class="page active p-4 space-y-4">
+                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic shrink-0">
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
-            <div id="page-add" class="page p-4 overflow-y-auto">
+            <div id="page-add" class="page p-4">
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
                     <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic text-center">Input Antaran</h2>
                     <input type="hidden" id="editKey">
@@ -82,44 +75,44 @@
                         <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
                     </div>
                     <input type="tel" id="custPhone" placeholder="Nomor HP (08...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan Data</button>
+                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm active:scale-95 transition-all">Simpan Data</button>
                     <button onclick="cancelEdit()" id="cancelBtn" class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black uppercase text-[10px] hidden">Batal</button>
                 </div>
             </div>
 
-            <div id="page-history" class="page p-4 overflow-y-auto space-y-4">
+            <div id="page-history" class="page p-4 space-y-4">
                 <div id="historyList" class="space-y-2 pb-32"></div>
             </div>
 
-            <div id="page-chat" class="page overflow-hidden">
-                <div id="chatDisplay" class="chat-container p-4"></div>
-                <div class="bg-[#f0f0f0] p-2 flex gap-2 items-center border-t pb-24">
+            <div id="page-chat" class="page">
+                <div id="chatDisplay" class="chat-container"></div>
+                <div class="fixed bottom-[70px] left-0 right-0 bg-[#f0f0f0] p-2 flex gap-2 items-center border-t z-50">
                     <button id="micBtn" onclick="toggleRecording()" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
                     <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
                     <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
                 </div>
             </div>
 
-            <div id="page-user" class="page p-8 text-center items-center justify-center">
-                <div class="bg-white p-10 rounded-[3rem] shadow-xl w-full">
+            <div id="page-user" class="page p-8 flex flex-col items-center justify-center">
+                <div class="bg-white p-10 rounded-[3rem] shadow-xl w-full text-center">
                     <div class="w-20 h-20 dominos-blue rounded-full mx-auto mb-4 flex items-center justify-center text-white text-3xl font-black italic">
                         <i class="fa fa-user"></i>
                     </div>
                     <h2 id="profileName" class="font-black text-blue-900 text-xl uppercase italic mb-1">Nama User</h2>
                     <p class="text-gray-400 font-bold text-xs uppercase mb-8">Status: Aktif</p>
                     <button onclick="handleLogout()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black uppercase text-xs border-2 border-red-100 italic">Log Out / Keluar</button>
-                    <button onclick="showPage('search')" class="mt-4 text-gray-400 font-black uppercase text-[10px]">Kembali</button>
+                    <button onclick="showPage('search')" class="mt-6 text-gray-400 font-black uppercase text-[10px]">Tutup</button>
                 </div>
             </div>
         </main>
 
         <div class="bottom-nav">
-            <button onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></button>
-            <button onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>Riwayat</span></button>
-            <button onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></button>
-            <button onclick="showPage('chat')" id="nav-chat" class="nav-item"><div id="chatBadge"></div><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></button>
-            <button onclick="showPage('user')" id="nav-user" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></button>
+            <div onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></div>
+            <div onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>Riwayat</span></div>
+            <div onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></div>
+            <div onclick="showPage('chat')" id="nav-chat" class="nav-item"><div id="chatBadge"></div><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></div>
+            <div onclick="showPage('user')" id="nav-user" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></div>
         </div>
     </div>
 
@@ -140,14 +133,14 @@
         let mediaRecorder; let audioChunks = [];
 
         window.onload = () => {
-            const drvSel = document.getElementById('driverName'); drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
-            ["Okta","Dendy","Arif","Rian","Gemilang","Sadewa","Fahran","Rafli","Acong"].forEach(d => drvSel.innerHTML += `<option value="${d}">${d}</option>`);
+            const drvSel = document.getElementById('driverName'); 
+            drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
+            ["Okta","Dendy","Arif","Rian","Gemilang","Sadewa","Fahran","Rafli","Acong"].forEach(d => {
+                drvSel.innerHTML += `<option value="${d}">${d}</option>`;
+            });
             
-            // Cek apakah sudah login sebelumnya
             if(currentUser) {
-                document.getElementById('loginScreen').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                setUser(currentUser);
+                enterApp(currentUser);
             }
             setInterval(runCountdown, 1000);
         };
@@ -155,55 +148,81 @@
         function checkPinLogin() {
             const pin = document.getElementById('inputPin').value;
             if(userPins[pin]) {
-                const name = userPins[pin];
-                setUser(name);
-                document.getElementById('loginScreen').classList.add('opacity-0');
-                setTimeout(() => {
-                    document.getElementById('loginScreen').classList.add('hidden');
-                    document.getElementById('mainApp').classList.remove('hidden');
-                }, 300);
+                initAudio();
+                enterApp(userPins[pin]);
             } else {
-                alert("ID KERJA / PIN SALAH!");
+                alert("PIN SALAH!");
                 document.getElementById('inputPin').value = "";
             }
         }
 
-        function setUser(n) { 
-            currentUser = n; 
-            localStorage.setItem('jtm_user', n); 
-            document.getElementById('userDisplay').innerText = n; 
-            document.getElementById('profileName').innerText = n;
-            db.ref('presence/'+n).set({status:'online'}); 
-            db.ref('presence/'+n).onDisconnect().remove(); 
+        function enterApp(name) {
+            currentUser = name;
+            localStorage.setItem('jtm_user', name);
+            document.getElementById('userDisplay').innerText = name;
+            document.getElementById('profileName').innerText = name;
+            
+            // Hilangkan Login Screen secara total agar tidak menghalangi klik
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('mainApp').classList.add('opacity-100'); }, 50);
+            
+            db.ref('presence/'+name).set({status:'online'});
+            db.ref('presence/'+name).onDisconnect().remove();
+            loadData();
+        }
+
+        function loadData() {
+            db.ref('presence').on('value', s => { 
+                const l = document.getElementById('onlineList'); 
+                l.innerHTML = ""; 
+                Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span class="whitespace-nowrap"><span class="w-1.5 h-1.5 bg-green-400 rounded-full inline-block mr-1"></span>${u}</span>`); 
+            });
+            db.ref().on('value', s => { 
+                allData = s.val().customers || {}; 
+                render(allData); 
+                firstLoad = false; 
+            });
+            db.ref('chats').limitToLast(1).on('child_added', snap => { 
+                if(!firstLoad && snap.val().user !== currentUser) { 
+                    document.getElementById('chatBadge').style.display='block'; 
+                    playBeep('chat'); 
+                } 
+            });
         }
 
         function handleLogout() {
-            if(confirm("Yakin ingin keluar aplikasi?")) {
+            if(confirm("Yakin ingin Keluar?")) {
                 localStorage.removeItem('jtm_user');
                 location.reload();
             }
         }
 
-        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); if(audioCtx.state === 'suspended') audioCtx.resume(); }
-        function playBeep(type) { if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); osc.connect(gn); gn.connect(audioCtx.destination); if(type==='chat') osc.frequency.setValueAtTime(1200, audioCtx.currentTime); else osc.frequency.setValueAtTime(800, audioCtx.currentTime); gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); }
-
-        db.ref('presence').on('value', s => { const l = document.getElementById('onlineList'); l.innerHTML = ""; Object.keys(s.val()||{}).forEach(u => l.innerHTML += `<span class="whitespace-nowrap"><span class="w-1.5 h-1.5 bg-green-400 rounded-full inline-block mr-1"></span>${u}</span>`); });
-        db.ref('chats').limitToLast(1).on('child_added', snap => { if(!firstLoad && snap.val().user !== currentUser) { document.getElementById('chatBadge').style.display='block'; playBeep('chat'); } });
-        db.ref().on('value', s => { allData = s.val().customers || {}; render(allData); firstLoad = false; });
-
-        function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('page-' + id).classList.add('active');
+            const nav = document.getElementById('nav-' + id);
+            if(nav) nav.classList.add('active');
+            if(id === 'chat') document.getElementById('chatBadge').style.display = 'none';
+        }
 
         function render(data, filter = "") {
-            const act = document.getElementById('activeList'); const hist = document.getElementById('historyList');
+            const act = document.getElementById('activeList'); 
+            const hist = document.getElementById('historyList');
             act.innerHTML = ""; hist.innerHTML = "";
+            
             Object.keys(data).sort((a,b) => (data[b].time||0)-(data[a].time||0)).forEach(k => {
                 const i = data[k]; 
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
                 if(!i.name || !match) return;
-                const isD = i.status === 'done'; const isOTW = i.status === 'otw';
+                
+                const isD = i.status === 'done'; 
+                const isOTW = i.status === 'otw';
                 const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
+                
                 const html = `
-                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
+                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3 relative">
                         <div class="flex justify-between items-start">
                             <div>
                                 <p class="text-[9px] font-black text-red-500 uppercase italic">${i.area||'AREA'}</p>
@@ -215,50 +234,39 @@
                                 ${isOTW ? `<p id="cd-${k}" class="text-[10px] font-black text-blue-600 mt-1 italic">20:00</p>` : ''}
                             </div>
                             <div class="flex gap-2">
-                                <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-md"><i class="fa fa-check"></i></button>
-                                <button onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white shadow-md"><i class="fa fa-motorcycle"></i></button>
+                                <div onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-md"><i class="fa fa-check"></i></div>
+                                <div onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white shadow-md"><i class="fa fa-motorcycle"></i></div>
                             </div>
                         </div>
                         ${!isD ? `<div class="flex gap-2 mt-4">
                             <div class="flex flex-col gap-1 flex-1">
-                                <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
-                                <button onclick="editData('${k}')" class="text-blue-900 bg-blue-50 py-1 rounded-lg text-[8px] font-black uppercase italic">Edit</button>
+                                <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] block">MAPS</a>
+                                <div onclick="editData('${k}')" class="text-blue-900 bg-blue-50 py-1 rounded-lg text-center text-[8px] font-black uppercase italic cursor-pointer">Edit</div>
                             </div>
                             <div class="flex flex-col gap-1 flex-1">
                                 <a href="https://wa.me/${i.phone.startsWith('0')?'62'+i.phone.slice(1):i.phone}?text=${encodeURIComponent(waMsg)}" 
-                                   onclick="markRead('${k}')" target="_blank" class="bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] relative">WA 
+                                   onclick="markRead('${k}')" target="_blank" class="bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] block relative">WA 
                                    ${i.read ? '<i class="fa fa-check-double text-blue-300 ml-1 text-[8px]"></i>' : '<i class="fa fa-check text-gray-200 ml-1 text-[8px]"></i>'}</a>
-                                <button onclick="deleteWithPin('${k}')" class="text-red-500 bg-red-50 py-1 rounded-lg text-[8px] font-black uppercase italic">Hapus</button>
+                                <div onclick="deleteWithPin('${k}')" class="text-red-500 bg-red-50 py-1 rounded-lg text-center text-[8px] font-black uppercase italic cursor-pointer">Hapus</div>
                             </div>
-                        </div>` : `<button onclick="setStatus('${k}','active')" class="w-full bg-gray-100 text-gray-400 py-2 rounded-xl text-[9px] font-black mt-2 italic">UNDO PENGANTARAN</button>`}
+                        </div>` : `<div onclick="setStatus('${k}','active')" class="w-full bg-gray-100 text-gray-400 py-2 rounded-xl text-[9px] font-black mt-2 italic text-center cursor-pointer">UNDO PENGANTARAN</div>`}
                     </div>`;
                 if(isD) hist.innerHTML += html; else act.innerHTML += html;
             });
         }
 
-        function runCountdown() {
-            Object.keys(allData).forEach(k => {
-                if(allData[k].status === 'otw') {
-                    const diff = Math.floor((Date.now() - allData[k].startTime) / 1000);
-                    const rem = (20 * 60) - diff;
-                    if(rem <= 0) setStatus(k, 'done');
-                    else {
-                        const m = Math.floor(rem / 60); const s = rem % 60;
-                        const el = document.getElementById('cd-'+k);
-                        if(el) { el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`; if(m < 5) el.className = "text-[10px] font-black timer-blink mt-1 italic"; }
-                    }
-                }
-            });
-        }
-
+        function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        function playBeep(type) { if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); osc.connect(gn); gn.connect(audioCtx.destination); if(type==='chat') osc.frequency.setValueAtTime(1200, audioCtx.currentTime); else osc.frequency.setValueAtTime(800, audioCtx.currentTime); gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); }
         function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
         function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); if(s==='done') playBeep('done'); }
         function markRead(k) { db.ref('customers/'+k).update({ read: true }); }
-        function deleteWithPin(k) { if(prompt("MASUKKAN PIN KEAMANAN:") === SECURITY_PIN) db.ref('customers/'+k).remove(); else alert("PIN SALAH!"); }
-
+        function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); else alert("PIN SALAH!"); }
+        function searchData() { render(allData, document.getElementById('searchInput').value.toLowerCase()); }
+        
         function saveData() { 
             const key = document.getElementById('editKey').value;
             const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, status: 'active', time: Date.now() };
+            if(!d.name || !d.driver) { alert("Nama & Driver wajib isi!"); return; }
             if(key) db.ref('customers/'+key).update(d); else db.ref('customers').push(d);
             cancelEdit(); showPage('search'); 
         }
@@ -277,18 +285,33 @@
             ["custArea","custName","custPhone","custMaps"].forEach(id => document.getElementById(id).value = "");
         }
 
+        function runCountdown() {
+            Object.keys(allData).forEach(k => {
+                if(allData[k].status === 'otw') {
+                    const diff = Math.floor((Date.now() - allData[k].startTime) / 1000);
+                    const rem = (20 * 60) - diff;
+                    if(rem <= 0) setStatus(k, 'done');
+                    else {
+                        const m = Math.floor(rem / 60); const s = rem % 60;
+                        const el = document.getElementById('cd-'+k);
+                        if(el) { el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`; if(m < 5) el.className = "text-[10px] font-black timer-blink mt-1 italic"; }
+                    }
+                }
+            });
+        }
+
         // CHAT LOGIC
-        db.ref('chats').limitToLast(25).on('value', s => { 
+        db.ref('chats').limitToLast(15).on('value', s => { 
             const d = document.getElementById('chatDisplay'); d.innerHTML = ""; 
             if(s.val()) { 
                 Object.keys(s.val()).forEach(k => { 
                     const c = s.val()[k]; const isMe = c.user === currentUser;
                     const ticks = isMe ? (c.readByAll ? '<i class="fa fa-check-double text-blue-500 tick"></i>' : '<i class="fa fa-check text-gray-400 tick"></i>') : '';
                     let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
-                    if(c.type === "voice") content = `<div class="flex items-center gap-3 min-w-[180px]"><button onclick="playVN('${k}', '${c.text}')" class="text-gray-500"><i class="fa fa-play"></i></button><div class="flex-1 h-1 bg-gray-200 relative rounded"><div id="prog-${k}" class="absolute h-full bg-blue-400 rounded" style="width:0%"></div></div></div>`;
+                    if(c.type === "voice") content = `<div class="flex items-center gap-3 min-w-[150px]"><div onclick="playVN('${k}', '${c.text}')" class="text-gray-500 cursor-pointer"><i class="fa fa-play"></i></div><div class="flex-1 h-1 bg-gray-200 relative rounded"><div id="prog-${k}" class="absolute h-full bg-blue-400 rounded" style="width:0%"></div></div></div>`;
                     
                     d.innerHTML += `<div class="bubble ${isMe?'right':'left'}" oncontextmenu="deleteChat('${k}', event)">
-                        ${!isMe?`<span class="text-[8px] font-black uppercase text-blue-900 mb-1">${c.user}</span>`:''}
+                        ${!isMe?`<span class="text-[8px] font-black uppercase text-blue-900 mb-1 block">${c.user}</span>`:''}
                         ${content}
                         <div class="text-[7px] text-right text-gray-500 mt-1">${c.time} ${ticks}</div>
                     </div>`; 
@@ -312,17 +335,8 @@
                 mediaRecorder.start(); btn.innerHTML = '<i class="fa fa-stop text-red-500"></i>';
             } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
         }
-        function playVN(id, url) { const a = new Audio(url); a.play(); a.ontimeupdate = () => document.getElementById('prog-'+id).style.width = (a.currentTime/a.duration*100)+'%'; }
+        function playVN(id, url) { const a = new Audio(url); a.play(); a.ontimeupdate = () => { let el = document.getElementById('prog-'+id); if(el) el.style.width = (a.currentTime/a.duration*100)+'%'; } }
         function sendChat(m, t="text") { const i = document.getElementById('chatInput'); const c = t==="text"?i.value.trim():m; if(c){ db.ref('chats').push({user:currentUser, text:c, type:t, time:new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), readByAll: false}); i.value=""; } }
-        
-        function showPage(id) { 
-            document.querySelectorAll('.page').forEach(p=>p.classList.remove('active')); 
-            document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-            document.getElementById('page-'+id).classList.add('active'); 
-            const nav = document.getElementById('nav-'+id);
-            if(nav) nav.classList.add('active');
-            if(id==='chat') document.getElementById('chatBadge').style.display='none'; 
-        }
     </script>
 </body>
 </html>
