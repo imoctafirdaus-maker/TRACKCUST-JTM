@@ -3,268 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Pro</title>
-    
+    <title>JTM TRACKER FIX</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    
     <style>
-        .dominos-blue { background-color: #006491; }
-        .dominos-red { background-color: #e31837; }
-        ::-webkit-scrollbar { width: 0; background: transparent; }
-        
-        /* Navigasi harus selalu di paling atas */
-        .bottom-nav { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: white; display: flex; justify-content: space-around; 
-            padding: 12px 0; border-top: 2px solid #f1f5f9; 
-            z-index: 999; padding-bottom: env(safe-area-inset-bottom);
-            pointer-events: auto !important;
-        }
-
-        .nav-item { 
-            display: flex; flex-direction: column; align-items: center; 
-            color: #94a3b8; font-size: 10px; font-weight: 800; 
-            text-transform: uppercase; width: 20%; cursor: pointer;
-            pointer-events: auto !important;
-        }
-
-        .nav-item.active { color: #006491; }
-
-        .nav-add { 
-            background: #006491 !important; color: white !important; 
-            width: 55px !important; height: 55px; border-radius: 50%; 
-            margin-top: -30px; justify-content: center; border: 4px solid white; 
-            box-shadow: 0 4px 15px rgba(0,100,145,0.3); z-index: 1000;
-        }
-
-        .page { display: none; height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; } 
-        .page.active { display: flex; flex-direction: column; }
-
-        /* Login Screen harus benar-benar hilang saat hidden */
-        #loginScreen { 
-            position: fixed; inset: 0; z-index: 2000; 
-            display: flex; flex-direction: column; align-items: center; 
-            justify-content: center; padding: 20px; 
-            background-color: #006491;
-        }
-        
-        #loginScreen.hidden { display: none !important; pointer-events: none !important; visibility: hidden; }
-
-        .btn-action { 
-            width: 42px; height: 42px; display: flex; 
-            align-items: center; justify-content: center; 
-            border-radius: 12px; font-weight: 900; cursor: pointer;
-            pointer-events: auto !important;
-            position: relative; z-index: 10;
-        }
-
-        .bubble { max-width: 85%; padding: 8px 12px; border-radius: 12px; margin-bottom: 8px; position: relative; }
-        .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
-        .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
+        body { touch-action: manipulation; }
+        .page { display: none; padding-bottom: 100px; }
+        .page.active { display: block; }
+        /* Memastikan navigasi tidak tertutup apapun */
+        #nav-bar { z-index: 9999 !important; background: white; border-top: 1px solid #ddd; }
+        button, a, .clickable { cursor: pointer; pointer-events: auto !important; }
     </style>
 </head>
-<body class="bg-gray-50 h-screen font-sans text-gray-800 overflow-hidden">
+<body class="bg-gray-100 h-screen overflow-x-hidden">
 
-    <div id="loginScreen">
-        <div class="mb-8 text-center">
-            <h1 class="text-white font-black italic text-4xl tracking-tighter uppercase">Domino's</h1>
-            <p class="text-red-400 font-black italic text-xl uppercase tracking-widest">JTM TRACK PRO</p>
-        </div>
-        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center">
-            <h2 class="font-black text-blue-900 text-lg uppercase italic mb-2">Log In</h2>
-            <p class="text-gray-400 text-[10px] font-bold uppercase mb-6">Masukkan ID Kerja Kamu</p>
-            <input type="password" id="inputPin" maxlength="4" placeholder="••••" inputmode="numeric"
-                class="w-full text-center text-3xl tracking-[1rem] font-black p-4 bg-gray-100 rounded-2xl outline-none border-2 border-transparent focus:border-blue-500 mb-6 text-blue-900">
-            <button onclick="checkPinLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Masuk</button>
+    <div id="login-area" class="fixed inset-0 bg-blue-900 z-[10000] flex items-center justify-center p-6">
+        <div class="bg-white p-8 rounded-3xl w-full max-w-sm text-center shadow-2xl">
+            <h1 class="font-bold text-2xl mb-4 text-blue-900 italic">DOMINO'S JTM</h1>
+            <input type="tel" id="pinInput" placeholder="PIN 4 DIGIT" maxlength="4" 
+                class="w-full border-2 border-gray-200 p-4 rounded-xl text-center text-2xl font-bold mb-4 outline-none focus:border-blue-500">
+            <button onclick="prosesLogin()" class="w-full bg-red-600 text-white font-bold py-4 rounded-xl shadow-lg active:bg-red-700">MASUK</button>
         </div>
     </div>
 
-    <div id="mainApp" class="hidden h-screen flex flex-col">
-        <nav class="dominos-blue p-4 text-white shadow-md shrink-0">
-            <div class="flex justify-between items-center mb-1">
-                <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's JTM</h1>
-                <div class="flex items-center gap-2">
-                    <div onclick="showPage('user')" id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase h-7 flex items-center shadow cursor-pointer">User</div>
-                    <div onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full flex items-center justify-center cursor-pointer"><i class="fa fa-sync-alt text-[10px]"></i></div>
-                </div>
-            </div>
-            <div id="onlineList" class="flex gap-2 overflow-x-auto py-1 text-[9px] font-bold italic"></div>
-        </nav>
+    <div id="app-area" class="hidden">
+        <header class="bg-blue-800 p-4 text-white sticky top-0 z-50 flex justify-between items-center shadow-md">
+            <span class="font-black italic">JTM TRACKER</span>
+            <span id="userName" class="text-[10px] bg-white text-blue-800 px-2 py-1 rounded font-bold uppercase">User</span>
+        </header>
 
-        <main class="flex-1 overflow-hidden relative">
-            <div id="page-search" class="page active p-4 space-y-4">
-                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Antaran..." class="w-full p-4 rounded-2xl shadow-sm outline-none text-sm font-bold bg-white italic">
-                <div id="activeList" class="space-y-4 pb-32"></div>
+        <main class="p-4">
+            <div id="p-list" class="page active">
+                <div id="listKonten"></div>
             </div>
 
-            <div id="page-add" class="page p-4">
-                <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
-                    <input type="hidden" id="editKey">
-                    <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase border-2 border-yellow-100">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                        <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase"></select>
-                    </div>
-                    <input type="tel" id="custPhone" placeholder="Nomor HP" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="text" id="custMaps" placeholder="Link Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <button onclick="saveData()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan</button>
-                    <button onclick="cancelEdit()" id="cancelBtn" class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black uppercase text-[10px] hidden">Batal</button>
-                </div>
-            </div>
-
-            <div id="page-history" class="page p-4 space-y-4">
-                <div id="historyList" class="space-y-2 pb-32"></div>
-            </div>
-
-            <div id="page-chat" class="page">
-                <div id="chatDisplay" class="chat-container flex-1 overflow-y-auto p-4 bg-gray-200" style="height: calc(100vh - 250px);"></div>
-                <div class="bg-white p-2 flex gap-2 items-center border-t">
-                    <button onclick="toggleRecording()" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone"></i></button>
-                    <input type="text" id="chatInput" placeholder="Pesan..." class="flex-1 bg-gray-100 rounded-full px-4 py-2 text-sm outline-none font-bold">
-                    <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center"><i class="fa fa-paper-plane"></i></button>
-                </div>
-            </div>
-
-            <div id="page-user" class="page p-8 items-center justify-center">
-                <div class="bg-white p-10 rounded-[3rem] shadow-xl w-full text-center">
-                    <h2 id="profileName" class="font-black text-blue-900 text-xl uppercase mb-8">Nama User</h2>
-                    <button onclick="handleLogout()" class="w-full bg-red-50 text-red-600 py-4 rounded-2xl font-black uppercase italic border-2 border-red-100">Log Out</button>
+            <div id="p-add" class="page">
+                <div class="bg-white p-6 rounded-2xl shadow">
+                    <input type="text" id="inArea" placeholder="KODE AREA" class="w-full p-3 mb-2 border rounded">
+                    <input type="text" id="inNama" placeholder="NAMA PELANGGAN" class="w-full p-3 mb-2 border rounded">
+                    <input type="tel" id="inHp" placeholder="NO HP" class="w-full p-3 mb-2 border rounded">
+                    <input type="text" id="inMaps" placeholder="LINK GOOGLE MAPS" class="w-full p-3 mb-4 border rounded">
+                    <button onclick="simpanAntaran()" class="w-full bg-blue-600 text-white p-4 rounded-xl font-bold">SIMPAN ANTARAN</button>
                 </div>
             </div>
         </main>
 
-        <div class="bottom-nav">
-            <div onclick="showPage('search')" id="nav-search" class="nav-item active"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></div>
-            <div onclick="showPage('history')" id="nav-history" class="nav-item"><i class="fa fa-clock-rotate-left mb-1 text-xl"></i><span>Riwayat</span></div>
-            <div onclick="showPage('add')" id="nav-add" class="nav-item nav-add"><i class="fa fa-plus text-2xl"></i></div>
-            <div onclick="showPage('chat')" id="nav-chat" class="nav-item"><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></div>
-            <div onclick="showPage('user')" id="nav-user" class="nav-item"><i class="fa fa-user-gear mb-1 text-xl"></i><span>User</span></div>
-        </div>
+        <nav id="nav-bar" class="fixed bottom-0 left-0 right-0 flex justify-around p-3 shadow-inner">
+            <button onclick="bukaHalaman('list')" class="flex flex-col items-center text-blue-900">
+                <i class="fa fa-list text-xl"></i><span class="text-[10px] font-bold">LIST</span>
+            </button>
+            <button onclick="bukaHalaman('add')" class="flex flex-col items-center text-red-600">
+                <i class="fa fa-plus-circle text-3xl"></i>
+            </button>
+            <button onclick="location.reload()" class="flex flex-col items-center text-gray-400">
+                <i class="fa fa-sync text-xl"></i><span class="text-[10px] font-bold">RELOAD</span>
+            </button>
+        </nav>
     </div>
 
     <script>
-        // DAFTAR PIN & FIREBASE SAMA SEPERTI SEBELUMNYA
-        const SECURITY_PIN = "147852";
-        const userPins = { 
-            "0000": "PAK KUR (MANAGEMENT)", "6413": "PAK AGUS (MANAGEMENT)", "4444": "PAK AGENG (MANAGEMENT)",
-            "0959": "SINTIYA (KASIR)", "0968": "RIDHA (KASIR)",
-            "0972": "Okta", "0960": "Dendy", "0966": "Arif", "0971": "Rian", "0967": "Gemilang", "0976": "Sadewa", "0975": "Fahran", "0974": "Rafli", "0929": "Acong"
-        };
-
-        const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", authDomain: "trackcust-jtm.firebaseapp.com", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm", storageBucket: "trackcust-jtm.firebasestorage.app", messagingSenderId: "411585432172", appId: "1:411585432172:web:2d9ae1655d4e3073e4a649" };
-        firebase.initializeApp(firebaseConfig);
+        const config = { databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app" };
+        firebase.initializeApp(config);
         const db = firebase.database();
 
-        let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let audioCtx = null;
-
-        window.onload = () => {
-            const drvSel = document.getElementById('driverName'); 
-            drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
-            ["Okta","Dendy","Arif","Rian","Gemilang","Sadewa","Fahran","Rafli","Acong"].forEach(d => drvSel.innerHTML += `<option value="${d}">${d}</option>`);
+        function prosesLogin() {
+            const pin = document.getElementById('pinInput').value;
+            const users = {"0972":"Okta","0960":"Dendy","0966":"Arif","0971":"Rian","0967":"Gemilang","0976":"Sadewa","0975":"Fahran","0974":"Rafli","0929":"Acong","0000":"ADMIN"};
             
-            if(currentUser) enterApp(currentUser);
-            setInterval(runCountdown, 1000);
-        };
-
-        function checkPinLogin() {
-            const pin = document.getElementById('inputPin').value;
-            if(userPins[pin]) enterApp(userPins[pin]);
-            else { alert("PIN SALAH!"); document.getElementById('inputPin').value = ""; }
+            if(users[pin]) {
+                localStorage.setItem('user_jtm', users[pin]);
+                mulaiApp(users[pin]);
+            } else {
+                alert("PIN Salah!");
+            }
         }
 
-        function enterApp(name) {
-            currentUser = name;
-            localStorage.setItem('jtm_user', name);
-            document.getElementById('userDisplay').innerText = name;
-            document.getElementById('profileName').innerText = name;
+        function mulaiApp(nama) {
+            document.getElementById('userName').innerText = nama;
+            document.getElementById('login-area').remove(); // Hapus total elemen login dari kode
+            document.getElementById('app-area').classList.remove('hidden');
             
-            // HANCURKAN LOGIN SCREEN SEPENUHNYA
-            const login = document.getElementById('loginScreen');
-            login.style.display = 'none';
-            login.classList.add('hidden');
-            
-            // MUNCULKAN MAIN APP
-            document.getElementById('mainApp').classList.remove('hidden');
-            
-            db.ref('presence/'+name).set({status:'online'});
-            db.ref('presence/'+name).onDisconnect().remove();
-            startListeners();
-        }
+            // Listen Data
+            db.ref('customers').on('value', snap => {
+                const data = snap.val();
+                const container = document.getElementById('listKonten');
+                container.innerHTML = "";
+                if(!data) return;
 
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('page-' + id).classList.add('active');
-            document.getElementById('nav-' + id).classList.add('active');
-        }
-
-        function startListeners() {
-            db.ref().on('value', s => { allData = s.val().customers || {}; render(allData); });
-        }
-
-        function render(data) {
-            const act = document.getElementById('activeList'); 
-            const hist = document.getElementById('historyList');
-            act.innerHTML = ""; hist.innerHTML = "";
-            
-            Object.keys(data).sort((a,b) => (data[b].time||0)-(data[a].time||0)).forEach(k => {
-                const i = data[k]; 
-                const isD = i.status === 'done'; 
-                const isOTW = i.status === 'otw';
-                
-                const html = `
-                    <div class="bg-white rounded-[1.5rem] p-5 shadow-md border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
-                        <div class="flex justify-between items-start">
-                            <div class="pointer-events-auto">
-                                <p class="text-[9px] font-black text-red-500 uppercase italic">${i.area||'AREA'}</p>
-                                <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
-                                <p class="text-[9px] font-bold text-gray-400 italic">${i.driver||'--'}</p>
-                                ${isOTW ? `<p id="cd-${k}" class="text-[10px] font-black text-blue-600 mt-1">20:00</p>` : ''}
+                Object.keys(data).reverse().forEach(id => {
+                    const item = data[id];
+                    if(item.status === 'done') return;
+                    
+                    container.innerHTML += `
+                        <div class="bg-white p-4 rounded-xl shadow mb-3 border-l-4 border-red-500">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <div class="text-[10px] font-bold text-red-500 uppercase">${item.area}</div>
+                                    <div class="font-bold text-blue-900">${item.name}</div>
+                                    <div class="text-[10px] text-gray-400">${item.hp}</div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="hapusData('${id}')" class="w-10 h-10 bg-gray-100 text-red-500 rounded-lg"><i class="fa fa-trash"></i></button>
+                                    <button onclick="selesai('${id}')" class="w-10 h-10 bg-green-500 text-white rounded-lg"><i class="fa fa-check"></i></button>
+                                </div>
                             </div>
-                            <div class="flex gap-2">
-                                <div onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white"><i class="fa fa-check"></i></div>
-                                <div onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white"><i class="fa fa-motorcycle"></i></div>
+                            <div class="mt-3">
+                                <a href="${item.maps}" target="_blank" class="block w-full bg-blue-50 text-blue-700 text-center py-2 rounded-lg font-bold text-xs">BUKA MAPS</a>
                             </div>
                         </div>
-                        ${!isD ? `
-                        <div class="flex gap-2 mt-4">
-                            <a href="${i.maps}" target="_blank" class="flex-1 dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
-                            <div onclick="deleteWithPin('${k}')" class="flex-1 bg-red-50 text-red-500 py-3 rounded-xl text-center font-black text-[10px] cursor-pointer">HAPUS</div>
-                        </div>` : ''}
-                    </div>`;
-                if(isD) hist.innerHTML += html; else act.innerHTML += html;
+                    `;
+                });
             });
         }
 
-        function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); }
-        function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); }
-        function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
-        function handleLogout() { localStorage.removeItem('jtm_user'); location.reload(); }
-        
-        function saveData() { 
-            const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, driver: document.getElementById('driverName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, status: 'active', time: Date.now() };
-            db.ref('customers').push(d); showPage('search');
-            ["custArea","custName","custPhone","custMaps"].forEach(id => document.getElementById(id).value = "");
+        function bukaHalaman(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('p-' + id).classList.add('active');
         }
 
-        function runCountdown() {
-            Object.keys(allData).forEach(k => {
-                if(allData[k].status === 'otw') {
-                    const diff = Math.floor((Date.now() - allData[k].startTime) / 1000);
-                    const rem = (20 * 60) - diff;
-                    if(rem <= 0) setStatus(k, 'done');
-                    else {
-                        const m = Math.floor(rem / 60); const s = rem % 60;
-                        const el = document.getElementById('cd-'+k);
-                        if(el) el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`;
-                    }
-                }
-            });
+        function simpanAntaran() {
+            const data = {
+                area: document.getElementById('inArea').value,
+                name: document.getElementById('inNama').value,
+                hp: document.getElementById('inHp').value,
+                maps: document.getElementById('inMaps').value,
+                status: 'active'
+            };
+            db.ref('customers').push(data);
+            bukaHalaman('list');
+            alert("Berhasil disimpan!");
         }
+
+        function selesai(id) { db.ref('customers/'+id).update({status: 'done'}); }
+        function hapusData(id) { if(confirm("Hapus data?")) db.ref('customers/'+id).remove(); }
+
+        // Cek Login Otomatis
+        const savedUser = localStorage.getItem('user_jtm');
+        if(savedUser) mulaiApp(savedUser);
     </script>
 </body>
 </html>
