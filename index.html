@@ -40,7 +40,7 @@
             <h1 class="font-black italic text-4xl uppercase">Domino's</h1>
             <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Track System</p>
         </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-sm text-center">
             <h2 class="font-black text-blue-900 text-[10px] uppercase mb-4 italic">Verifikasi Petugas</h2>
             <select id="selectUser" class="w-full p-4 bg-gray-100 rounded-2xl mb-4 font-bold text-blue-900 outline-none uppercase text-xs"></select>
             <input type="password" id="inputPin" maxlength="4" placeholder="PIN" inputmode="numeric" class="w-full text-center text-2xl font-black p-4 bg-gray-100 rounded-2xl mb-6 outline-none border-2 border-transparent focus:border-blue-500">
@@ -62,7 +62,13 @@
 
         <main class="flex-1 overflow-hidden relative">
             <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/No HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
+                <div class="space-y-2">
+                    <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/No HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
+                    <div class="flex justify-between items-center px-2">
+                        <p class="text-[10px] font-black text-gray-400 uppercase italic">Total Antaran Aktif:</p>
+                        <span id="totalCustomer" class="bg-blue-600 text-white px-3 py-0.5 rounded-full text-[10px] font-black italic shadow-sm">0</span>
+                    </div>
+                </div>
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
@@ -262,11 +268,19 @@
         function render(data, filter = "") {
             const act = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             act.innerHTML = ""; hist.innerHTML = "";
+            let countActive = 0;
+
             Object.keys(data).sort((a,b) => (data[b].time||0)-(data[a].time||0)).forEach(k => {
                 const i = data[k]; 
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
-                if(!i.name || !match) return;
+                
                 const isD = i.status === 'done'; const isOTW = i.status === 'otw';
+                
+                // Hitung total hanya untuk data yang belum selesai (active/otw)
+                if(!isD) countActive++;
+
+                if(!i.name || !match) return;
+
                 const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
@@ -300,6 +314,9 @@
                     </div>`;
                 if(isD) hist.innerHTML += html; else act.innerHTML += html;
             });
+
+            // Update display total data
+            document.getElementById('totalCustomer').innerText = countActive;
         }
 
         function showFullPhoto(k) {
