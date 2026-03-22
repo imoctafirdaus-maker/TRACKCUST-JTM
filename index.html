@@ -313,7 +313,7 @@
             // Proteksi: Hanya crew (nama tanpa MANAGEMENT/KASIR) yang bisa mengantar
             if(currentUser.includes("MANAGEMENT") || currentUser.includes("KASIR")) {
                 playBeep('error');
-                return alert("⚠️ CAUTION: Anda hanya Crew Delivery Man yang dapat mengantar!");
+                return alert("⚠️ CAUTION:Hanya Crew DeliveryMan yang dapat mengantar!");
             }
             
             db.ref('customers/'+k).update({ 
