@@ -179,9 +179,18 @@
             try {
                 const result = await Tesseract.recognize(input.files[0], 'eng+ind');
                 const text = result.data.text;
-                const phoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
-                if (phoneMatch) {
-                    document.getElementById('searchInput').value = phoneMatch[0];
+                
+                // Regex khusus format label: (8962) 6312 -621 x 62
+                const labelPhoneMatch = text.match(/\((\d{4})\)\s*(\d{4})\s*-\s*(\d{3,4})\s*x\s*(\d{2})/);
+                const normalPhoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
+
+                if (labelPhoneMatch) {
+                    const cleanNumber = "0" + labelPhoneMatch[1] + labelPhoneMatch[2] + labelPhoneMatch[3] + labelPhoneMatch[4];
+                    document.getElementById('searchInput').value = cleanNumber;
+                    searchData();
+                    playBeep('done');
+                } else if (normalPhoneMatch) {
+                    document.getElementById('searchInput').value = normalPhoneMatch[0];
                     searchData();
                     playBeep('done');
                 } else {
@@ -233,8 +242,17 @@
             try {
                 const result = await Tesseract.recognize(input.files[0], 'eng+ind');
                 const text = result.data.text;
-                const phoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
-                if (phoneMatch) document.getElementById('custPhone').value = phoneMatch[0];
+                
+                // Regex khusus format label: (8962) 6312 -621 x 62
+                const labelPhoneMatch = text.match(/\((\d{4})\)\s*(\d{4})\s*-\s*(\d{3,4})\s*x\s*(\d{2})/);
+                const normalPhoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
+
+                if (labelPhoneMatch) {
+                    document.getElementById('custPhone').value = "0" + labelPhoneMatch[1] + labelPhoneMatch[2] + labelPhoneMatch[3] + labelPhoneMatch[4];
+                } else if (normalPhoneMatch) {
+                    document.getElementById('custPhone').value = normalPhoneMatch[0];
+                }
+
                 const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
                 for(let i=0; i<lines.length; i++) {
                     const l = lines[i].toLowerCase();
