@@ -40,7 +40,7 @@
             <h1 class="font-black italic text-4xl uppercase">Domino's</h1>
             <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Track System</p>
         </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-sm text-center">
             <h2 class="font-black text-blue-900 text-[10px] uppercase mb-4 italic">Verifikasi Petugas</h2>
             <select id="selectUser" class="w-full p-4 bg-gray-100 rounded-2xl mb-4 font-bold text-blue-900 outline-none uppercase text-xs"></select>
             <input type="password" id="inputPin" maxlength="4" placeholder="PIN" inputmode="numeric" class="w-full text-center text-2xl font-black p-4 bg-gray-100 rounded-2xl mb-6 outline-none border-2 border-transparent focus:border-blue-500">
@@ -69,7 +69,7 @@
             <div id="page-add" class="page p-4 overflow-y-auto relative">
                 <div id="ocrLoader">
                     <i class="fa fa-circle-notch fa-spin text-4xl mb-3 text-red-500"></i>
-                    <p class="font-black italic text-xs uppercase">Sedang Memproses...</p>
+                    <p class="font-black italic text-xs uppercase">Sedang Memproses Struk...</p>
                 </div>
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
                     <div class="flex justify-between items-center mb-1">
@@ -82,11 +82,11 @@
                     <input type="hidden" id="editKey">
                     <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase border-2 border-yellow-100 italic">
                     <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
+                        <input type="text" id="custName" placeholder="Nama Pelanggan" class="bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold italic">
                         <select id="driverName" class="bg-blue-50 p-4 rounded-xl text-sm font-bold text-blue-900 outline-none uppercase italic"></select>
                     </div>
                     <input type="tel" id="custPhone" placeholder="Nomor HP (Contoh: 0812...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold italic">
-                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                    <input type="text" id="custMaps" placeholder="Alamat atau Link Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold italic">
                     
                     <div class="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border-2 border-dashed border-blue-200">
                         <label class="flex-1 cursor-pointer flex items-center gap-2 text-blue-900 font-black text-[10px] uppercase italic">
@@ -191,27 +191,40 @@
             playBeep('error');
         }
 
+        // --- LOGIKA OCR KHUSUS DOMINO'S ---
         async function runOCR(input) {
             if (!input.files || !input.files[0]) return;
             const loader = document.getElementById('ocrLoader');
             loader.style.display = 'flex';
             try {
-                const result = await Tesseract.recognize(input.files[0], 'eng+ind');
+                const result = await Tesseract.recognize(input.files[0], 'ind+eng');
                 const text = result.data.text;
-                const phoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
-                if (phoneMatch) document.getElementById('custPhone').value = phoneMatch[0];
-                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
-                for(let i=0; i<lines.length; i++) {
-                    const l = lines[i].toLowerCase();
-                    if(l.includes('nama') || l.includes('customer') || l.includes('sold to')) {
-                        let nameVal = lines[i].split(/[:\-]/).pop().trim();
-                        if(nameVal.length < 3 && lines[i+1]) nameVal = lines[i+1];
-                        document.getElementById('custName').value = nameVal;
-                        break;
-                    }
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+
+                // 1. Ambil Nama (Baris pertama struk biasanya Nama)
+                if (lines.length > 0) {
+                    document.getElementById('custName').value = lines[0].toUpperCase();
                 }
+
+                // 2. Ambil Alamat (Filter baris tengah yang bukan HP/Nama)
+                let fullAddress = "";
+                lines.forEach((line, index) => {
+                    if (index > 0 && !line.includes('(') && !line.match(/\d{10,}/)) {
+                        fullAddress += line + " ";
+                    }
+                });
+                if (fullAddress) document.getElementById('custMaps').value = fullAddress.trim().toUpperCase();
+
+                // 3. Ambil & Bersihkan No HP (Format: (81xx)xxxx-xxx)
+                const phoneMatch = text.match(/\((\d+)\)\s*([\d-]+)/);
+                if (phoneMatch) {
+                    let cleanPhone = phoneMatch[1] + phoneMatch[2].replace(/-/g, '');
+                    if (cleanPhone.startsWith('8')) cleanPhone = '0' + cleanPhone;
+                    document.getElementById('custPhone').value = cleanPhone;
+                }
+
                 playBeep('done');
-            } catch (e) { alert("Gagal!"); } finally { loader.style.display = 'none'; input.value = ""; }
+            } catch (e) { alert("Gagal scan struk!"); } finally { loader.style.display = 'none'; input.value = ""; }
         }
 
         window.onload = () => {
@@ -267,7 +280,14 @@
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
                 if(!i.name || !match) return;
                 const isD = i.status === 'done'; const isOTW = i.status === 'otw';
+                
+                // LOGIKA AUTO-CONVERT MAPS
+                const mapsUrl = i.maps.startsWith('http') 
+                    ? i.maps 
+                    : `https://www.google.com/maps/search/${encodeURIComponent(i.maps + " Jatimakmur")}`;
+
                 const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
+                
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start">
@@ -285,7 +305,7 @@
                         </div>
                         ${!isD ? `<div class="flex gap-2 mt-4">
                             <div class="flex flex-col gap-1 flex-1">
-                                <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
+                                <a href="${mapsUrl}" target="_blank" class="dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px]">MAPS</a>
                                 <button onclick="editData('${k}')" class="text-blue-900 bg-blue-50 py-1 rounded-lg text-[8px] font-black uppercase italic">Edit Data</button>
                             </div>
                             <div class="flex flex-col gap-1 flex-1">
