@@ -275,7 +275,10 @@
                                 <p class="text-[9px] font-black text-red-500 uppercase italic">${i.area||'AREA'}</p>
                                 <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
                                 <p class="text-[9px] font-bold text-gray-400 italic">${i.driver||'--'} | ${i.phone}</p>
-                                ${isOTW ? `<p id="cd-${k}" class="text-[10px] font-black text-blue-600 mt-1 italic">20:00</p>` : ''}
+                                ${isOTW ? `<div class="flex items-center gap-2 mt-1">
+                                    <p id="cd-${k}" class="text-[10px] font-black text-blue-600 italic">20:00</p>
+                                    <span class="text-[8px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-black uppercase italic">${i.driver}</span>
+                                </div>` : ''}
                                 ${i.photo ? `<button onclick="showFullPhoto('${k}')" class="mt-2 flex items-center gap-1 text-[8px] font-black text-blue-600 uppercase italic border border-blue-100 px-2 py-1 rounded-lg bg-blue-50"><i class="fa fa-image"></i> Lihat Foto Rumah</button>` : ''}
                             </div>
                             <div class="flex gap-2">
@@ -306,16 +309,12 @@
 
         function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); if(s==='done') playBeep('done'); }
         
-        // FITUR OTOMATIS DRIVER & START OTW DENGAN ROLE PROTECTION
         function startOTW(k) { 
             if(!currentUser) return alert("Sesi berakhir, silakan login ulang.");
-
-            // Proteksi: Hanya crew (nama tanpa MANAGEMENT/KASIR) yang bisa mengantar
             if(currentUser.includes("MANAGEMENT") || currentUser.includes("KASIR")) {
                 playBeep('error');
-                return alert("⚠️ CAUTION:Hanya Crew DeliveryMan yang dapat mengantar!");
+                return alert("⚠️ CAUTION: Hanya Crew Delivery Man yang dapat mengantar!");
             }
-            
             db.ref('customers/'+k).update({ 
                 status: 'otw', 
                 startTime: Date.now(),
@@ -374,7 +373,7 @@
                     else {
                         const m = Math.floor(rem / 60); const s = rem % 60;
                         const el = document.getElementById('cd-'+k);
-                        if(el) { el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`; if(m < 5) el.className = "text-[10px] font-black timer-blink mt-1 italic"; }
+                        if(el) { el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`; if(m < 5) el.className = "text-[10px] font-black timer-blink italic"; }
                     }
                 }
             });
