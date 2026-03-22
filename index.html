@@ -69,7 +69,7 @@
             <div id="page-add" class="page p-4 overflow-y-auto relative">
                 <div id="ocrLoader">
                     <i class="fa fa-circle-notch fa-spin text-4xl mb-3 text-red-500"></i>
-                    <p class="font-black italic text-xs uppercase">Sedang Membaca Struk...</p>
+                    <p class="font-black italic text-xs uppercase">Sedang Memproses...</p>
                 </div>
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
                     <div class="flex justify-between items-center mb-1">
@@ -87,6 +87,16 @@
                     </div>
                     <input type="tel" id="custPhone" placeholder="Nomor HP (Contoh: 0812...)" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold italic">
                     <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                    
+                    <div class="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border-2 border-dashed border-blue-200">
+                        <label class="flex-1 cursor-pointer flex items-center gap-2 text-blue-900 font-black text-[10px] uppercase italic">
+                            <i class="fa fa-home text-lg text-red-500"></i> FOTO RUMAH (OPSIONAL)
+                            <input type="file" id="custPhotoFile" accept="image/*" capture="environment" onchange="handlePhoto(this)" class="hidden">
+                        </label>
+                        <div id="photoPreview" class="hidden w-10 h-10 rounded-lg bg-cover bg-center border-2 border-white shadow-sm"></div>
+                        <input type="hidden" id="custPhotoBase64">
+                    </div>
+
                     <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm italic">Simpan Data</button>
                     <button onclick="cancelEdit()" id="cancelBtn" class="w-full bg-gray-100 text-gray-400 py-3 rounded-2xl font-black uppercase text-[10px] hidden">Batal Edit</button>
                 </div>
@@ -140,6 +150,41 @@
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
         }
 
+        // --- LOGIKA KOMPRESI FOTO ---
+        function handlePhoto(input) {
+            if (!input.files || !input.files[0]) return;
+            const loader = document.getElementById('ocrLoader');
+            loader.style.display = 'flex';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 400; // Lebar foto dibatasi 400px agar ringan
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+                    canvas.width = width; canvas.height = height;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Kompresi ke format JPEG dengan kualitas 0.5 (50%)
+                    const base64 = canvas.toDataURL("image/jpeg", 0.5);
+                    document.getElementById('custPhotoBase64').value = base64;
+                    
+                    const prev = document.getElementById('photoPreview');
+                    prev.style.backgroundImage = `url(${base64})`;
+                    prev.classList.remove('hidden');
+                    loader.style.display = 'none';
+                    playBeep('done');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
         async function runOCR(input) {
             if (!input.files || !input.files[0]) return;
             const loader = document.getElementById('ocrLoader');
@@ -160,12 +205,7 @@
                     }
                 }
                 playBeep('done');
-            } catch (e) {
-                alert("Gagal membaca gambar.");
-            } finally {
-                loader.style.display = 'none';
-                input.value = ""; 
-            }
+            } catch (e) { alert("Gagal!"); } finally { loader.style.display = 'none'; input.value = ""; }
         }
 
         window.onload = () => {
@@ -230,6 +270,7 @@
                                 <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
                                 <p class="text-[9px] font-bold text-gray-400 italic">${i.driver||'--'} | ${i.phone}</p>
                                 ${isOTW ? `<p id="cd-${k}" class="text-[10px] font-black text-blue-600 mt-1 italic">20:00</p>` : ''}
+                                ${i.photo ? `<button onclick="showFullPhoto('${k}')" class="mt-2 flex items-center gap-1 text-[8px] font-black text-blue-600 uppercase italic border border-blue-100 px-2 py-1 rounded-lg bg-blue-50"><i class="fa fa-image"></i> Lihat Foto Rumah</button>` : ''}
                             </div>
                             <div class="flex gap-2">
                                 <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-md"><i class="fa fa-check"></i></button>
@@ -252,11 +293,15 @@
             });
         }
 
+        function showFullPhoto(k) {
+            const win = window.open("", "_blank");
+            win.document.write(`<html><body style="margin:0;background:black;display:flex;align-items:center;justify-content:center;"><img src="${allData[k].photo}" style="max-width:100%;border-radius:15px;box-shadow:0 0 30px rgba(255,255,255,0.2);"></body></html>`);
+        }
+
         function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); if(s==='done') playBeep('done'); }
         function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
         function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
         
-        // --- LOGIKA SAVE DATA DENGAN ANTI-DUPLIKAT ---
         function saveData() { 
             const key = document.getElementById('editKey').value;
             const inputPhone = document.getElementById('custPhone').value.trim();
@@ -268,15 +313,9 @@
                 return alert("Data Nama, HP, dan Driver Wajib Diisi!");
             }
 
-            // Cek Duplikat (Hanya saat tambah data baru, bukan edit)
             if(!key) {
-                const isDuplicate = Object.values(allData).some(item => 
-                    item.phone === inputPhone && item.status !== 'done'
-                );
-                if(isDuplicate) {
-                    playBeep('error');
-                    return alert("⚠️ NOMOR TELAH TERDAFTAR!\nNomor " + inputPhone + " saat ini masih dalam daftar antaran aktif.");
-                }
+                const isDuplicate = Object.values(allData).some(item => item.phone === inputPhone && item.status !== 'done');
+                if(isDuplicate) { playBeep('error'); return alert("⚠️ DATA DOUBLE!"); }
             }
 
             const d = { 
@@ -285,27 +324,35 @@
                 driver: inputDriver, 
                 phone: inputPhone, 
                 maps: document.getElementById('custMaps').value, 
+                photo: document.getElementById('custPhotoBase64').value, // Simpan Data Foto (Teks)
                 status: 'active', 
                 time: Date.now() 
             };
 
             if(key) db.ref('customers/'+key).update(d); else db.ref('customers').push(d);
-            cancelEdit(); showPage('search'); 
-            playBeep('done');
+            cancelEdit(); showPage('search'); playBeep('done');
         }
 
         function editData(k) {
             const i = allData[k]; document.getElementById('editKey').value = k;
             document.getElementById('custArea').value = i.area; document.getElementById('custName').value = i.name;
             document.getElementById('driverName').value = i.driver; document.getElementById('custPhone').value = i.phone;
-            document.getElementById('custMaps').value = i.maps; document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('custMaps').value = i.maps; 
+            document.getElementById('custPhotoBase64').value = i.photo || "";
+            if(i.photo) {
+                const prev = document.getElementById('photoPreview');
+                prev.style.backgroundImage = `url(${i.photo})`;
+                prev.classList.remove('hidden');
+            }
+            document.getElementById('formTitle').innerText = "Edit Antaran";
             document.getElementById('cancelBtn').classList.remove('hidden'); showPage('add');
         }
 
         function cancelEdit() {
             document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran";
             document.getElementById('cancelBtn').classList.add('hidden');
-            ["custArea","custName","custPhone","custMaps"].forEach(id => document.getElementById(id).value = "");
+            document.getElementById('photoPreview').classList.add('hidden');
+            ["custArea","custName","custPhone","custMaps","custPhotoBase64"].forEach(id => document.getElementById(id).value = "");
         }
 
         function runCountdown() {
