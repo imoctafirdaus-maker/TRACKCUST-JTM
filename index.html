@@ -31,9 +31,50 @@
         .tick { font-size: 10px; margin-left: 4px; }
         #pinOverlay { position: fixed; inset: 0; background: #006491; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
         #ocrLoader { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; color: white; flex-direction: column; border-radius: 2rem; }
+
+        /* FITUR BARU: SCANNER FRAME CSS */
+        .scanner-frame {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 5000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .scanner-box {
+            width: 85%;
+            height: 180px;
+            border: 4px solid #e31837;
+            border-radius: 20px;
+            box-shadow: 0 0 0 1000px rgba(0,0,0,0.5);
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .scanner-box::after {
+            content: "POSISIKAN ALAMAT DI SINI";
+            position: absolute;
+            top: -35px;
+            background: #e31837;
+            color: white;
+            font-size: 10px;
+            font-weight: 900;
+            padding: 5px 15px;
+            border-radius: 50px;
+            letter-spacing: 1px;
+        }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
+
+    <div id="cameraFrame" class="scanner-frame">
+        <div class="scanner-box"></div>
+        <div class="mt-8 text-white font-black italic text-sm animate-pulse uppercase">Memproses Alamat...</div>
+    </div>
 
     <div id="pinOverlay">
         <div class="text-center mb-8 text-white">
@@ -191,31 +232,26 @@
             playBeep('error');
         }
 
-        // --- LOGIKA OCR KHUSUS DOMINO'S ---
+        // --- LOGIKA OCR GABUNGAN (DENGAN SCANNER FRAME) ---
         async function runOCR(input) {
             if (!input.files || !input.files[0]) return;
+            
+            // Tampilkan UI Fokus & Loader
+            const frame = document.getElementById('cameraFrame');
             const loader = document.getElementById('ocrLoader');
+            frame.style.display = 'flex';
             loader.style.display = 'flex';
+
             try {
                 const result = await Tesseract.recognize(input.files[0], 'ind+eng');
                 const text = result.data.text;
                 const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
 
-                // 1. Ambil Nama (Baris pertama struk biasanya Nama)
-                if (lines.length > 0) {
-                    document.getElementById('custName').value = lines[0].toUpperCase();
-                }
+                // 1. Ambil Nama (Cari baris murni teks di atas)
+                const nameCandidate = lines.find(l => !l.includes('(') && !l.match(/RT|RW|JL|JALAN/i) && l.length > 5);
+                if (nameCandidate) document.getElementById('custName').value = nameCandidate.toUpperCase();
 
-                // 2. Ambil Alamat (Filter baris tengah yang bukan HP/Nama)
-                let fullAddress = "";
-                lines.forEach((line, index) => {
-                    if (index > 0 && !line.includes('(') && !line.match(/\d{10,}/)) {
-                        fullAddress += line + " ";
-                    }
-                });
-                if (fullAddress) document.getElementById('custMaps').value = fullAddress.trim().toUpperCase();
-
-                // 3. Ambil & Bersihkan No HP (Format: (81xx)xxxx-xxx)
+                // 2. Ambil No HP Domino's Format: (8xxx)xxxx-xxxx
                 const phoneMatch = text.match(/\((\d+)\)\s*([\d-]+)/);
                 if (phoneMatch) {
                     let cleanPhone = phoneMatch[1] + phoneMatch[2].replace(/-/g, '');
@@ -223,8 +259,21 @@
                     document.getElementById('custPhone').value = cleanPhone;
                 }
 
+                // 3. Ambil Alamat (Cari keyword alamat spesifik Domino's)
+                let addressLines = lines.filter(l => l.match(/JALAN|JL|RT|RW|KEC|KEL|NO\.|BLOK|MUSHOLA|CLUSTER/i));
+                if (addressLines.length > 0) {
+                    document.getElementById('custMaps').value = addressLines.join(' ').toUpperCase();
+                }
+
                 playBeep('done');
-            } catch (e) { alert("Gagal scan struk!"); } finally { loader.style.display = 'none'; input.value = ""; }
+            } catch (e) { 
+                alert("Gagal scan struk! Pastikan area alamat berada di dalam kotak merah."); 
+                playBeep('error');
+            } finally { 
+                frame.style.display = 'none';
+                loader.style.display = 'none'; 
+                input.value = ""; 
+            }
         }
 
         window.onload = () => {
@@ -281,7 +330,6 @@
                 if(!i.name || !match) return;
                 const isD = i.status === 'done'; const isOTW = i.status === 'otw';
                 
-                // LOGIKA AUTO-CONVERT MAPS
                 const mapsUrl = i.maps.startsWith('http') 
                     ? i.maps 
                     : `https://www.google.com/maps/search/${encodeURIComponent(i.maps + " Jatimakmur")}`;
