@@ -30,8 +30,6 @@
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         .tick { font-size: 10px; margin-left: 4px; }
         #pinOverlay { position: fixed; inset: 0; background: #006491; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        
-        /* TAMBAHAN: Style Loader OCR */
         #ocrLoader { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; color: white; flex-direction: column; border-radius: 2rem; }
     </style>
 </head>
@@ -73,7 +71,6 @@
                     <i class="fa fa-circle-notch fa-spin text-4xl mb-3 text-red-500"></i>
                     <p class="font-black italic text-xs uppercase">Sedang Membaca Struk...</p>
                 </div>
-
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
                     <div class="flex justify-between items-center mb-1">
                         <h2 id="formTitle" class="font-black text-blue-900 text-xs uppercase italic">Input Antaran</h2>
@@ -82,7 +79,6 @@
                             <input type="file" accept="image/*" capture="environment" onchange="runOCR(this)" class="hidden">
                         </label>
                     </div>
-
                     <input type="hidden" id="editKey">
                     <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold outline-none uppercase border-2 border-yellow-100 italic">
                     <div class="grid grid-cols-2 gap-2">
@@ -144,38 +140,28 @@
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
         }
 
-        // --- TAMBAHAN: FUNGSI LOGIKA OCR ---
         async function runOCR(input) {
             if (!input.files || !input.files[0]) return;
             const loader = document.getElementById('ocrLoader');
             loader.style.display = 'flex';
-            
             try {
                 const result = await Tesseract.recognize(input.files[0], 'eng+ind');
                 const text = result.data.text;
-                console.log("OCR Result Raw:", text);
-                
-                // Cari Nomor HP (Pola angka 10-13 digit diawali 08/62)
                 const phoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
                 if (phoneMatch) document.getElementById('custPhone').value = phoneMatch[0];
-
-                // Cari Nama (Logika: Baris setelah kata 'Customer' atau 'Nama' atau 'Sold to')
                 const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
                 for(let i=0; i<lines.length; i++) {
                     const l = lines[i].toLowerCase();
                     if(l.includes('nama') || l.includes('customer') || l.includes('sold to')) {
-                        // Ambil baris yang sama setelah tanda titik dua, atau baris berikutnya
                         let nameVal = lines[i].split(/[:\-]/).pop().trim();
                         if(nameVal.length < 3 && lines[i+1]) nameVal = lines[i+1];
                         document.getElementById('custName').value = nameVal;
                         break;
                     }
                 }
-                
                 playBeep('done');
             } catch (e) {
-                console.error(e);
-                alert("Gagal membaca gambar. Pastikan foto struk tegak dan terang.");
+                alert("Gagal membaca gambar.");
             } finally {
                 loader.style.display = 'none';
                 input.value = ""; 
@@ -187,12 +173,10 @@
             const logSel = document.getElementById('selectUser');
             drvSel.innerHTML = '<option value="">PILIH DRIVER</option>';
             logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
-            
             Object.keys(userPins).forEach(n => {
                 logSel.innerHTML += `<option value="${n}">${n}</option>`;
                 if(!n.includes("MANAGEMENT") && !n.includes("KASIR")) drvSel.innerHTML += `<option value="${n}">${n}</option>`;
             });
-
             if(currentUser) bukaApp(currentUser);
             setInterval(runCountdown, 1000);
         };
@@ -238,7 +222,6 @@
                 if(!i.name || !match) return;
                 const isD = i.status === 'done'; const isOTW = i.status === 'otw';
                 const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
-                
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start">
@@ -273,21 +256,26 @@
         function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
         function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
         
+        // --- LOGIKA SAVE DATA DENGAN ANTI-DUPLIKAT ---
         function saveData() { 
             const key = document.getElementById('editKey').value;
             const inputPhone = document.getElementById('custPhone').value.trim();
             const inputName = document.getElementById('custName').value;
             const inputDriver = document.getElementById('driverName').value;
 
-            if(!inputPhone || !inputName || !inputDriver) return alert("Data Nama, HP, dan Driver Wajib Diisi!");
+            if(!inputPhone || !inputName || !inputDriver) {
+                playBeep('error');
+                return alert("Data Nama, HP, dan Driver Wajib Diisi!");
+            }
 
+            // Cek Duplikat (Hanya saat tambah data baru, bukan edit)
             if(!key) {
                 const isDuplicate = Object.values(allData).some(item => 
                     item.phone === inputPhone && item.status !== 'done'
                 );
                 if(isDuplicate) {
                     playBeep('error');
-                    return alert("⚠️ DATA DOUBLE! Nomor " + inputPhone + " sedang ada dalam antaran aktif!");
+                    return alert("⚠️ NOMOR TELAH TERDAFTAR!\nNomor " + inputPhone + " saat ini masih dalam daftar antaran aktif.");
                 }
             }
 
@@ -303,6 +291,7 @@
 
             if(key) db.ref('customers/'+key).update(d); else db.ref('customers').push(d);
             cancelEdit(); showPage('search'); 
+            playBeep('done');
         }
 
         function editData(k) {
@@ -342,7 +331,6 @@
                     const ticks = isMe ? (c.readByAll ? '<i class="fa fa-check-double text-blue-500 tick"></i>' : '<i class="fa fa-check text-gray-400 tick"></i>') : '';
                     let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
                     if(c.type === "voice") content = `<div class="flex items-center gap-3 min-w-[180px]"><button onclick="playVN('${k}', '${c.text}')" class="text-gray-500"><i class="fa fa-play text-lg"></i></button><div class="flex-1 h-1 bg-gray-200 relative rounded"><div id="prog-${k}" class="absolute h-full bg-blue-400 rounded" style="width:0%"></div></div></div>`;
-                    
                     d.innerHTML += `<div class="bubble ${isMe?'right':'left'}" oncontextmenu="deleteChat('${k}', event)">
                         ${!isMe?`<span class="text-[8px] font-black uppercase text-blue-900 mb-1 block">${c.user}</span>`:''}
                         ${content}
