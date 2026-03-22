@@ -150,12 +150,12 @@
         function playBeep(type) { if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); osc.connect(gn); gn.connect(audioCtx.destination); 
             if(type==='chat') osc.frequency.setValueAtTime(1200, audioCtx.currentTime); 
             else if(type==='done') osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
+            else if(type==='otw') osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
             else if(type==='error') osc.frequency.setValueAtTime(200, audioCtx.currentTime);
             else osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
         }
 
-        // --- LOGIKA FOTO ---
         function handlePhoto(input) {
             if (!input.files || !input.files[0]) return;
             const loader = document.getElementById('ocrLoader');
@@ -267,7 +267,7 @@
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
                 if(!i.name || !match) return;
                 const isD = i.status === 'done'; const isOTW = i.status === 'otw';
-                const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ,mohon untuk tetap aktif WhatsApp ,dan sedia menunggu. Terimakasih ☺️`;
+                const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start">
@@ -280,7 +280,7 @@
                             </div>
                             <div class="flex gap-2">
                                 <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-md"><i class="fa fa-check"></i></button>
-                                <button onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white shadow-md"><i class="fa fa-motorcycle"></i></button>
+                                <button onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white shadow-md active:scale-95"><i class="fa fa-motorcycle"></i></button>
                             </div>
                         </div>
                         ${!isD ? `<div class="flex gap-2 mt-4">
@@ -305,7 +305,25 @@
         }
 
         function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); if(s==='done') playBeep('done'); }
-        function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
+        
+        // FITUR OTOMATIS DRIVER & START OTW DENGAN ROLE PROTECTION
+        function startOTW(k) { 
+            if(!currentUser) return alert("Sesi berakhir, silakan login ulang.");
+
+            // Proteksi: Hanya crew (nama tanpa MANAGEMENT/KASIR) yang bisa mengantar
+            if(currentUser.includes("MANAGEMENT") || currentUser.includes("KASIR")) {
+                playBeep('error');
+                return alert("⚠️ CAUTION: Anda hanya Crew Delivery Man yang dapat mengantar!");
+            }
+            
+            db.ref('customers/'+k).update({ 
+                status: 'otw', 
+                startTime: Date.now(),
+                driver: currentUser 
+            }); 
+            playBeep('otw'); 
+        }
+
         function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
         
         function saveData() { 
