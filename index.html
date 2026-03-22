@@ -93,7 +93,12 @@
                             <i class="fa fa-home text-lg text-red-500"></i> FOTO RUMAH (OPSIONAL)
                             <input type="file" id="custPhotoFile" accept="image/*" onchange="handlePhoto(this)" class="hidden">
                         </label>
-                        <div id="photoPreview" class="hidden w-10 h-10 rounded-lg bg-cover bg-center border-2 border-white shadow-sm"></div>
+                        <div id="photoContainer" class="hidden relative group">
+                            <div id="photoPreview" class="w-12 h-12 rounded-lg bg-cover bg-center border-2 border-white shadow-md"></div>
+                            <button onclick="removePhoto()" class="absolute -top-2 -right-2 bg-red-500 text-white w-5 h-5 rounded-full flex items-center justify-center text-[10px] border-2 border-white shadow-sm active:scale-75 transition-all">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
                         <input type="hidden" id="custPhotoBase64">
                     </div>
 
@@ -150,6 +155,7 @@
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
         }
 
+        // --- LOGIKA FOTO ---
         function handlePhoto(input) {
             if (!input.files || !input.files[0]) return;
             const loader = document.getElementById('ocrLoader');
@@ -168,15 +174,21 @@
                     ctx.drawImage(img, 0, 0, width, height);
                     const base64 = canvas.toDataURL("image/jpeg", 0.5);
                     document.getElementById('custPhotoBase64').value = base64;
-                    const prev = document.getElementById('photoPreview');
-                    prev.style.backgroundImage = `url(${base64})`;
-                    prev.classList.remove('hidden');
+                    document.getElementById('photoPreview').style.backgroundImage = `url(${base64})`;
+                    document.getElementById('photoContainer').classList.remove('hidden');
                     loader.style.display = 'none';
                     playBeep('done');
                 };
                 img.src = e.target.result;
             };
             reader.readAsDataURL(input.files[0]);
+        }
+
+        function removePhoto() {
+            document.getElementById('custPhotoBase64').value = "";
+            document.getElementById('custPhotoFile').value = "";
+            document.getElementById('photoContainer').classList.add('hidden');
+            playBeep('error');
         }
 
         async function runOCR(input) {
@@ -321,9 +333,8 @@
             document.getElementById('custMaps').value = i.maps; 
             document.getElementById('custPhotoBase64').value = i.photo || "";
             if(i.photo) {
-                const prev = document.getElementById('photoPreview');
-                prev.style.backgroundImage = `url(${i.photo})`;
-                prev.classList.remove('hidden');
+                document.getElementById('photoPreview').style.backgroundImage = `url(${i.photo})`;
+                document.getElementById('photoContainer').classList.remove('hidden');
             }
             document.getElementById('formTitle').innerText = "Edit Antaran";
             document.getElementById('cancelBtn').classList.remove('hidden'); showPage('add');
@@ -332,7 +343,7 @@
         function cancelEdit() {
             document.getElementById('editKey').value = ""; document.getElementById('formTitle').innerText = "Input Antaran";
             document.getElementById('cancelBtn').classList.add('hidden');
-            document.getElementById('photoPreview').classList.add('hidden');
+            document.getElementById('photoContainer').classList.add('hidden');
             ["custArea","custName","custPhone","custMaps","custPhotoBase64"].forEach(id => document.getElementById(id).value = "");
         }
 
