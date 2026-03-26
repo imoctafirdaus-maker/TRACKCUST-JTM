@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Full System</title>
+    <title>TrackCust JTM - Official</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -14,36 +14,36 @@
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 12px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; width: 20%; cursor: pointer; }
         .nav-item.active { color: #006491; }
-        .nav-add { background: #006491 !important; color: white !important; width: 55px !important; height: 55px; border-radius: 50%; margin-top: -30px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
-        .page { display: none; height: 100%; } .page.active { display: flex; flex-direction: column; }
+        .nav-add { background: #006491 !important; color: white !important; width: 50px !important; height: 50px; border-radius: 50%; margin-top: -25px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
         
-        /* Style Chat */
-        .chat-container { background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-color: #e5ddd5; flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-        .bubble { max-width: 85%; padding: 6px 10px; border-radius: 12px; margin-bottom: 5px; position: relative; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
-        .bubble.left { background: white; align-self: flex-start; border-top-left-radius: 2px; }
-        .bubble.right { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 2px; }
+        /* App Structure */
+        .page { display: none; height: 100%; flex-direction: column; }
+        .page.active { display: flex; }
         
-        .btn-action { width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 12px; font-weight: 900; }
-        .timer-blink { animation: blink 1s infinite; color: #e31837; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        #pinOverlay { position: fixed; inset: 0; background: #006491; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        /* WhatsApp Style Chat */
+        #page-chat { background-color: #0b141a; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-repeat: repeat; background-size: 380px; }
+        .msg-bubble { max-width: 80%; padding: 8px 12px; margin-bottom: 6px; font-size: 14px; position: relative; border-radius: 10px; }
+        .msg-left { background: #202c33; align-self: flex-start; color: white; }
+        .msg-right { background: #005c4b; align-self: flex-end; color: white; }
+        .msg-time { font-size: 9px; color: rgba(255,255,255,0.5); float: right; margin-top: 5px; margin-left: 8px; }
 
-        /* Modal Preview */
-        #imgModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:10001; align-items:center; justify-content:center; padding:20px; }
+        /* Others */
+        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
+        #imgModal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:10001; align-items:center; justify-content:center; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
 
     <div id="imgModal" onclick="this.style.display='none'">
-        <img id="fullImg" class="max-w-full max-h-full rounded-lg shadow-2xl">
-        <p class="absolute bottom-10 text-white font-bold italic text-sm">Klik dimana saja untuk tutup</p>
+        <img id="fullImg" class="max-w-full max-h-full">
     </div>
 
-    <div id="pinOverlay">
+    <div id="pinOverlay" class="fixed inset-0 dominos-blue z-[10000] flex flex-col items-center justify-center p-6">
         <div class="text-center mb-8 text-white">
             <h1 class="font-black italic text-4xl uppercase">Domino's</h1>
             <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Track System</p>
@@ -51,63 +51,63 @@
         <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
             <select id="selectUser" class="w-full p-4 bg-gray-100 rounded-2xl mb-4 font-bold text-blue-900 outline-none uppercase text-xs"></select>
             <input type="password" id="inputPin" maxlength="4" placeholder="PIN 4 DIGIT" inputmode="numeric" class="w-full text-center text-2xl font-black p-4 bg-gray-100 rounded-2xl mb-6 outline-none">
-            <button onclick="prosesLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Masuk Aplikasi</button>
+            <button onclick="prosesLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Masuk</button>
         </div>
     </div>
 
     <div id="mainContent" style="display:none;" class="flex flex-col h-full">
-        <nav class="dominos-blue p-4 text-white shadow-md">
-            <div class="flex justify-between items-center">
-                <h1 class="font-black italic uppercase tracking-tighter text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-                <div class="flex items-center gap-2">
-                    <button id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase shadow-md h-7 flex items-center">User</button>
-                    <button onclick="location.reload()" class="bg-red-500 text-white w-7 h-7 rounded-full shadow-md flex items-center justify-center"><i class="fa fa-sync-alt text-[10px]"></i></button>
-                </div>
+        <nav class="dominos-blue p-4 text-white shadow-md flex justify-between items-center">
+            <h1 class="font-black italic uppercase text-lg">Domino's <span class="text-red-400">JTM</span></h1>
+            <div class="flex items-center gap-2">
+                <span id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">User</span>
+                <button onclick="location.reload()" class="bg-red-500 w-7 h-7 rounded-full flex items-center justify-center"><i class="fa fa-sync-alt text-[10px]"></i></button>
             </div>
         </nav>
 
         <main class="flex-1 overflow-hidden relative">
             <div id="page-list" class="page active p-4 overflow-y-auto">
-                <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic mb-2">
-                <p class="text-[10px] font-black text-gray-400 uppercase italic ml-2 mb-4">Total Order Aktif: <span id="activeCount" class="text-blue-600">0</span></p>
+                <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/Area..." class="w-full p-4 rounded-2xl shadow-sm outline-none mb-4 font-bold italic">
                 <div id="activeList" class="space-y-4 pb-32"></div>
+            </div>
+
+            <div id="page-history" class="page p-4 overflow-y-auto">
+                <h2 class="font-black text-gray-400 text-[10px] uppercase italic mb-4">Riwayat Antaran Selesai</h2>
+                <div id="historyList" class="space-y-4 pb-32"></div>
             </div>
 
             <div id="page-add" class="page p-4 overflow-y-auto">
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
-                    <h2 class="font-black text-blue-900 text-xs uppercase italic text-center">Input Antaran</h2>
-                    <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold uppercase border-2 border-yellow-100 outline-none">
+                    <input type="text" id="custArea" placeholder="KODE AREA (A-1)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold uppercase outline-none">
                     <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <input type="tel" id="custPhone" placeholder="Nomor HP" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                    
                     <div class="bg-blue-50 p-4 rounded-xl border-2 border-dashed border-blue-200 text-center">
                         <label class="cursor-pointer">
                             <i class="fa fa-camera text-blue-400 text-xl"></i>
-                            <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Pilih Foto Rumah</p>
-                            <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processAndPreview(this)">
+                            <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Foto Rumah</p>
+                            <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processImage(this)">
                         </label>
-                        <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white shadow-md">
+                        <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
                     </div>
-                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm">Simpan Data</button>
+                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase text-sm">Simpan</button>
                 </div>
             </div>
 
-            <div id="page-chat" class="page overflow-hidden h-full">
-                <div id="chatDisplay" class="chat-container p-4 pb-28"></div>
-                <div class="fixed bottom-20 left-0 right-0 p-2 bg-[#f0f0f0] flex gap-2 items-center border-t z-50">
-                    <button id="micBtn" onclick="toggleRecording()" class="w-10 h-10 flex items-center justify-center text-gray-500"><i class="fa fa-microphone text-xl"></i></button>
-                    <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-white rounded-full px-4 py-2 text-sm outline-none shadow-sm font-bold">
-                    <button onclick="sendChat()" class="bg-[#075e54] text-white w-10 h-10 rounded-full flex items-center justify-center shadow-md"><i class="fa fa-paper-plane text-xs"></i></button>
+            <div id="page-chat" class="page h-full relative">
+                <div id="chatDisplay" class="flex-1 overflow-y-auto flex flex-col p-4 pb-24"></div>
+                <div class="absolute bottom-16 left-0 right-0 p-2 flex gap-2 items-center bg-[#0b141a]/80">
+                    <input type="text" id="chatInput" placeholder="Ketik pesan..." class="flex-1 bg-[#202c33] text-white rounded-full px-4 py-2 outline-none">
+                    <button onclick="sendChat()" class="bg-[#00a884] w-10 h-10 rounded-full text-white flex items-center justify-center"><i class="fa fa-paper-plane text-sm"></i></button>
                 </div>
             </div>
         </main>
 
         <div class="bottom-nav">
-            <div onclick="showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-list-ul mb-1 text-xl"></i><span>List</span></div>
+            <div onclick="showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-motorcycle mb-1 text-xl"></i><span>Antaran</span></div>
+            <div onclick="showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
             <div onclick="showPage('add')" class="nav-item nav-add" id="nav-add"><i class="fa fa-plus text-2xl"></i></div>
             <div onclick="showPage('chat')" class="nav-item" id="nav-chat"><i class="fa fa-comments mb-1 text-xl"></i><span>Chat</span></div>
-            <div onclick="handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Logout</span></div>
+            <div onclick="handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Out</span></div>
         </div>
     </div>
 
@@ -119,48 +119,14 @@
         
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let photoBase64 = "";
-        let mediaRecorder; let audioChunks = [];
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
-            logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
+            logSel.innerHTML = '<option value="">-- NAMA --</option>';
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
-            setInterval(runCountdown, 1000);
+            setInterval(updateTimers, 1000);
         };
-
-        // FITUR: AUTO COMPRESS GAMBAR
-        function processAndPreview(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = new Image();
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; // Ukuran lebar maksimal agar ringan
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
-
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        
-                        // Compress ke JPEG kualitas 0.7 (Hemat memori 70%)
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        document.getElementById('imgPrev').src = photoBase64;
-                        document.getElementById('imgPrev').classList.remove('hidden');
-                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function viewFull(url) {
-            document.getElementById('fullImg').src = url;
-            document.getElementById('imgModal').style.display = 'flex';
-        }
 
         function prosesLogin() {
             const u = document.getElementById('selectUser').value;
@@ -173,125 +139,127 @@
             document.getElementById('userDisplay').innerText = n;
             document.getElementById('pinOverlay').style.display = "none";
             document.getElementById('mainContent').style.display = "flex";
-            startSystem();
+            startDataListeners();
         }
 
-        function handleLogout() { if(confirm("Keluar aplikasi?")) { localStorage.removeItem('jtm_user'); location.reload(); } }
+        function handleLogout() { if(confirm("Keluar?")) { localStorage.removeItem('jtm_user'); location.reload(); } }
 
-        function startSystem() {
+        function startDataListeners() {
             db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-            db.ref('chats').limitToLast(30).on('value', s => {
+            db.ref('couple_chats').limitToLast(30).on('value', s => {
                 const d = document.getElementById('chatDisplay'); d.innerHTML = "";
-                if(s.val()) {
-                    Object.keys(s.val()).forEach(k => {
-                        const c = s.val()[k]; const isMe = c.user === currentUser;
-                        let content = `<span class="text-[13px] font-bold">${c.text}</span>`;
-                        if(c.type === "voice") content = `<button onclick="playVN('${c.text}')" class="text-blue-500"><i class="fa fa-play mr-2"></i> Voice Note</button>`;
-                        d.innerHTML += `<div class="bubble ${isMe?'right':'left'}">
-                            ${!isMe?`<span class="text-[8px] font-black uppercase text-blue-900 block">${c.user}</span>`:''}
-                            ${content}
-                            <div class="text-[7px] text-right text-gray-400 mt-1">${c.time}</div>
-                        </div>`;
-                    });
-                }
+                s.forEach(c => {
+                    const m = c.val(); const isMe = m.sender === currentUser;
+                    d.innerHTML += `<div class="msg-bubble ${isMe?'msg-right':'msg-left'}">
+                        ${!isMe?`<div class='text-[8px] font-bold text-red-400 mb-1 uppercase'>${m.sender}</div>`:''}
+                        ${m.text}<span class="msg-time">${m.time}</span>
+                    </div>`;
+                });
                 d.scrollTop = d.scrollHeight;
             });
         }
 
         function render() {
-            const act = document.getElementById('activeList'); 
+            const list = document.getElementById('activeList'); 
+            const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
-            act.innerHTML = ""; let count = 0;
+            list.innerHTML = ""; hist.innerHTML = "";
 
-            Object.keys(allData).reverse().forEach(k => {
-                const i = allData[k];
-                if(i.status === 'done') return;
-                count++;
+            Object.keys(allData).reverse().forEach(id => {
+                const i = allData[id];
                 const match = i.name.toLowerCase().includes(filter) || i.area.toLowerCase().includes(filter);
-                if(!match) return;
-
-                act.innerHTML += `
-                    <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] border-red-500 mb-3">
+                const cardHtml = `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                         <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="text-[9px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
+                            <div>
+                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
+                                <h3 class="font-black text-blue-900 text-sm">${i.name}</h3>
                                 <div class="flex items-center gap-2 mt-1">
-                                    <p id="cd-${k}" class="text-[10px] font-black text-gray-400 italic">READY</p>
-                                    <span class="${i.status==='otw'?'':'hidden'} driver-badge animate-pulse">
-                                        <i class="fa fa-motorcycle mr-1"></i> OTW: ${i.driverBy || ''}
-                                    </span>
+                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'DONE':'READY'}</p>
+                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
                                 </div>
                             </div>
+                            ${i.status !== 'done' ? `
                             <div class="flex gap-2">
-                                <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-md"><i class="fa fa-check"></i></button>
-                                <button onclick="startOTW('${k}')" class="btn-action ${i.status==='otw'?'bg-gray-200 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
-                            </div>
+                                <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
+                                <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
+                            </div>` : '<i class="fa fa-check-double text-green-500"></i>'}
                         </div>
-                        ${i.photo ? `<img src="${i.photo}" onclick="viewFull('${i.photo}')" class="w-full h-28 object-cover rounded-xl mt-3 border shadow-inner cursor-pointer active:scale-95 transition-all">` : ''}
-                        
-                        <div class="flex gap-2 mt-4">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-3 rounded-xl text-center font-black text-[10px] flex-1">MAPS</a>
-                            <a href="https://wa.me/${i.phone}" target="_blank" class="bg-green-500 text-white py-3 rounded-xl text-center font-black text-[10px] flex-1">WA</a>
+                        ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}')" class="w-full h-24 object-cover rounded-xl mt-3 border cursor-pointer">` : ''}
+                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
+                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">MAPS</a>
+                            <a href="https://wa.me/${i.phone}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">WA</a>
                         </div>
                     </div>`;
+
+                if(i.status === 'done') hist.innerHTML += cardHtml;
+                else if(match) list.innerHTML += cardHtml;
             });
-            document.getElementById('activeCount').innerText = count + " Pesanan";
         }
 
-        function sendChat(m, t="text") {
-            const i = document.getElementById('chatInput');
-            const c = t==="text"?i.value.trim():m;
-            if(c){
-                db.ref('chats').push({ user: currentUser, text: c, type: t, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
-                i.value = "";
+        function processImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        document.getElementById('imgPrev').src = photoBase64;
+                        document.getElementById('imgPrev').classList.remove('hidden');
+                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
             }
         }
 
-        async function toggleRecording() {
-            const btn = document.getElementById('micBtn');
-            if (!mediaRecorder || mediaRecorder.state === "inactive") {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream); audioChunks = [];
-                mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-                mediaRecorder.onstop = () => {
-                    const blob = new Blob(audioChunks, { type: 'audio/webm' });
-                    const reader = new FileReader(); reader.readAsDataURL(blob);
-                    reader.onloadend = () => sendChat(reader.result, "voice");
-                };
-                mediaRecorder.start(); btn.innerHTML = '<i class="fa fa-stop text-red-500"></i>';
-            } else { mediaRecorder.stop(); btn.innerHTML = '<i class="fa fa-microphone text-xl"></i>'; }
+        function saveData() {
+            const area = document.getElementById('custArea').value;
+            const name = document.getElementById('custName').value;
+            if(!area || !name) return alert("Isi Area & Nama!");
+            const btn = document.getElementById('saveBtn'); btn.disabled = true;
+            db.ref('customers').push({ area: area.toUpperCase(), name, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() })
+            .then(() => {
+                photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden');
+                document.getElementById('custArea').value = ""; document.getElementById('custName').value = "";
+                btn.disabled = false; showPage('list');
+            });
         }
 
-        function playVN(url) { new Audio(url).play(); }
-        function startOTW(k) { if(allData[k].status !== 'otw') db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
-        function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); }
+        function goOTW(id) { if(allData[id].status !== 'otw') db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
+        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
+        function sendChat() {
+            const i = document.getElementById('chatInput'); if(!i.value.trim()) return;
+            db.ref('couple_chats').push({ sender: currentUser, text: i.value.trim(), time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
+            i.value = "";
+        }
+
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
         }
-        function saveData() {
-            const sBtn = document.getElementById('saveBtn');
-            sBtn.innerText = "MENYIMPAN..."; sBtn.disabled = true;
-            const d = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', time: Date.now() };
-            db.ref('customers').push(d).then(() => {
-                photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); 
-                document.getElementById('photoStatus').innerText = "Pilih Foto Rumah";
-                sBtn.innerText = "SIMPAN DATA"; sBtn.disabled = false;
-                showPage('list');
-            });
-        }
-        function runCountdown() {
-            Object.keys(allData).forEach(k => {
-                if(allData[k].status === 'otw') {
-                    const diff = Math.floor((Date.now() - allData[k].startTime) / 1000);
-                    const rem = (20 * 60) - diff;
-                    const el = document.getElementById('cd-'+k);
+
+        function openFullImg(url) { document.getElementById('fullImg').src = url; document.getElementById('imgModal').style.display = 'flex'; }
+
+        function updateTimers() {
+            Object.keys(allData).forEach(id => {
+                if(allData[id].status === 'otw') {
+                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
+                    const remaining = (20 * 60) - elapsed;
+                    const el = document.getElementById('timer-'+id);
                     if(el) {
-                        const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60);
-                        el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`;
+                        const m = Math.max(0, Math.floor(remaining / 60));
+                        const s = Math.max(0, remaining % 60);
+                        el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
+                        if(remaining < 0) el.classList.replace('text-gray-400', 'text-red-600');
                     }
                 }
             });
