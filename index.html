@@ -30,7 +30,7 @@
         @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
         .tick { font-size: 10px; margin-left: 4px; }
         #pinOverlay { position: fixed; inset: 0; background: #006491; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        #ocrLoader, #searchOcrLoader { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; color: white; flex-direction: column; border-radius: 2rem; }
+        #ocrLoader { display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center; color: white; flex-direction: column; border-radius: 2rem; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -62,23 +62,7 @@
 
         <main class="flex-1 overflow-hidden relative">
             <div id="page-search" class="page active p-4 overflow-y-auto space-y-4">
-                <div id="searchOcrLoader">
-                    <i class="fa fa-circle-notch fa-spin text-4xl mb-3 text-red-500"></i>
-                    <p class="font-black italic text-xs uppercase">Mencari Nomor...</p>
-                </div>
-                <div class="space-y-2">
-                    <div class="relative flex items-center">
-                        <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/No HP/Driver..." class="w-full p-4 pr-12 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
-                        <label class="absolute right-3 bg-blue-100 text-blue-600 w-10 h-10 rounded-xl flex items-center justify-center cursor-pointer shadow-sm active:scale-90 transition-all">
-                            <i class="fa fa-camera"></i>
-                            <input type="file" accept="image/*" capture="environment" onchange="runSearchOCR(this)" class="hidden">
-                        </label>
-                    </div>
-                    <div class="flex justify-between items-center px-2">
-                        <p class="text-[10px] font-black text-gray-400 uppercase italic">Total Antaran Aktif:</p>
-                        <span id="totalCustomer" class="bg-blue-600 text-white px-3 py-0.5 rounded-full text-[10px] font-black italic shadow-sm">0</span>
-                    </div>
-                </div>
+                <input type="text" id="searchInput" onkeyup="searchData()" placeholder="Cari Nama/No HP/Driver..." class="w-full p-4 rounded-2xl shadow-sm outline-none border-none text-sm font-bold bg-white italic">
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
@@ -166,40 +150,12 @@
         function playBeep(type) { if(!audioCtx) return; const osc = audioCtx.createOscillator(); const gn = audioCtx.createGain(); osc.connect(gn); gn.connect(audioCtx.destination); 
             if(type==='chat') osc.frequency.setValueAtTime(1200, audioCtx.currentTime); 
             else if(type==='done') osc.frequency.setValueAtTime(1500, audioCtx.currentTime);
-            else if(type==='otw') osc.frequency.setValueAtTime(1000, audioCtx.currentTime);
             else if(type==='error') osc.frequency.setValueAtTime(200, audioCtx.currentTime);
             else osc.frequency.setValueAtTime(800, audioCtx.currentTime); 
             gn.gain.setValueAtTime(0.1, audioCtx.currentTime); osc.start(); osc.stop(audioCtx.currentTime + 0.2); 
         }
 
-        async function runSearchOCR(input) {
-            if (!input.files || !input.files[0]) return;
-            const loader = document.getElementById('searchOcrLoader');
-            loader.style.display = 'flex';
-            try {
-                const result = await Tesseract.recognize(input.files[0], 'eng+ind');
-                const text = result.data.text;
-                
-                // Regex khusus format label: (8962) 6312 -621 x 62
-                const labelPhoneMatch = text.match(/\((\d{4})\)\s*(\d{4})\s*-\s*(\d{3,4})\s*x\s*(\d{2})/);
-                const normalPhoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
-
-                if (labelPhoneMatch) {
-                    const cleanNumber = "0" + labelPhoneMatch[1] + labelPhoneMatch[2] + labelPhoneMatch[3] + labelPhoneMatch[4];
-                    document.getElementById('searchInput').value = cleanNumber;
-                    searchData();
-                    playBeep('done');
-                } else if (normalPhoneMatch) {
-                    document.getElementById('searchInput').value = normalPhoneMatch[0];
-                    searchData();
-                    playBeep('done');
-                } else {
-                    alert("Nomor HP tidak ditemukan pada gambar.");
-                    playBeep('error');
-                }
-            } catch (e) { alert("Gagal memindai!"); } finally { loader.style.display = 'none'; input.value = ""; }
-        }
-
+        // --- LOGIKA FOTO ---
         function handlePhoto(input) {
             if (!input.files || !input.files[0]) return;
             const loader = document.getElementById('ocrLoader');
@@ -242,17 +198,8 @@
             try {
                 const result = await Tesseract.recognize(input.files[0], 'eng+ind');
                 const text = result.data.text;
-                
-                // Regex khusus format label: (8962) 6312 -621 x 62
-                const labelPhoneMatch = text.match(/\((\d{4})\)\s*(\d{4})\s*-\s*(\d{3,4})\s*x\s*(\d{2})/);
-                const normalPhoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
-
-                if (labelPhoneMatch) {
-                    document.getElementById('custPhone').value = "0" + labelPhoneMatch[1] + labelPhoneMatch[2] + labelPhoneMatch[3] + labelPhoneMatch[4];
-                } else if (normalPhoneMatch) {
-                    document.getElementById('custPhone').value = normalPhoneMatch[0];
-                }
-
+                const phoneMatch = text.match(/(08\d{8,11}|62\d{8,11})/);
+                if (phoneMatch) document.getElementById('custPhone').value = phoneMatch[0];
                 const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 2);
                 for(let i=0; i<lines.length; i++) {
                     const l = lines[i].toLowerCase();
@@ -315,17 +262,12 @@
         function render(data, filter = "") {
             const act = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             act.innerHTML = ""; hist.innerHTML = "";
-            let countActive = 0;
-
             Object.keys(data).sort((a,b) => (data[b].time||0)-(data[a].time||0)).forEach(k => {
                 const i = data[k]; 
                 const match = (i.name||"").toLowerCase().includes(filter) || (i.driver||"").toLowerCase().includes(filter) || (i.phone||"").toLowerCase().includes(filter);
-                const isD = i.status === 'done'; const isOTW = i.status === 'otw';
-                
-                if(!isD) countActive++;
                 if(!i.name || !match) return;
-
-                const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar,dimohon untuk tetap aktif WhatsApp ya pak/bu, hingga pesanan tiba. Terimakasih ☺️`;
+                const isD = i.status === 'done'; const isOTW = i.status === 'otw';
+                const waMsg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar ya, mohon ditunggu. Terimakasih ☺️`;
                 const html = `
                     <div class="bg-white rounded-[1.5rem] p-5 shadow-sm border-l-[10px] ${isD?'border-gray-200':'border-red-500'} mb-3">
                         <div class="flex justify-between items-start">
@@ -333,15 +275,12 @@
                                 <p class="text-[9px] font-black text-red-500 uppercase italic">${i.area||'AREA'}</p>
                                 <h3 class="font-black text-blue-900 text-xs">${i.name}</h3>
                                 <p class="text-[9px] font-bold text-gray-400 italic">${i.driver||'--'} | ${i.phone}</p>
-                                ${isOTW ? `<div class="flex items-center gap-2 mt-1">
-                                    <p id="cd-${k}" class="text-[10px] font-black text-blue-600 italic">20:00</p>
-                                    <span class="text-[8px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-black uppercase italic">${i.driver}</span>
-                                </div>` : ''}
+                                ${isOTW ? `<p id="cd-${k}" class="text-[10px] font-black text-blue-600 mt-1 italic">20:00</p>` : ''}
                                 ${i.photo ? `<button onclick="showFullPhoto('${k}')" class="mt-2 flex items-center gap-1 text-[8px] font-black text-blue-600 uppercase italic border border-blue-100 px-2 py-1 rounded-lg bg-blue-50"><i class="fa fa-image"></i> Lihat Foto Rumah</button>` : ''}
                             </div>
                             <div class="flex gap-2">
                                 <button onclick="setStatus('${k}','done')" class="btn-action bg-yellow-400 text-white shadow-md"><i class="fa fa-check"></i></button>
-                                <button onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white shadow-md active:scale-95"><i class="fa fa-motorcycle"></i></button>
+                                <button onclick="startOTW('${k}')" class="btn-action ${isOTW?'bg-gray-300':'bg-blue-500'} text-white shadow-md"><i class="fa fa-motorcycle"></i></button>
                             </div>
                         </div>
                         ${!isD ? `<div class="flex gap-2 mt-4">
@@ -358,7 +297,6 @@
                     </div>`;
                 if(isD) hist.innerHTML += html; else act.innerHTML += html;
             });
-            document.getElementById('totalCustomer').innerText = countActive;
         }
 
         function showFullPhoto(k) {
@@ -366,32 +304,8 @@
             win.document.write(`<html><body style="margin:0;background:black;display:flex;align-items:center;justify-content:center;"><img src="${allData[k].photo}" style="max-width:100%;border-radius:15px;box-shadow:0 0 30px rgba(255,255,255,0.2);"></body></html>`);
         }
 
-        function setStatus(k, s) { 
-            const item = allData[k];
-            if(s === 'done') {
-                if(item.driver !== currentUser && !currentUser.includes("MANAGEMENT") && !currentUser.includes("KASIR")) {
-                    playBeep('error');
-                    return alert("⚠️ CAUTION: Drivernya bukan anda!");
-                }
-                playBeep('done');
-            }
-            db.ref('customers/'+k).update({ status: s }); 
-        }
-        
-        function startOTW(k) { 
-            if(!currentUser) return alert("Sesi berakhir, silakan login ulang.");
-            if(currentUser.includes("MANAGEMENT") || currentUser.includes("KASIR")) {
-                playBeep('error');
-                return alert("⚠️ CAUTION: Hanya Crew Delivery Man yang dapat mengantar!");
-            }
-            db.ref('customers/'+k).update({ 
-                status: 'otw', 
-                startTime: Date.now(),
-                driver: currentUser 
-            }); 
-            playBeep('otw'); 
-        }
-
+        function setStatus(k, s) { db.ref('customers/'+k).update({ status: s }); if(s==='done') playBeep('done'); }
+        function startOTW(k) { db.ref('customers/'+k).update({ status: 'otw', startTime: Date.now() }); playBeep('otw'); }
         function deleteWithPin(k) { if(prompt("PIN HAPUS:") === SECURITY_PIN) db.ref('customers/'+k).remove(); }
         
         function saveData() { 
@@ -442,7 +356,7 @@
                     else {
                         const m = Math.floor(rem / 60); const s = rem % 60;
                         const el = document.getElementById('cd-'+k);
-                        if(el) { el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`; if(m < 5) el.className = "text-[10px] font-black timer-blink italic"; }
+                        if(el) { el.innerText = `${m}:${s < 10 ? '0' + s : s} MENIT`; if(m < 5) el.className = "text-[10px] font-black timer-blink mt-1 italic"; }
                     }
                 }
             });
