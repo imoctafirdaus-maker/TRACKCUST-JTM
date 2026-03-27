@@ -29,6 +29,8 @@
         .msg-right { background: #005c4b; align-self: flex-end; color: white; }
         .msg-time { font-size: 9px; color: rgba(255,255,255,0.5); float: right; margin-top: 5px; margin-left: 8px; }
         .read-icon { color: #53bdeb; margin-left: 3px; }
+        .del-chat { font-size: 10px; color: rgba(255,255,255,0.3); margin-left: 8px; cursor: pointer; }
+        .del-chat:hover { color: #ff4d4d; }
 
         .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
     </style>
@@ -119,22 +121,11 @@
     </div>
 
     <script>
-        // DAFTAR KARYAWAN & PIN TERBARU (TOTAL 14 ORANG)
         const userPins = { 
-            "Pak KUR (Mgt)": "0000",
-            "Pak Agus (Mgt)": "6413",
-            "Pak Ageng (Mgt)": "4444",
-            "Sintiya (Cashier)": "0959",
-            "Ridha (Cashier)": "0968",
-            "Okta": "0972", 
-            "Dendy": "0960", 
-            "Arif": "0966", 
-            "Rian": "0971", 
-            "Gemilang": "0967",
-            "Sadewa": "0976",
-            "Fahran": "0975",
-            "Rafli": "0974",
-            "Acong": "0929"
+            "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
+            "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
+            "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967",
+            "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929"
         };
 
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
@@ -147,7 +138,6 @@
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
             logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
-            // Urutan sesuai daftar yang kamu berikan
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
@@ -189,13 +179,25 @@
                 s.forEach(c => {
                     const m = c.val(); const isMe = m.sender === currentUser;
                     d.innerHTML += `<div class="msg-bubble ${isMe?'msg-right':'msg-left'}">
-                        ${!isMe?`<div class='text-[8px] font-bold text-red-400 mb-1 uppercase'>${m.sender}</div>`:''}
+                        <div class="flex justify-between items-center mb-1">
+                            ${!isMe?`<div class='text-[8px] font-bold text-red-400 uppercase'>${m.sender}</div>`:'<div></div>'}
+                            <i onclick="deleteChat('${c.key}')" class="fa fa-trash-alt del-chat"></i>
+                        </div>
                         ${m.text}
                         <span class="msg-time">${m.time} ${isMe?'<i class="fa fa-check-double read-icon"></i>':''}</span>
                     </div>`;
                 });
                 d.scrollTop = d.scrollHeight;
             });
+        }
+
+        function deleteChat(chatId) {
+            const p = prompt("MASUKKAN PIN ANDA UNTUK HAPUS PESAN:");
+            if(p === userPins[currentUser]) {
+                db.ref('couple_chats/' + chatId).remove();
+            } else if(p !== null) {
+                alert("PIN SALAH!");
+            }
         }
 
         function render() {
@@ -207,9 +209,7 @@
                 const i = allData[id];
                 const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                 const match = searchStr.includes(filter);
-
                 if(i.status !== 'done') activeCount++;
-
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${i.phone}?text=${encodeURIComponent(msgWa)}`;
 
@@ -240,22 +240,14 @@
                         </div>
                     </div>`;
 
-                if(i.status === 'done') {
-                   if(match) hist.innerHTML += cardHtml;
-                } else {
-                   if(match) list.innerHTML += cardHtml;
-                }
+                if(i.status === 'done') { if(match) hist.innerHTML += cardHtml; } else { if(match) list.innerHTML += cardHtml; }
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
         function secureDelete(id) {
             const p = prompt("MASUKKAN PIN ANDA UNTUK MENGHAPUS:");
-            if(p === userPins[currentUser]) {
-                db.ref('customers/' + id).remove();
-            } else if(p !== null) {
-                alert("PIN SALAH! AKSES DITOLAK.");
-            }
+            if(p === userPins[currentUser]) { db.ref('customers/' + id).remove(); } else if(p !== null) { alert("PIN SALAH!"); }
         }
 
         function processImage(input) {
@@ -270,8 +262,8 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                         photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        document.getElementById('imgPrev').src = photoBase64;
-                        document.getElementById('imgPrev').classList.remove('hidden');
+                        const prev = document.getElementById('imgPrev');
+                        prev.src = photoBase64; prev.classList.remove('hidden');
                         document.getElementById('btnRemovePhoto').classList.remove('hidden');
                         document.getElementById('photoStatus').innerText = "FOTO SIAP!";
                     };
@@ -282,8 +274,7 @@
         }
 
         function removePhoto() {
-            photoBase64 = "";
-            document.getElementById('imgPrev').classList.add('hidden');
+            photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden');
             document.getElementById('btnRemovePhoto').classList.add('hidden');
             document.getElementById('photoStatus').innerText = "Foto Rumah";
             document.getElementById('housePhoto').value = "";
@@ -324,6 +315,7 @@
         function cancelEdit() { resetForm(); }
         function goOTW(id) { if(allData[id].status !== 'otw') db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
         function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
+        
         function sendChat() {
             const i = document.getElementById('chatInput'); if(!i.value.trim()) return;
             db.ref('couple_chats').push({ sender: currentUser, text: i.value.trim(), time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) });
