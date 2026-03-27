@@ -66,7 +66,7 @@
         <main class="flex-1 overflow-hidden relative">
             <div id="page-list" class="page active p-4 overflow-y-auto">
                 <div class="flex justify-between items-center mb-3">
-                    <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
+                    <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
                     <div id="countActive" class="bg-red-500 text-white px-3 py-2 rounded-xl text-[10px] font-black italic">0 AKTIF</div>
                 </div>
                 <div id="activeList" class="space-y-4 pb-32"></div>
@@ -187,10 +187,13 @@
 
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
-                const match = i.name.toLowerCase().includes(filter) || i.area.toLowerCase().includes(filter);
+                
+                // PENCARIAN MULTI-KOLOM (NAMA, HP, DRIVER, AREA)
+                const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
+                const match = searchStr.includes(filter);
+
                 if(i.status !== 'done') activeCount++;
 
-                // AUTO TEXT WHATSAPP SESUAI PERMINTAAN AWAL
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${i.phone}?text=${encodeURIComponent(msgWa)}`;
 
@@ -221,8 +224,11 @@
                         </div>
                     </div>`;
 
-                if(i.status === 'done') hist.innerHTML += cardHtml;
-                else if(match) list.innerHTML += cardHtml;
+                if(i.status === 'done') {
+                   if(match) hist.innerHTML += cardHtml;
+                } else {
+                   if(match) list.innerHTML += cardHtml;
+                }
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
