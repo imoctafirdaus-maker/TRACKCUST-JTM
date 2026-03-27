@@ -119,7 +119,24 @@
     </div>
 
     <script>
-        const userPins = { "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967" };
+        // DAFTAR KARYAWAN & PIN TERBARU (TOTAL 14 ORANG)
+        const userPins = { 
+            "Pak KUR (Mgt)": "0000",
+            "Pak Agus (Mgt)": "6413",
+            "Pak Ageng (Mgt)": "4444",
+            "Sintiya (Cashier)": "0959",
+            "Ridha (Cashier)": "0968",
+            "Okta": "0972", 
+            "Dendy": "0960", 
+            "Arif": "0966", 
+            "Rian": "0971", 
+            "Gemilang": "0967",
+            "Sadewa": "0976",
+            "Fahran": "0975",
+            "Rafli": "0974",
+            "Acong": "0929"
+        };
+
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -129,7 +146,8 @@
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
-            logSel.innerHTML = '<option value="">-- NAMA --</option>';
+            logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
+            // Urutan sesuai daftar yang kamu berikan
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
@@ -187,8 +205,6 @@
 
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
-                
-                // PENCARIAN MULTI-KOLOM (NAMA, HP, DRIVER, AREA)
                 const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                 const match = searchStr.includes(filter);
 
