@@ -283,10 +283,22 @@
         function saveData() {
             const area = document.getElementById('custArea').value;
             const name = document.getElementById('custName').value;
+            const phone = document.getElementById('custPhone').value;
             const editId = document.getElementById('editId').value;
+            
             if(!area || !name) return alert("Isi Area & Nama!");
+
+            // Cek apakah nomor sudah terdaftar (Hanya jika bukan sedang mode EDIT)
+            if(!editId && phone) {
+                const isExist = Object.values(allData).some(item => item.phone === phone && item.status !== 'done');
+                if(isExist) {
+                    alert("NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!");
+                    return;
+                }
+            }
+
             const btn = document.getElementById('saveBtn'); btn.disabled = true;
-            const data = { area: area.toUpperCase(), name, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
+            const data = { area: area.toUpperCase(), name, phone: phone, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
             const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
             ref.then(() => resetForm());
         }
