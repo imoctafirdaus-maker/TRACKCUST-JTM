@@ -154,14 +154,13 @@
             updatePresence();
         };
 
-        // FUNGSI WA DIRECT DENGAN AUTO CHAT
+        // --- FITUR WA DIRECT DENGAN AUTO CHAT ---
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
             if(!num) return alert("Nomor Kosong!");
             if(num.startsWith('0')) num = '62' + num.slice(1);
             
-            // Pesan Otomatis
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
@@ -330,6 +329,7 @@
             document.getElementById('housePhoto').value = "";
         }
 
+        // --- FITUR SAVE DENGAN CEK DATA GANDA ---
         function saveData() {
             const area = document.getElementById('custArea').value;
             const name = document.getElementById('custName').value;
@@ -338,7 +338,27 @@
             
             if(!area || !name) return alert("Isi Area & Nama!");
 
-            const data = { area: area.toUpperCase(), name, phone: phone, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
+            // Proteksi data ganda: Cek apakah nomor HP sudah ada di daftar AKTIF
+            if(!editId && phone) {
+                const isExist = Object.values(allData).some(item => 
+                    item.phone === phone && item.status !== 'done'
+                );
+                if(isExist) { 
+                    alert("⚠️ NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!"); 
+                    return; 
+                }
+            }
+
+            const data = { 
+                area: area.toUpperCase(), 
+                name, 
+                phone: phone, 
+                maps: document.getElementById('custMaps').value, 
+                photo: photoBase64, 
+                status: 'active', 
+                timestamp: Date.now() 
+            };
+            
             const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
             ref.then(() => resetForm());
         }
