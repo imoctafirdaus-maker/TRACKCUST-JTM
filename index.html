@@ -186,6 +186,7 @@
             updatePresence();
         };
 
+        // SCANNER LOGIC (IMPROVED)
         async function scanAddressTable(input) {
             if (!input.files || !input.files[0]) return;
             
@@ -209,7 +210,6 @@
                     canvas.width = img.width;
                     canvas.height = img.height;
                     
-                    // Filter khusus untuk mempertajam teks di layar monitor
                     ctx.filter = 'grayscale(100%) contrast(200%) brightness(100%)';
                     ctx.drawImage(img, 0, 0);
 
@@ -228,30 +228,23 @@
 
                         lines.forEach(line => {
                             let text = line.text.trim().toUpperCase();
-                            
-                            // Regex Fleksibel: Mencari pola angka yang mengandung 8-13 digit 
-                            // meskipun dipisahkan spasi, kurung, atau tanda strip
                             const phoneMatch = text.match(/(?:\(?\d{3,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4})/);
 
                             if (text.length > 5 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
                                 foundCount++;
                                 let phoneNum = phoneMatch ? phoneMatch[0] : "";
-                                
-                                // Bersihkan nomor hanya untuk link WA (ambil angkanya saja)
                                 let cleanWaNumber = phoneNum.replace(/\D/g, '');
                                 
-                                // Normalisasi ke format 62
                                 if (cleanWaNumber.startsWith('0')) cleanWaNumber = '62' + cleanWaNumber.slice(1);
                                 else if (cleanWaNumber.startsWith('8')) cleanWaNumber = '62' + cleanWaNumber;
 
-                                // Jika baris pertama ketemu nomor, masukkan ke input utama
                                 if(foundCount === 1 && cleanWaNumber) directInput.value = cleanWaNumber;
 
                                 const row = `
                                     <tr class="hover:bg-gray-50 border-b border-gray-100">
                                         <td class="p-2 leading-tight uppercase font-bold text-gray-800">
                                             <div class="text-[9px] mb-1">${text.replace(phoneNum, '').trim()}</div>
-                                            <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : '<span class="text-red-400">No HP tdk terdeteksi</span>'}</div>
+                                            <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : ''}</div>
                                         </td>
                                         <td class="p-2 text-center">
                                             ${cleanWaNumber.length >= 10 ? `
@@ -270,7 +263,7 @@
                             tableArea.classList.remove('hidden');
                             if(directInput.value === "Scanning...") directInput.value = "";
                         } else {
-                            alert("Data tidak terbaca jelas. Pastikan kamera fokus ke area nomor HP.");
+                            alert("Data tidak terbaca jelas.");
                             directInput.value = "";
                         }
                     } catch (err) {
