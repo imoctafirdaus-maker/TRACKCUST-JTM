@@ -187,7 +187,7 @@
             updatePresence();
         };
 
-        // --- FITUR SCAN ALAMAT KE TABEL DENGAN FILTER MONITOR ---
+        // --- FITUR SCAN ALAMAT KE TABEL DENGAN FILTER MONITOR OPTIMAL ---
         async function scanAddressTable(input) {
             if (!input.files || !input.files[0]) return;
             
@@ -206,14 +206,13 @@
             reader.onload = async (e) => {
                 const img = new Image();
                 img.onload = async () => {
-                    // --- FILTER ANTI PANTULAN CAHAYA MONITOR ---
                     const canvas = document.createElement('canvas');
                     const ctx = canvas.getContext('2d');
                     canvas.width = img.width;
                     canvas.height = img.height;
 
-                    // Mengubah gambar ke Grayscale & Menaikkan Kontras 2x lipat
-                    ctx.filter = 'grayscale(100%) contrast(200%) brightness(120%)';
+                    // FILTER BALANCED: Kontras tinggi tapi tetap menjaga detail angka
+                    ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
                     ctx.drawImage(img, 0, 0);
 
                     const filteredImg = canvas.toDataURL('image/jpeg');
@@ -231,10 +230,13 @@
 
                         lines.forEach(line => {
                             let text = line.text.trim().toUpperCase();
+                            // Membersihkan karakter aneh tanpa menghapus angka penting
                             text = text.replace(/[^A-Z0-9\s\-\/\.\(\)]/g, '');
-                            const phoneMatch = text.match(/(08|62|8)\d{7,12}/);
+                            
+                            // Pola nomor telepon yang lebih sensitif (termasuk yang diawali 8 atau 08)
+                            const phoneMatch = text.match(/(08|62|8)\d{6,11}/);
 
-                            if (text.length > 12 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
+                            if (text.length > 8 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
                                 foundCount++;
                                 let phoneNum = phoneMatch ? phoneMatch[0] : "";
                                 let cleanAddress = text.replace(phoneNum, '').replace(/[()]/g, '').trim();
@@ -249,7 +251,7 @@
                                     <tr class="hover:bg-gray-50 border-b border-gray-100">
                                         <td class="p-2 leading-tight uppercase font-bold text-gray-800">
                                             <div class="text-[9px] mb-1">${cleanAddress}</div>
-                                            <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : ''}</div>
+                                            <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : '<span class="text-red-400">No HP tdk terdeteksi</span>'}</div>
                                         </td>
                                         <td class="p-2 text-center">
                                             ${phoneNum ? `
@@ -268,7 +270,7 @@
                             tableArea.classList.remove('hidden');
                             if(directInput.value === "Scanning...") directInput.value = "";
                         } else {
-                            alert("Teks sulit dibaca. Miringkan sedikit HP saat memotret monitor untuk hindari pantulan.");
+                            alert("Teks sulit dibaca. Pastikan angka nomor telepon terlihat jelas di kamera.");
                             directInput.value = "";
                         }
                     } catch (err) {
