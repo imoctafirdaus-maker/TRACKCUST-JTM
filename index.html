@@ -209,8 +209,8 @@
                     const ctx = canvas.getContext('2d');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    
-                    ctx.filter = 'grayscale(100%) contrast(200%) brightness(100%)';
+                    //Menambahkan sedikit penurunan brightness untuk meredam silau background putih
+                    ctx.filter = 'grayscale(100%) contrast(250%) brightness(90%)';
                     ctx.drawImage(img, 0, 0);
 
                     const filteredImg = canvas.toDataURL('image/jpeg');
