@@ -111,7 +111,7 @@
             </div>
 
             <div id="page-chat" class="page h-full items-center p-4 bg-gray-100 overflow-y-auto">
-                <div class="wa-card mb-20">
+                <div class="wa-card mb-20 mx-auto">
                     <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-200">
                         <i class="fab fa-whatsapp text-white text-3xl"></i>
                     </div>
@@ -187,7 +187,7 @@
             updatePresence();
         };
 
-        // --- FITUR BARU: SCAN ALAMAT KE TABEL ---
+        // --- FITUR SCAN ALAMAT KE TABEL (OPTIMIZED) ---
         async function scanAddressTable(input) {
             if (!input.files || !input.files[0]) return;
             
@@ -208,35 +208,49 @@
                 previewImg.style.display = "block";
 
                 try {
-                    const result = await Tesseract.recognize(e.target.result, 'eng');
+                    // Menggunakan whitelist karakter agar simbol aneh tidak terbaca
+                    const result = await Tesseract.recognize(e.target.result, 'eng', {
+                        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.() ',
+                        logger: m => console.log(m)
+                    });
+                    
                     const lines = result.data.lines;
                     let foundCount = 0;
 
                     lines.forEach(line => {
-                        const text = line.text.trim();
-                        // Cari pola nomor telepon
-                        const phoneMatch = text.match(/(08|62|8)\d{7,11}/);
+                        let text = line.text.trim().toUpperCase();
+                        
+                        // FILTER 1: Hapus karakter sampah yang sering muncul akibat noise layar
+                        text = text.replace(/[^A-Z0-9\s\-\/\.\(\)]/g, '');
 
-                        if (text.length > 12) {
+                        // FILTER 2: Cari pola nomor telepon (8-13 digit)
+                        const phoneMatch = text.match(/(08|62|8)\d{7,12}/);
+
+                        // FILTER 3: Hanya ambil baris yang punya konten alamat atau nomor telepon
+                        if (text.length > 12 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
                             foundCount++;
                             let phoneNum = phoneMatch ? phoneMatch[0] : "";
-                            let cleanAddress = text.replace(phoneNum, '').replace(/[()#x62]/g, '').trim();
                             
-                            // Ambil nomor pertama untuk input utama
-                            if(foundCount === 1) directInput.value = phoneNum;
+                            // Bersihkan alamat dari sisa-sisa nomor telepon dan simbol tak perlu
+                            let cleanAddress = text.replace(phoneNum, '').replace(/[()]/g, '').trim();
+                            
+                            // Ambil nomor pertama yang valid untuk input utama
+                            if(foundCount === 1 && phoneNum) directInput.value = phoneNum;
 
-                            // Format link WA
-                            let waLink = phoneNum;
+                            let waLink = phoneNum.replace(/\D/g, '');
                             if(waLink.startsWith('0')) waLink = '62' + waLink.slice(1);
                             if(waLink.startsWith('8')) waLink = '62' + waLink;
 
                             const row = `
-                                <tr class="hover:bg-gray-50">
-                                    <td class="p-2 leading-tight uppercase font-bold text-gray-800 border-r border-gray-100">${cleanAddress}<br><span class="text-blue-600 font-black">${phoneNum}</span></td>
+                                <tr class="hover:bg-gray-50 border-b border-gray-100">
+                                    <td class="p-2 leading-tight uppercase font-bold text-gray-800">
+                                        <div class="text-[9px] mb-1">${cleanAddress}</div>
+                                        <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : ''}</div>
+                                    </td>
                                     <td class="p-2 text-center">
                                         ${phoneNum ? `
-                                            <button onclick="openWaLinkCustom('${waLink}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-sm flex items-center justify-center mx-auto">
-                                                <i class="fab fa-whatsapp"></i>
+                                            <button onclick="openWaLinkCustom('${waLink}')" class="bg-green-500 text-white w-9 h-9 rounded-xl shadow-md flex items-center justify-center mx-auto active:scale-90 transition-transform">
+                                                <i class="fab fa-whatsapp text-lg"></i>
                                             </button>
                                         ` : '-'}
                                     </td>
@@ -248,8 +262,9 @@
 
                     if (foundCount > 0) {
                         tableArea.classList.remove('hidden');
+                        if(directInput.value === "Scanning...") directInput.value = "";
                     } else {
-                        alert("Data tidak terbaca. Pastikan foto fokus pada tulisan alamat.");
+                        alert("Data tidak terbaca jelas. Tips: Foto struk fisik lebih akurat daripada foto layar monitor.");
                         directInput.value = "";
                     }
                 } catch (err) {
@@ -264,7 +279,7 @@
         }
 
         function openWaLinkCustom(num) {
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -272,9 +287,9 @@
             document.getElementById('scanResultArea').classList.add('hidden');
             document.getElementById('waOcrPreview').style.display = "none";
             document.getElementById('waDirectNumber').value = "";
+            document.getElementById('addressTableBody').innerHTML = "";
         }
 
-        // --- FITUR WA DIRECT MANUAL ---
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
             if(!num || num === "Scanning...") return alert("Nomor Kosong!");
@@ -328,7 +343,7 @@
                 const match = searchStr.includes(filter);
                 if(i.status !== 'done') activeCount++;
                 
-                let formattedPhone = i.phone.replace(/\D/g, '');
+                let formattedPhone = (i.phone || "").replace(/\D/g, '');
                 if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
 
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
