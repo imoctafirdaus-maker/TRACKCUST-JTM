@@ -1,463 +1,93 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Official</title>
+<div id="scanResultArea" class="hidden mt-4">
+    <h3 class="text-blue-900 font-black uppercase italic text-xs mb-2">Informasi Alamat Pengiriman</h3>
+    <div class="overflow-hidden rounded-lg border-2 border-blue-900">
+        <table class="w-full text-[10px] bg-white">
+            <thead class="bg-blue-900 text-white uppercase">
+                <tr>
+                    <th class="p-2 text-center border-r border-blue-800" style="width: 10%;">No.</th>
+                    <th class="p-2 text-left" style="width: 60%;">Alamat Lengkap</th>
+                    <th class="p-2 text-center" style="width: 30%;">Nomor Telepon / Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="addressTableBody" class="divide-y divide-gray-200 font-bold text-gray-800">
+                </tbody>
+        </table>
+    </div>
+    <div class="mt-3 p-2 bg-yellow-50 rounded border border-yellow-200">
+        <p class="text-[9px] text-gray-600"><strong>Catatan:</strong> Pastikan nomor telepon benar sebelum menekan tombol WhatsApp.</p>
+    </div>
+</div>
+
+<script>
+async function scanFullAddressOCR(input) {
+    if (!input.files || !input.files[0]) return;
     
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <script src='https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js'></script>
+    const loading = document.getElementById('ocrLoading');
+    const tableArea = document.getElementById('scanResultArea');
+    const tableBody = document.getElementById('addressTableBody');
     
-    <style>
-        .dominos-blue { background-color: #006491; }
-        .dominos-red { background-color: #e31837; }
-        ::-webkit-scrollbar { width: 0; background: transparent; }
-        
-        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
-        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; width: 20%; cursor: pointer; }
-        .nav-item.active { color: #006491; }
-        .nav-add { background: #006491 !important; color: white !important; width: 50px !important; height: 50px; border-radius: 50%; margin-top: -25px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
-        
-        .page { display: none; height: 100%; flex-direction: column; }
-        .page.active { display: flex; }
-        
-        #page-chat { background-color: #f0f2f5; }
-        .wa-card { background: white; padding: 2rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 320px; text-align: center; }
+    loading.classList.remove('hidden');
+    tableArea.classList.add('hidden');
+    tableBody.innerHTML = "";
 
-        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        
-        .qr-container { background: white; padding: 8px; border-radius: 12px; border: 2px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; }
-        .qr-container:active { transform: scale(0.95); background: #f8fafc; }
-        
-        #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            // Memproses gambar menggunakan Tesseract.js
+            const result = await Tesseract.recognize(e.target.result, 'eng');
+            const lines = result.data.lines;
+            
+            let rowCount = 0;
 
-        /* Loading Spinner untuk OCR */
-        .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
-</head>
-<body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
+            lines.forEach(line => {
+                const text = line.text.trim();
+                // Mencari pola nomor telepon di dalam baris teks
+                const phoneMatch = text.match(/\(?\d{3,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,4}/);
 
-    <div id="imgModal" class="fixed inset-0 bg-black/95 z-[10001] hidden flex-col items-center justify-center p-4" onclick="this.style.display='none'">
-        <button class="absolute top-6 right-6 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-2xl"></i></button>
-        <div id="modalContent" class="flex flex-col items-center">
-             <img id="fullImg" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain">
-             <p id="modalCaption" class="text-white mt-4 font-black italic uppercase tracking-widest"></p>
-        </div>
-    </div>
-
-    <div id="pinOverlay" class="fixed inset-0 dominos-blue z-[10000] flex flex-col items-center justify-center p-6">
-        <div class="text-center mb-8 text-white">
-            <h1 class="font-black italic text-4xl uppercase">Domino's</h1>
-            <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Track System</p>
-        </div>
-        <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
-            <select id="selectUser" class="w-full p-4 bg-gray-100 rounded-2xl mb-4 font-bold text-blue-900 outline-none uppercase text-xs"></select>
-            <input type="password" id="inputPin" maxlength="4" placeholder="PIN 4 DIGIT" inputmode="numeric" class="w-full text-center text-2xl font-black p-4 bg-gray-100 rounded-2xl mb-6 outline-none">
-            <button onclick="prosesLogin()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase shadow-lg">Masuk</button>
-        </div>
-    </div>
-
-    <div id="mainContent" style="display:none;" class="flex flex-col h-full">
-        <nav class="dominos-blue p-4 text-white shadow-md flex justify-between items-center">
-            <h1 class="font-black italic uppercase text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <div class="flex items-center gap-2">
-                <span id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">User</span>
-                <button onclick="location.reload()" class="bg-red-500 w-7 h-7 rounded-full flex items-center justify-center"><i class="fa fa-sync-alt text-[10px]"></i></button>
-            </div>
-        </nav>
-        
-        <div id="onlineBar" class="bg-blue-900/10 px-4 py-1 flex gap-2 overflow-x-auto text-[8px] font-black text-blue-900 uppercase italic"></div>
-
-        <main class="flex-1 overflow-hidden relative">
-            <div id="page-list" class="page active p-4 overflow-y-auto">
-                <div class="flex justify-between items-center mb-3">
-                    <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
-                    <div id="countActive" class="bg-red-500 text-white px-3 py-2 rounded-xl text-[10px] font-black italic">0 AKTIF</div>
-                </div>
-                <div id="activeList" class="space-y-4 pb-32"></div>
-            </div>
-
-            <div id="page-history" class="page p-4 overflow-y-auto">
-                <div id="historyList" class="space-y-4 pb-32"></div>
-            </div>
-
-            <div id="page-add" class="page p-4 overflow-y-auto">
-                <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
-                    <h2 id="formTitle" class="font-black text-blue-900 text-center uppercase text-xs">Tambah Antaran</h2>
-                    <input type="hidden" id="editId">
-                    <input type="text" id="custArea" placeholder="KODE AREA (A-1)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold uppercase outline-none">
-                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="tel" id="custPhone" placeholder="Nomor HP" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
+                if (text.length > 15) { // Validasi sederhana agar baris kosong tidak masuk
+                    rowCount++;
+                    let phoneNum = phoneMatch ? phoneMatch[0] : "";
+                    // Membersihkan teks alamat dari karakter gangguan (seperti #x62 atau tanda kurung nomor)
+                    let cleanAddress = text.replace(phoneNum, '').replace(/[#x62()]/g, '').trim();
                     
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-dashed border-blue-200 text-center relative">
-                        <label class="cursor-pointer">
-                            <i class="fa fa-camera text-blue-400 text-xl"></i>
-                            <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Foto Rumah</p>
-                            <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processImage(this)">
-                        </label>
-                        <button onclick="removePhoto()" id="btnRemovePhoto" class="hidden absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-[10px]"></i></button>
-                        <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
-                    </div>
-                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase text-sm">Simpan</button>
-                    <button onclick="cancelEdit()" id="cancelBtn" class="hidden w-full bg-gray-400 text-white py-3 rounded-xl font-bold uppercase text-[10px]">Batal</button>
-                </div>
-            </div>
+                    // Format nomor untuk link WhatsApp (menghilangkan karakter non-digit)
+                    let waFormatted = phoneNum.replace(/\D/g, '');
+                    if(waFormatted.startsWith('0')) waFormatted = '62' + waFormatted.slice(1);
 
-            <div id="page-chat" class="page h-full items-center justify-center p-6 bg-gray-100">
-                <div class="wa-card">
-                    <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-200">
-                        <i class="fab fa-whatsapp text-white text-4xl"></i>
-                    </div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-lg">WA Direct</h2>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-6">Scan Struk / Ketik Nomor</p>
-                    
-                    <div class="relative mb-4">
-                        <input type="tel" id="waDirectNumber" placeholder="Masukan Nomor HP" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 outline-none font-black text-center text-blue-900">
-                        <label class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-blue-500">
-                            <i class="fa fa-camera text-xl"></i>
-                            <input type="file" accept="image/*" class="hidden" onchange="scanNumber(this)">
-                        </label>
-                    </div>
-
-                    <div id="ocrLoading" class="hidden mb-4 text-[10px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Sedang Mendeteksi Angka...
-                    </div>
-                    
-                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black uppercase text-sm shadow-md active:scale-95 transition-transform">
-                        Mulai Chat
-                    </button>
-                </div>
-            </div>
-        </main>
-
-        <div class="bottom-nav">
-            <div onclick="showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-motorcycle mb-1 text-xl"></i><span>Antaran</span></div>
-            <div onclick="showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
-            <div onclick="showPage('add')" class="nav-item nav-add" id="nav-add"><i class="fa fa-plus text-2xl"></i></div>
-            <div onclick="showPage('chat')" class="nav-item" id="nav-chat"><i class="fab fa-whatsapp mb-1 text-xl"></i><span>WA Direct</span></div>
-            <div onclick="handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Out</span></div>
-        </div>
-    </div>
-
-    <script>
-        const userPins = { 
-            "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
-            "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
-            "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967",
-            "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929"
-        };
-
-        const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        
-        let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = "";
-
-        window.onload = () => {
-            const logSel = document.getElementById('selectUser');
-            logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
-            Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
-            if(currentUser) bukaApp(currentUser);
-            setInterval(updateTimers, 1000);
-            updatePresence();
-        };
-
-        // --- FITUR SCAN NOMOR (OCR) ---
-        async function scanNumber(input) {
-            if (!input.files || !input.files[0]) return;
-            
-            const loading = document.getElementById('ocrLoading');
-            const targetInput = document.getElementById('waDirectNumber');
-            
-            loading.classList.remove('hidden');
-            targetInput.value = "Scanning...";
-
-            try {
-                const result = await Tesseract.recognize(input.files[0], 'eng', {
-                    logger: m => console.log(m)
-                });
-                
-                // Regex untuk hanya mengambil angka (mengabaikan huruf/simbol)
-                // Kita ambil deretan angka yang panjangnya minimal 10 digit (ciri nomor telpon)
-                const text = result.data.text;
-                const matches = text.match(/\d+/g); // Cari semua angka
-                
-                if (matches) {
-                    // Gabungkan angka yang ditemukan dan filter (contoh: cari yang diawali 08 atau 62)
-                    let filteredNum = matches.join('').match(/(08|62)\d+/);
-                    if (filteredNum) {
-                        targetInput.value = filteredNum[0];
-                    } else {
-                        // Jika tidak ada pola 08/62, masukkan angka pertama yang ditemukan saja
-                        targetInput.value = matches[0];
-                    }
-                } else {
-                    alert("Gagal mendeteksi angka. Pastikan foto jelas.");
-                    targetInput.value = "";
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Terjadi kesalahan saat scan.");
-                targetInput.value = "";
-            } finally {
-                loading.classList.add('hidden');
-                input.value = ""; // Reset input file
-            }
-        }
-
-        // --- FITUR WA DIRECT ---
-        function openWaDirect() {
-            let num = document.getElementById('waDirectNumber').value;
-            if(!num || num === "Scanning...") return alert("Nomor Kosong!");
-            if(num.startsWith('0')) num = '62' + num.slice(1);
-            
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
-            
-            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        // --- SISANYA KODE FIREBASE & RENDER (TETAP SAMA) ---
-        function updatePresence() {
-            if(!currentUser) return;
-            const ref = db.ref('presence/' + currentUser);
-            ref.set(true);
-            ref.onDisconnect().remove();
-            db.ref('presence').on('value', s => {
-                const el = document.getElementById('onlineBar');
-                el.innerHTML = "";
-                s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
-            });
-        }
-
-        function prosesLogin() {
-            const u = document.getElementById('selectUser').value;
-            const p = document.getElementById('inputPin').value;
-            if(p === userPins[u]) { bukaApp(u); updatePresence(); } else alert("PIN SALAH!");
-        }
-
-        function bukaApp(n) {
-            currentUser = n; localStorage.setItem('jtm_user', n);
-            document.getElementById('userDisplay').innerText = n;
-            document.getElementById('pinOverlay').style.display = "none";
-            document.getElementById('mainContent').style.display = "flex";
-            startDataListeners();
-        }
-
-        function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
-
-        function startDataListeners() {
-            db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-        }
-
-        function render() {
-            const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
-            const filter = document.getElementById('searchInput').value.toLowerCase();
-            let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
-
-            Object.keys(allData).reverse().forEach(id => {
-                const i = allData[id];
-                const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
-                const match = searchStr.includes(filter);
-                if(i.status !== 'done') activeCount++;
-                
-                let formattedPhone = i.phone;
-                if(formattedPhone && formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
-
-                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
-                const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
-
-                const cardHtml = `
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
-                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
+                    const row = `
+                        <tr>
+                            <td class="p-2 text-center border-r border-gray-100 bg-gray-50">${rowCount}</td>
+                            <td class="p-2 leading-tight uppercase">${cleanAddress}</td>
+                            <td class="p-2 text-center">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-blue-700">${phoneNum || '-'}</span>
+                                    ${phoneNum ? `
+                                        <button onclick="window.open('https://wa.me/${waFormatted}', '_blank')" 
+                                                class="bg-green-500 text-white px-2 py-1 rounded shadow-sm text-[8px] flex items-center gap-1">
+                                            <i class="fab fa-whatsapp"></i> Chat WA
+                                        </button>
+                                    ` : ''}
                                 </div>
-                            </div>
-                            <div class="flex gap-2">
-                                ${i.status !== 'done' ? `
-                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                    <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
-                                    <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
-                                ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
-                            </div>
-                        </div>
-
-                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.maps ? `
-                                <div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')">
-                                    <div id="qrcode-${id}"></div>
-                                    <p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p>
-                                </div>
-                            ` : ''}
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}
-                        </div>
-
-                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
-                            <a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
-                        </div>
-                    </div>`;
-
-                if(i.status === 'done') { 
-                    if(match) hist.innerHTML += cardHtml; 
-                } else { 
-                    if(match) {
-                        list.innerHTML += cardHtml;
-                        if(i.maps) {
-                            setTimeout(() => {
-                                const el = document.getElementById(`qrcode-${id}`);
-                                if(el && el.innerHTML === "") {
-                                    new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H });
-                                }
-                            }, 50);
-                        }
-                    }
+                            </td>
+                        </tr>
+                    `;
+                    tableBody.innerHTML += row;
                 }
             });
-            document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
-        }
 
-        function openFullQR(id, custName) {
-            const qrCanvas = document.getElementById(`qrcode-${id}`).querySelector('canvas');
-            if (qrCanvas) {
-                const tempDiv = document.createElement('div');
-                new QRCode(tempDiv, { text: allData[id].maps, width: 1000, height: 1000, colorDark: "#000000", correctLevel : QRCode.CorrectLevel.H });
-                setTimeout(() => {
-                    const largeQr = tempDiv.querySelector('canvas').toDataURL();
-                    const img = document.getElementById('fullImg');
-                    img.src = largeQr;
-                    img.className = "max-w-full max-h-[70vh] rounded-lg shadow-2xl object-contain qr-large";
-                    document.getElementById('modalCaption').innerText = "SCAN LOKASI: " + custName.toUpperCase();
-                    document.getElementById('imgModal').style.display = 'flex';
-                }, 100);
-            }
-        }
-
-        function openFullImg(url, caption = "") { 
-            const img = document.getElementById('fullImg');
-            img.src = url; 
-            img.className = "max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain";
-            document.getElementById('modalCaption').innerText = caption;
-            document.getElementById('imgModal').style.display = 'flex'; 
-        }
-
-        function secureDelete(id) {
-            const p = prompt("MASUKKAN PIN ANDA UNTUK MENGHAPUS:");
-            if(p === userPins[currentUser]) { db.ref('customers/' + id).remove(); } else if(p !== null) { alert("PIN SALAH!"); }
-        }
-
-        function processImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        const prev = document.getElementById('imgPrev');
-                        prev.src = photoBase64; prev.classList.remove('hidden');
-                        document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function removePhoto() {
-            photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('btnRemovePhoto').classList.add('hidden');
-            document.getElementById('photoStatus').innerText = "Foto Rumah";
-            document.getElementById('housePhoto').value = "";
-        }
-
-        function saveData() {
-            const area = document.getElementById('custArea').value;
-            const name = document.getElementById('custName').value;
-            const phone = document.getElementById('custPhone').value;
-            const editId = document.getElementById('editId').value;
-            
-            if(!area || !name) return alert("Isi Area & Nama!");
-
-            if(!editId && phone) {
-                const isExist = Object.values(allData).some(item => 
-                    item.phone === phone && item.status !== 'done'
-                );
-                if(isExist) { 
-                    alert("⚠️ NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!"); 
-                    return; 
-                }
+            if (rowCount > 0) {
+                tableArea.classList.remove('hidden');
+            } else {
+                alert("Alamat tidak terdeteksi. Coba foto lebih dekat dan jelas.");
             }
 
-            const data = { area: area.toUpperCase(), name, phone: phone, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
-            const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
-            ref.then(() => resetForm());
+        } catch (err) {
+            console.error(err);
+            alert("Terjadi kesalahan saat membaca gambar.");
+        } finally {
+            loading.classList.add('hidden');
         }
-
-        function editData(id) {
-            const i = allData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('custArea').value = i.area;
-            document.getElementById('custName').value = i.name;
-            document.getElementById('custPhone').value = i.phone;
-            document.getElementById('custMaps').value = i.maps;
-            if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); document.getElementById('btnRemovePhoto').classList.remove('hidden'); }
-            document.getElementById('formTitle').innerText = "Edit Antaran";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            showPage('add');
-        }
-
-        function resetForm() {
-            document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = "";
-            document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = "";
-            removePhoto(); document.getElementById('formTitle').innerText = "Tambah Antaran";
-            document.getElementById('cancelBtn').classList.add('hidden');
-            showPage('list');
-        }
-
-        function cancelEdit() { resetForm(); }
-        function goOTW(id) { if(allData[id].status !== 'otw') db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
-        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
-
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-'+id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('nav-'+id)?.classList.add('active');
-        }
-
-        function updateTimers() {
-            Object.keys(allData).forEach(id => {
-                if(allData[id].status === 'otw') {
-                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
-                    const remaining = (20 * 60) - elapsed;
-                    const el = document.getElementById('timer-'+id);
-                    if(el) {
-                        const m = Math.max(0, Math.floor(remaining / 60));
-                        const s = Math.max(0, remaining % 60);
-                        el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
-                        if(remaining < 0) el.classList.replace('text-gray-400', 'text-red-600');
-                    }
-                }
-            });
-        }
-    </script>
-</body>
-</html>
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+</script>
