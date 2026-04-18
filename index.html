@@ -35,7 +35,6 @@
         
         #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
-        /* Loading Spinner untuk OCR */
         .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -115,18 +114,18 @@
                         <i class="fab fa-whatsapp text-white text-4xl"></i>
                     </div>
                     <h2 class="font-black text-blue-900 uppercase italic text-lg">WA Direct</h2>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-6">Scan Struk / Ketik Nomor</p>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase mb-6">Scan Nomor Struk</p>
                     
                     <div class="relative mb-4">
-                        <input type="tel" id="waDirectNumber" placeholder="Masukan Nomor HP" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 outline-none font-black text-center text-blue-900">
-                        <label class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-blue-500">
-                            <i class="fa fa-camera text-xl"></i>
-                            <input type="file" accept="image/*" class="hidden" onchange="scanNumberOCR(this)">
+                        <input type="tel" id="waDirectNumber" placeholder="Ketik / Foto Nomor" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 outline-none font-black text-center text-blue-900">
+                        <label class="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-blue-600 bg-blue-50 p-2 rounded-lg">
+                            <i class="fa fa-camera text-lg"></i>
+                            <input type="file" accept="image/*" capture="camera" class="hidden" onchange="scanNumberOCR(this)">
                         </label>
                     </div>
 
                     <div id="ocrLoading" class="hidden mb-4 text-[10px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Sedang Mendeteksi Angka...
+                        <div class="loader-ocr"></div> Sedang Membaca Foto...
                     </div>
                     
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black uppercase text-sm shadow-md active:scale-95 transition-transform">
@@ -169,7 +168,7 @@
             updatePresence();
         };
 
-        // --- FITUR SCAN NOMOR (OCR) ---
+        // --- FITUR AUTO COPY DARI FOTO (OCR) ---
         async function scanNumberOCR(input) {
             if (!input.files || !input.files[0]) return;
             
@@ -177,44 +176,44 @@
             const targetInput = document.getElementById('waDirectNumber');
             
             loading.classList.remove('hidden');
-            targetInput.value = "Mendeteksi...";
+            targetInput.value = "Processing...";
 
             try {
-                const result = await Tesseract.recognize(input.files[0], 'eng');
-                const text = result.data.text;
-                // Regex mendeteksi angka minimal 10 digit (ciri nomor telpon)
-                const matches = text.match(/\d+/g); 
+                const result = await Tesseract.recognize(input.files[0], 'eng', {
+                    logger: m => console.log(m) 
+                });
                 
-                if (matches) {
-                    let combinedNumbers = matches.join('');
-                    // Ambil yang polanya mirip nomor Indonesia (mulai 08/62/8)
-                    let filteredNum = combinedNumbers.match(/(08|62|8)\d{8,12}/);
-                    if (filteredNum) {
-                        targetInput.value = filteredNum[0];
-                    } else {
-                        targetInput.value = matches[0];
-                    }
+                // Ambil semua angka saja dari teks yang terbaca
+                const text = result.data.text;
+                const numbersOnly = text.replace(/\D/g, ''); 
+                
+                // Cari pola nomor HP yang masuk akal (biasanya 10-13 digit)
+                const hpPattern = numbersOnly.match(/(08|62|8)\d{8,11}/);
+                
+                if (hpPattern) {
+                    targetInput.value = hpPattern[0];
+                } else if (numbersOnly.length >= 8) {
+                    targetInput.value = numbersOnly.substring(0, 13);
                 } else {
-                    alert("Angka tidak ditemukan.");
+                    alert("Nomor tidak terdeteksi jelas. Pastikan foto struk tegak & terang.");
                     targetInput.value = "";
                 }
             } catch (err) {
-                console.error(err);
-                alert("Gagal memproses gambar.");
+                alert("Gagal membaca foto.");
                 targetInput.value = "";
             } finally {
                 loading.classList.add('hidden');
-                input.value = "";
+                input.value = ""; // Reset input file
             }
         }
 
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
-            if(!num || num === "Mendeteksi...") return alert("Nomor Kosong!");
+            if(!num || num.includes("Processing")) return alert("Nomor Kosong!");
             if(num.startsWith('0')) num = '62' + num.slice(1);
+            if(num.startsWith('8')) num = '62' + num;
             
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur,ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
-            
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
