@@ -160,7 +160,7 @@
             if(!num) return alert("Nomor Kosong!");
             if(num.startsWith('0')) num = '62' + num.slice(1);
             
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur,ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
