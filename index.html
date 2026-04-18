@@ -34,7 +34,9 @@
         .del-chat:hover { color: #ff4d4d; }
 
         .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        .qr-box { background: white; padding: 5px; border-radius: 12px; border: 1px dashed #006491; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* QR Styling */
+        .qr-container { background: white; padding: 6px; border-radius: 12px; border: 1px dashed #006491; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -238,12 +240,12 @@
 
                         <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
                             ${i.maps ? `
-                                <div class="qr-box">
+                                <div class="qr-container cursor-pointer" onclick="openFullQR('${id}')">
                                     <div id="qrcode-${id}"></div>
-                                    <p class="text-[6px] font-black mt-1 text-blue-900 uppercase">Scan Maps</p>
+                                    <p class="text-[6px] font-black mt-1 text-blue-900 uppercase">Perbesar QR</p>
                                 </div>
                             ` : ''}
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}')" class="flex-1 h-20 object-cover rounded-xl border">` : ''}
+                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}
                         </div>
 
                         <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
@@ -257,19 +259,28 @@
                 } else { 
                     if(match) {
                         list.innerHTML += cardHtml;
-                        // Generate QR Code setelah elemen muncul
+                        // Jalankan fungsi QR setelah kartu di-render
                         if(i.maps) {
                             setTimeout(() => {
                                 const el = document.getElementById(`qrcode-${id}`);
                                 if(el && el.innerHTML === "") {
                                     new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
                                 }
-                            }, 100);
+                            }, 50);
                         }
                     }
                 }
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
+        }
+
+        // Fungsi Perbesar QR
+        function openFullQR(id) {
+            const qrCanvas = document.getElementById(`qrcode-${id}`).querySelector('canvas');
+            if (qrCanvas) {
+                const dataUrl = qrCanvas.toDataURL();
+                openFullImg(dataUrl);
+            }
         }
 
         function secureDelete(id) {
@@ -317,7 +328,7 @@
 
             if(!editId && phone) {
                 const isExist = Object.values(allData).some(item => item.phone === phone && item.status !== 'done');
-                if(isExist) return alert("NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!");
+                if(isExist) { alert("NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!"); return; }
             }
 
             const btn = document.getElementById('saveBtn'); btn.disabled = true;
