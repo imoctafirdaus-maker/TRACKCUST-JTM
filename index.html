@@ -7,6 +7,7 @@
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     
@@ -33,6 +34,7 @@
         .del-chat:hover { color: #ff4d4d; }
 
         .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
+        .qr-box { background: white; padding: 5px; border-radius: 12px; border: 1px dashed #006491; display: flex; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -233,14 +235,39 @@
                                 ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
                             </div>
                         </div>
-                        ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}')" class="w-full h-24 object-cover rounded-xl mt-3 border">` : ''}
+
+                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
+                            ${i.maps ? `
+                                <div class="qr-box">
+                                    <div id="qrcode-${id}"></div>
+                                    <p class="text-[6px] font-black mt-1 text-blue-900 uppercase">Scan Maps</p>
+                                </div>
+                            ` : ''}
+                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}')" class="flex-1 h-20 object-cover rounded-xl border">` : ''}
+                        </div>
+
                         <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase">Buka Maps</a>
+                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
                             <a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
                         </div>
                     </div>`;
 
-                if(i.status === 'done') { if(match) hist.innerHTML += cardHtml; } else { if(match) list.innerHTML += cardHtml; }
+                if(i.status === 'done') { 
+                    if(match) hist.innerHTML += cardHtml; 
+                } else { 
+                    if(match) {
+                        list.innerHTML += cardHtml;
+                        // Generate QR Code setelah elemen muncul
+                        if(i.maps) {
+                            setTimeout(() => {
+                                const el = document.getElementById(`qrcode-${id}`);
+                                if(el && el.innerHTML === "") {
+                                    new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
+                                }
+                            }, 100);
+                        }
+                    }
+                }
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
@@ -288,13 +315,9 @@
             
             if(!area || !name) return alert("Isi Area & Nama!");
 
-            // Cek apakah nomor sudah terdaftar (Hanya jika bukan sedang mode EDIT)
             if(!editId && phone) {
                 const isExist = Object.values(allData).some(item => item.phone === phone && item.status !== 'done');
-                if(isExist) {
-                    alert("NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!");
-                    return;
-                }
+                if(isExist) return alert("NOMOR TERSEBUT TELAH TERDAFTAR DAN MASIH AKTIF!");
             }
 
             const btn = document.getElementById('saveBtn'); btn.disabled = true;
