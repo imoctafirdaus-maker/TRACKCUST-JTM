@@ -187,7 +187,7 @@
             updatePresence();
         };
 
-        // --- FITUR SCAN ALAMAT KE TABEL (OPTIMIZED) ---
+        // --- FITUR SCAN ALAMAT KE TABEL DENGAN FILTER MONITOR ---
         async function scanAddressTable(input) {
             if (!input.files || !input.files[0]) return;
             
@@ -204,76 +204,81 @@
 
             const reader = new FileReader();
             reader.onload = async (e) => {
-                previewImg.src = e.target.result;
-                previewImg.style.display = "block";
+                const img = new Image();
+                img.onload = async () => {
+                    // --- FILTER ANTI PANTULAN CAHAYA MONITOR ---
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
 
-                try {
-                    // Menggunakan whitelist karakter agar simbol aneh tidak terbaca
-                    const result = await Tesseract.recognize(e.target.result, 'eng', {
-                        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.() ',
-                        logger: m => console.log(m)
-                    });
-                    
-                    const lines = result.data.lines;
-                    let foundCount = 0;
+                    // Mengubah gambar ke Grayscale & Menaikkan Kontras 2x lipat
+                    ctx.filter = 'grayscale(100%) contrast(200%) brightness(120%)';
+                    ctx.drawImage(img, 0, 0);
 
-                    lines.forEach(line => {
-                        let text = line.text.trim().toUpperCase();
+                    const filteredImg = canvas.toDataURL('image/jpeg');
+                    previewImg.src = filteredImg;
+                    previewImg.style.display = "block";
+
+                    try {
+                        const result = await Tesseract.recognize(filteredImg, 'eng', {
+                            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.() ',
+                            logger: m => console.log(m)
+                        });
                         
-                        // FILTER 1: Hapus karakter sampah yang sering muncul akibat noise layar
-                        text = text.replace(/[^A-Z0-9\s\-\/\.\(\)]/g, '');
+                        const lines = result.data.lines;
+                        let foundCount = 0;
 
-                        // FILTER 2: Cari pola nomor telepon (8-13 digit)
-                        const phoneMatch = text.match(/(08|62|8)\d{7,12}/);
+                        lines.forEach(line => {
+                            let text = line.text.trim().toUpperCase();
+                            text = text.replace(/[^A-Z0-9\s\-\/\.\(\)]/g, '');
+                            const phoneMatch = text.match(/(08|62|8)\d{7,12}/);
 
-                        // FILTER 3: Hanya ambil baris yang punya konten alamat atau nomor telepon
-                        if (text.length > 12 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
-                            foundCount++;
-                            let phoneNum = phoneMatch ? phoneMatch[0] : "";
-                            
-                            // Bersihkan alamat dari sisa-sisa nomor telepon dan simbol tak perlu
-                            let cleanAddress = text.replace(phoneNum, '').replace(/[()]/g, '').trim();
-                            
-                            // Ambil nomor pertama yang valid untuk input utama
-                            if(foundCount === 1 && phoneNum) directInput.value = phoneNum;
+                            if (text.length > 12 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
+                                foundCount++;
+                                let phoneNum = phoneMatch ? phoneMatch[0] : "";
+                                let cleanAddress = text.replace(phoneNum, '').replace(/[()]/g, '').trim();
+                                
+                                if(foundCount === 1 && phoneNum) directInput.value = phoneNum;
 
-                            let waLink = phoneNum.replace(/\D/g, '');
-                            if(waLink.startsWith('0')) waLink = '62' + waLink.slice(1);
-                            if(waLink.startsWith('8')) waLink = '62' + waLink;
+                                let waLink = phoneNum.replace(/\D/g, '');
+                                if(waLink.startsWith('0')) waLink = '62' + waLink.slice(1);
+                                if(waLink.startsWith('8')) waLink = '62' + waLink;
 
-                            const row = `
-                                <tr class="hover:bg-gray-50 border-b border-gray-100">
-                                    <td class="p-2 leading-tight uppercase font-bold text-gray-800">
-                                        <div class="text-[9px] mb-1">${cleanAddress}</div>
-                                        <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : ''}</div>
-                                    </td>
-                                    <td class="p-2 text-center">
-                                        ${phoneNum ? `
-                                            <button onclick="openWaLinkCustom('${waLink}')" class="bg-green-500 text-white w-9 h-9 rounded-xl shadow-md flex items-center justify-center mx-auto active:scale-90 transition-transform">
-                                                <i class="fab fa-whatsapp text-lg"></i>
-                                            </button>
-                                        ` : '-'}
-                                    </td>
-                                </tr>
-                            `;
-                            tableBody.innerHTML += row;
+                                const row = `
+                                    <tr class="hover:bg-gray-50 border-b border-gray-100">
+                                        <td class="p-2 leading-tight uppercase font-bold text-gray-800">
+                                            <div class="text-[9px] mb-1">${cleanAddress}</div>
+                                            <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : ''}</div>
+                                        </td>
+                                        <td class="p-2 text-center">
+                                            ${phoneNum ? `
+                                                <button onclick="openWaLinkCustom('${waLink}')" class="bg-green-500 text-white w-9 h-9 rounded-xl shadow-md flex items-center justify-center mx-auto active:scale-90 transition-transform">
+                                                    <i class="fab fa-whatsapp text-lg"></i>
+                                                </button>
+                                            ` : '-'}
+                                        </td>
+                                    </tr>
+                                `;
+                                tableBody.innerHTML += row;
+                            }
+                        });
+
+                        if (foundCount > 0) {
+                            tableArea.classList.remove('hidden');
+                            if(directInput.value === "Scanning...") directInput.value = "";
+                        } else {
+                            alert("Teks sulit dibaca. Miringkan sedikit HP saat memotret monitor untuk hindari pantulan.");
+                            directInput.value = "";
                         }
-                    });
-
-                    if (foundCount > 0) {
-                        tableArea.classList.remove('hidden');
-                        if(directInput.value === "Scanning...") directInput.value = "";
-                    } else {
-                        alert("Data tidak terbaca jelas. Tips: Foto struk fisik lebih akurat daripada foto layar monitor.");
-                        directInput.value = "";
+                    } catch (err) {
+                        console.error(err);
+                        alert("Gagal memproses gambar.");
+                    } finally {
+                        loading.classList.add('hidden');
                     }
-                } catch (err) {
-                    console.error(err);
-                    alert("Gagal memproses gambar.");
-                    directInput.value = "";
-                } finally {
-                    loading.classList.add('hidden');
-                }
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(input.files[0]);
         }
