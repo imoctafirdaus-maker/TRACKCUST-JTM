@@ -208,7 +208,9 @@
                     const ctx = canvas.getContext('2d');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    ctx.filter = 'grayscale(100%) contrast(150%) brightness(110%)';
+                    
+                    // Filter khusus untuk mempertajam teks di layar monitor
+                    ctx.filter = 'grayscale(100%) contrast(200%) brightness(100%)';
                     ctx.drawImage(img, 0, 0);
 
                     const filteredImg = canvas.toDataURL('image/jpeg');
@@ -217,7 +219,7 @@
 
                     try {
                         const result = await Tesseract.recognize(filteredImg, 'eng', {
-                            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.() ',
+                            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-/.() ',
                             logger: m => console.log(m)
                         });
                         
@@ -226,22 +228,24 @@
 
                         lines.forEach(line => {
                             let text = line.text.trim().toUpperCase();
-                            text = text.replace(/[^A-Z0-9\s\-\/\.\(\)]/g, '');
                             
-                            // Deteksi nomor telepon (8..., 08..., 62...)
-                            const phoneMatch = text.match(/(08|62|8)\d{6,11}/);
+                            // Regex Fleksibel: Mencari pola angka yang mengandung 8-13 digit 
+                            // meskipun dipisahkan spasi, kurung, atau tanda strip
+                            const phoneMatch = text.match(/(?:\(?\d{3,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4})/);
 
-                            if (text.length > 8 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
+                            if (text.length > 5 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
                                 foundCount++;
                                 let phoneNum = phoneMatch ? phoneMatch[0] : "";
                                 
-                                // Jika terdeteksi di baris pertama, masukkan ke input utama
-                                if(foundCount === 1 && phoneNum) directInput.value = phoneNum;
+                                // Bersihkan nomor hanya untuk link WA (ambil angkanya saja)
+                                let cleanWaNumber = phoneNum.replace(/\D/g, '');
+                                
+                                // Normalisasi ke format 62
+                                if (cleanWaNumber.startsWith('0')) cleanWaNumber = '62' + cleanWaNumber.slice(1);
+                                else if (cleanWaNumber.startsWith('8')) cleanWaNumber = '62' + cleanWaNumber;
 
-                                // Format link WhatsApp
-                                let waLink = phoneNum.replace(/\D/g, '');
-                                if(waLink.startsWith('0')) waLink = '62' + waLink.slice(1);
-                                if(waLink.startsWith('8')) waLink = '62' + waLink;
+                                // Jika baris pertama ketemu nomor, masukkan ke input utama
+                                if(foundCount === 1 && cleanWaNumber) directInput.value = cleanWaNumber;
 
                                 const row = `
                                     <tr class="hover:bg-gray-50 border-b border-gray-100">
@@ -250,8 +254,8 @@
                                             <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : '<span class="text-red-400">No HP tdk terdeteksi</span>'}</div>
                                         </td>
                                         <td class="p-2 text-center">
-                                            ${phoneNum ? `
-                                                <button onclick="openWaLinkCustom('${waLink}')" class="bg-green-500 text-white w-9 h-9 rounded-xl shadow-md flex items-center justify-center mx-auto active:scale-90 transition-transform">
+                                            ${cleanWaNumber.length >= 10 ? `
+                                                <button onclick="openWaLinkCustom('${cleanWaNumber}')" class="bg-green-500 text-white w-9 h-9 rounded-xl shadow-md flex items-center justify-center mx-auto active:scale-90 transition-transform">
                                                     <i class="fab fa-whatsapp text-lg"></i>
                                                 </button>
                                             ` : '-'}
@@ -266,7 +270,7 @@
                             tableArea.classList.remove('hidden');
                             if(directInput.value === "Scanning...") directInput.value = "";
                         } else {
-                            alert("Teks sulit dibaca. Pastikan kamera fokus!");
+                            alert("Data tidak terbaca jelas. Pastikan kamera fokus ke area nomor HP.");
                             directInput.value = "";
                         }
                     } catch (err) {
