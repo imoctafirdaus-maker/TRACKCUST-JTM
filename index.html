@@ -24,7 +24,6 @@
         .page { display: none; height: 100%; flex-direction: column; }
         .page.active { display: flex; }
         
-        /* WA Direct Page Styling */
         #page-chat { background-color: #f0f2f5; }
         .wa-card { background: white; padding: 2rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 320px; text-align: center; }
 
@@ -132,7 +131,6 @@
     </div>
 
     <script>
-        // Data Pins & Config (Tetap)
         const userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
@@ -156,13 +154,16 @@
             updatePresence();
         };
 
-        // FUNGSI WA DIRECT (BARU)
+        // FUNGSI WA DIRECT DENGAN AUTO CHAT
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
             if(!num) return alert("Nomor Kosong!");
-            // Ubah 08 ke 62
             if(num.startsWith('0')) num = '62' + num.slice(1);
-            window.open(`https://wa.me/${num}`, '_blank');
+            
+            // Pesan Otomatis
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
+            
+            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function updatePresence() {
@@ -195,7 +196,6 @@
 
         function startDataListeners() {
             db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-            // Note: Listener couple_chats dihapus agar aplikasi lebih ringan
         }
 
         function render() {
@@ -209,7 +209,6 @@
                 const match = searchStr.includes(filter);
                 if(i.status !== 'done') activeCount++;
                 
-                // Format nomor WA
                 let formattedPhone = i.phone;
                 if(formattedPhone && formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
 
@@ -272,7 +271,6 @@
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
-        // FUNGSI MODAL & IMAGE (TETAP)
         function openFullQR(id, custName) {
             const qrCanvas = document.getElementById(`qrcode-${id}`).querySelector('canvas');
             if (qrCanvas) {
