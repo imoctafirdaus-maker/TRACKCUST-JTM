@@ -276,10 +276,9 @@
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
             updatePresence();
-            startDeliveryStatusListener(); // Jalankan listener status delivery
+            startDeliveryStatusListener(); 
         };
 
-        // Fungsi Baru: Memperbarui Status Mengantar ke Firebase
         function pushDeliveryStatus(nama) {
             const now = Date.now();
             db.ref('delivery_activity/' + nama).set({
@@ -288,7 +287,6 @@
             });
         }
 
-        // Fungsi Baru: Mendengarkan Perubahan Status Mengantar
         function startDeliveryStatusListener() {
             db.ref('delivery_activity').on('value', s => {
                 const bar = document.getElementById('deliveryStatusBar');
@@ -298,7 +296,6 @@
 
                 s.forEach(child => {
                     const data = child.val();
-                    // Jika data sudah lebih dari 15 menit (900.000 ms), hapus dari database
                     if (now - data.timestamp > 900000) {
                         db.ref('delivery_activity/' + child.key).remove();
                     } else {
@@ -438,7 +435,6 @@
                     if (phoneMatches && phoneMatches.length > 0) {
                         let cleanNumber = phoneMatches[0].replace(/\D/g, '');
 
-                        // LOGIKA AUTO-REDIRECT CEK DATA AKTIF
                         const searchNum = cleanNumber.startsWith('0') ? cleanNumber.slice(1) : (cleanNumber.startsWith('62') ? cleanNumber.slice(2) : cleanNumber);
                         const activeId = Object.keys(allData).find(id => {
                             const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
@@ -540,7 +536,7 @@
         }
 
         function openWaLinkCustom(num) {
-            pushDeliveryStatus(currentUser); // Trigger status "Sedang Mengantar"
+            pushDeliveryStatus(currentUser);
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
@@ -550,7 +546,6 @@
             if(!num || num === "Processing...") return alert("Nomor Kosong!");
             let waNum = num.replace(/\D/g, '');
 
-            // LOGIKA AUTO-REDIRECT KE ANTARAN AKTIF
             const searchNum = waNum.startsWith('0') ? waNum.slice(1) : (waNum.startsWith('62') ? waNum.slice(2) : waNum);
             const activeId = Object.keys(allData).find(id => {
                 const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
@@ -697,12 +692,33 @@
 
         function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; document.getElementById('housePhoto').value = ""; }
 
+        // FUNGSI SIMPAN DENGAN PERINGATAN DATA GANDA
         function saveData() {
             const area = document.getElementById('custArea').value;
             const name = document.getElementById('custName').value;
             const phone = document.getElementById('custPhone').value;
             const editId = document.getElementById('editId').value;
+            
             if(!area || !name) return alert("Isi Area & Nama!");
+
+            // Logika Cek Duplikat Nomor di Antaran Aktif
+            if (phone) {
+                const cleanInputPhone = phone.replace(/\D/g, '');
+                // Ambil 9 digit terakhir untuk pencocokan lebih akurat (menghindari beda 08/62)
+                const checkNum = cleanInputPhone.length > 9 ? cleanInputPhone.slice(-9) : cleanInputPhone;
+
+                const isDuplicate = Object.keys(allData).some(id => {
+                    if (id === editId) return false; // Abaikan jika sedang edit data yang sama
+                    const existingPhone = (allData[id].phone || "").replace(/\D/g, '');
+                    return allData[id].status !== 'done' && existingPhone.includes(checkNum);
+                });
+
+                if (isDuplicate) {
+                    const confirmSave = confirm("PERINGATAN: Nomor telepon ini sudah terdaftar dalam antaran AKTIF. Apakah Anda yakin ingin menambahkannya lagi?");
+                    if (!confirmSave) return; // Batalkan proses simpan
+                }
+            }
+
             const data = { area: area.toUpperCase(), name, phone, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
             const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
             ref.then(() => resetForm());
@@ -733,7 +749,7 @@
         function goOTW(id) { 
             if(allData[id].status !== 'otw') {
                 db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser });
-                pushDeliveryStatus(currentUser); // Trigger status ke bar atas
+                pushDeliveryStatus(currentUser); 
             }
         }
         function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
