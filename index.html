@@ -43,7 +43,7 @@
         .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
         @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
 
-        /* Zoom & Focus Controls Styles */
+        /* Zoom & Focus & Visual Controls Styles */
         .cam-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #e2e8f0; }
         .control-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .btn-zoom { flex: 1; padding: 6px; background: white; border: 2px solid #006491; color: #006491; border-radius: 8px; font-size: 10px; font-weight: 900; }
@@ -51,6 +51,8 @@
 
         .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        .visual-slider { flex: 1; accent-color: #006491; height: 4px; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -145,7 +147,18 @@
                         </div>
                     </div>
 
-                    <div id="camControls" class="hidden cam-controls">
+                    <div id="camControls" class="hidden cam-controls text-left">
+                        <div class="grid grid-cols-2 gap-2 mb-2 p-2 bg-white rounded-xl border border-gray-100">
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black text-blue-900 uppercase">Cahaya (BR):</span>
+                                <input type="range" id="brSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
+                            </div>
+                            <div class="flex flex-col">
+                                <span class="text-[8px] font-black text-blue-900 uppercase">Kontras (CT):</span>
+                                <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
+                            </div>
+                        </div>
+
                         <div class="control-group">
                             <span class="text-[9px] font-black text-blue-900 italic uppercase">Zoom:</span>
                             <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
@@ -251,6 +264,16 @@
             }
         }
 
+        // --- NEW VISUAL FILTERS LOGIC ---
+        function updateVisualFilters() {
+            const br = document.getElementById('brSlider').value;
+            const ct = document.getElementById('ctSlider').value;
+            const video = document.getElementById('scannerVideo');
+            if(video) {
+                video.style.filter = `brightness(${br}%) contrast(${ct}%)`;
+            }
+        }
+
         // --- CAMERA LOGIC WITH ZOOM & FOCUS ---
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
@@ -265,6 +288,11 @@
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
                 document.getElementById('camControls').classList.remove('hidden');
+
+                // Reset sliders to default on start
+                document.getElementById('brSlider').value = 100;
+                document.getElementById('ctSlider').value = 100;
+                updateVisualFilters();
 
                 setTimeout(() => {
                     const caps = videoTrack.getCapabilities();
