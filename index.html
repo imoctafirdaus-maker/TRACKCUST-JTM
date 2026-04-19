@@ -35,7 +35,14 @@
         
         #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
-        .scanner-preview { width: 100%; height: 120px; object-fit: cover; border-radius: 1rem; margin-bottom: 1rem; border: 2px solid #006491; display: none; }
+        /* Scanner Styles */
+        .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
+        #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
+        .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; }
+        .scanner-box { width: 100%; height: 100%; border: 2px solid #e31837; position: relative; }
+        .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
+        @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
+
         .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -111,43 +118,49 @@
 
             <div id="page-chat" class="page h-full items-center p-4 bg-gray-100 overflow-y-auto">
                 <div class="wa-card mb-20 mx-auto">
-                    <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-200">
-                        <i class="fab fa-whatsapp text-white text-3xl"></i>
+                    <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg">
+                        <i class="fab fa-whatsapp text-white text-2xl"></i>
                     </div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-md">WA Direct & Scanner</h2>
+                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner Nomor Telpon</h2>
                     
-                    <img id="waOcrPreview" class="scanner-preview">
+                    <div class="scanner-container">
+                        <video id="scannerVideo" autoplay playsinline></video>
+                        <div class="scanner-overlay">
+                            <div class="scanner-box">
+                                <div class="laser"></div>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div class="relative mb-3">
-                        <input type="tel" id="waDirectNumber" placeholder="Ketik/Scan Nomor" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm">
-                        <label class="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer text-blue-500">
-                            <i class="fa fa-camera"></i>
-                            <input type="file" accept="image/*" capture="camera" class="hidden" onchange="scanAddressTable(this)">
-                        </label>
+                    <div class="flex gap-2 mb-3">
+                        <button onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
+                            <i class="fa fa-video mr-1"></i> Buka Kamera
+                        </button>
+                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
+                            <i class="fa fa-expand mr-1"></i> Scan Nomor
+                        </button>
                     </div>
 
                     <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Mengekstrak Alamat & No. HP...
+                        <div class="loader-ocr"></div> Membaca Label...
                     </div>
+
+                    <input type="tel" id="waDirectNumber" placeholder="Hasil Scan" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     
-                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md active:scale-95 transition-transform mb-4">
-                        Chat Nomor Diatas
+                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">
+                        Chat Pelanggan
                     </button>
 
                     <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
-                        <h3 class="text-blue-900 font-black uppercase italic text-[10px] mb-2">Data Alamat Terdeteksi:</h3>
-                        <div class="overflow-x-auto rounded-lg border border-gray-200">
-                            <table class="w-full text-[9px] bg-white">
-                                <thead class="bg-blue-900 text-white uppercase">
-                                    <tr>
-                                        <th class="p-2 text-left">Alamat</th>
-                                        <th class="p-2 text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="addressTableBody" class="font-bold text-gray-700 divide-y divide-gray-100"></tbody>
-                            </table>
-                        </div>
-                        <button onclick="clearScanTable()" class="mt-2 text-red-500 font-black uppercase text-[8px] italic underline">Bersihkan Tabel</button>
+                        <table class="w-full text-[10px] bg-white rounded-lg overflow-hidden border">
+                            <thead class="bg-blue-900 text-white uppercase italic">
+                                <tr>
+                                    <th class="p-2">Nomor Terdeteksi</th>
+                                    <th class="p-2">Chat</th>
+                                </tr>
+                            </thead>
+                            <tbody id="addressTableBody" class="font-bold text-gray-700 divide-y divide-gray-100"></tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -176,6 +189,7 @@
         
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let photoBase64 = "";
+        let stream = null;
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -186,113 +200,87 @@
             updatePresence();
         };
 
-        // SCANNER LOGIC (IMPROVED FOR PHYSICAL LABELS)
-        async function scanAddressTable(input) {
-            if (!input.files || !input.files[0]) return;
-            
-            const loading = document.getElementById('ocrLoading');
-            const tableArea = document.getElementById('scanResultArea');
-            const tableBody = document.getElementById('addressTableBody');
-            const previewImg = document.getElementById('waOcrPreview');
-            const directInput = document.getElementById('waDirectNumber');
-
-            loading.classList.remove('hidden');
-            tableArea.classList.add('hidden');
-            tableBody.innerHTML = "";
-            directInput.value = "Scanning...";
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                const img = new Image();
-                img.onload = async () => {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    
-                    // Filter khusus label fisik: Kontras tinggi & sedikit redup untuk meredam refleksi kertas
-                    ctx.filter = 'grayscale(100%) contrast(300%) brightness(85%)';
-                    ctx.drawImage(img, 0, 0);
-
-                    const filteredImg = canvas.toDataURL('image/jpeg');
-                    previewImg.src = filteredImg;
-                    previewImg.style.display = "block";
-
-                    try {
-                        const result = await Tesseract.recognize(filteredImg, 'eng', {
-                            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-/.() ',
-                            logger: m => console.log(m)
-                        });
-                        
-                        const lines = result.data.lines;
-                        let foundCount = 0;
-
-                        lines.forEach(line => {
-                            let text = line.text.trim().toUpperCase();
-                            
-                            // Regex untuk menangkap nomor HP dengan berbagai format (dengan atau tanpa kurung/strip)
-                            const phoneMatch = text.match(/(?:\(?\d{3,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4})/);
-
-                            // Mencari baris yang mengandung alamat (Keyword: JL, KEC, KAB, NO, atau mengandung no HP)
-                            if (text.length > 5 && (text.includes('JL') || text.includes('KEC') || text.includes('KAB') || text.includes('NO') || phoneMatch)) {
-                                foundCount++;
-                                let phoneNum = phoneMatch ? phoneMatch[0] : "";
-                                let cleanWaNumber = phoneNum.replace(/\D/g, '');
-                                
-                                // Normalisasi ke format internasional (62)
-                                if (cleanWaNumber.startsWith('0')) cleanWaNumber = '62' + cleanWaNumber.slice(1);
-                                else if (cleanWaNumber.startsWith('8')) cleanWaNumber = '62' + cleanWaNumber;
-
-                                if(foundCount === 1 && cleanWaNumber) directInput.value = cleanWaNumber;
-
-                                const row = `
-                                    <tr class="hover:bg-gray-50 border-b border-gray-100">
-                                        <td class="p-2 leading-tight uppercase font-bold text-gray-800">
-                                            <div class="text-[9px] mb-1">${text.replace(phoneNum, '').trim()}</div>
-                                            <div class="text-blue-700 text-[10px] font-black">${phoneNum ? '📞 ' + phoneNum : ''}</div>
-                                        </td>
-                                        <td class="p-2 text-center">
-                                            ${cleanWaNumber.length >= 10 ? `
-                                                <button onclick="openWaLinkCustom('${cleanWaNumber}')" class="bg-green-500 text-white w-9 h-9 rounded-xl shadow-md flex items-center justify-center mx-auto active:scale-90 transition-transform">
-                                                    <i class="fab fa-whatsapp text-lg"></i>
-                                                </button>
-                                            ` : '-'}
-                                        </td>
-                                    </tr>
-                                `;
-                                tableBody.innerHTML += row;
-                            }
-                        });
-
-                        if (foundCount > 0) {
-                            tableArea.classList.remove('hidden');
-                            if(directInput.value === "Scanning...") directInput.value = "";
-                        } else {
-                            alert("Data tidak terbaca jelas. Pastikan foto tegak lurus.");
-                            directInput.value = "";
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        alert("Gagal memproses gambar.");
-                    } finally {
-                        loading.classList.add('hidden');
-                    }
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(input.files[0]);
+        // --- SCANNER LOGIC ---
+        async function startCamera() {
+            const video = document.getElementById('scannerVideo');
+            try {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Izin kamera ditolak atau tidak tersedia.");
+            }
         }
 
+        async function captureAndScan() {
+            const video = document.getElementById('scannerVideo');
+            if (!video.srcObject) return alert("Buka kamera dulu!");
+
+            const loading = document.getElementById('ocrLoading');
+            const tableBody = document.getElementById('addressTableBody');
+            const directInput = document.getElementById('waDirectNumber');
+            const tableArea = document.getElementById('scanResultArea');
+
+            loading.classList.remove('hidden');
+            directInput.value = "Scanning...";
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            // Filter Kontras Tinggi agar (8962) terbaca jelas
+            ctx.filter = 'grayscale(100%) contrast(300%) brightness(85%)';
+            ctx.drawImage(video, 0, 0);
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+            try {
+                const result = await Tesseract.recognize(dataUrl, 'eng', {
+                    tessedit_char_whitelist: '0123456789()- ',
+                });
+
+                const rawText = result.data.text;
+                // Regex: Cari (4 angka) + 4 angka + - + 3-4 angka
+                const phoneRegex = /\(\d{3,4}\)\s?\d{3,4}-\d{3,4}/g;
+                const matches = rawText.match(phoneRegex);
+
+                tableBody.innerHTML = "";
+                
+                if (matches && matches.length > 0) {
+                    matches.forEach((match, idx) => {
+                        let cleanNum = match.replace(/\D/g, ''); 
+                        if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
+                        else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
+
+                        if(idx === 0) directInput.value = cleanNum;
+
+                        tableBody.innerHTML += `
+                            <tr>
+                                <td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td>
+                                <td class="p-3 text-center">
+                                    <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button>
+                                </td>
+                            </tr>`;
+                    });
+                    tableArea.classList.remove('hidden');
+                } else {
+                    alert("Nomor tidak terdeteksi. Dekatkan kamera ke area nomor.");
+                    directInput.value = "";
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // --- CORE FUNCTIONS (UNTUK FITUR LAMA) ---
         function openWaLinkCustom(num) {
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        function clearScanTable() {
-            document.getElementById('scanResultArea').classList.add('hidden');
-            document.getElementById('waOcrPreview').style.display = "none";
-            document.getElementById('waDirectNumber').value = "";
-            document.getElementById('addressTableBody').innerHTML = "";
         }
 
         function openWaDirect() {
@@ -349,7 +337,6 @@
                 
                 let formattedPhone = (i.phone || "").replace(/\D/g, '');
                 if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
-
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
 
@@ -373,17 +360,10 @@
                                 ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
                             </div>
                         </div>
-
                         <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.maps ? `
-                                <div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')">
-                                    <div id="qrcode-${id}"></div>
-                                    <p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p>
-                                </div>
-                            ` : ''}
+                            ${i.maps ? `<div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p></div>` : ''}
                             ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}
                         </div>
-
                         <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
                             <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
                             <a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
@@ -503,6 +483,11 @@
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
+            // Stop kamera jika pindah halaman
+            if(id !== 'chat' && stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+            }
         }
 
         function updateTimers() {
