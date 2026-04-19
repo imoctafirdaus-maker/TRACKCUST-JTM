@@ -122,7 +122,7 @@
                     <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg">
                         <i class="fab fa-whatsapp text-white text-2xl"></i>
                     </div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner Nomor Telpon</h2>
+                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
                     
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
@@ -134,8 +134,11 @@
                     </div>
 
                     <div class="flex gap-2 mb-3">
-                        <button onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
+                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
                             <i class="fa fa-video mr-1"></i> Buka Kamera
+                        </button>
+                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
+                            <i class="fa fa-video-slash mr-1"></i> Tutup Kamera
                         </button>
                         <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
                             <i class="fa fa-expand mr-1"></i> Scan Nomor
@@ -146,7 +149,7 @@
                         <div class="loader-ocr"></div> Meredam Silau & Membaca...
                     </div>
 
-                    <input type="tel" id="waDirectNumber" placeholder="Hasil Scan" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
+                    <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">
                         Chat Pelanggan
@@ -202,7 +205,7 @@
             updatePresence();
         };
 
-        // --- SCANNER LOGIC DENGAN AUTO-BRIGHTNESS (ANTI SILAU MONITOR) ---
+        // --- SCANNER LOGIC ---
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
             try {
@@ -211,8 +214,20 @@
                     video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
                 });
                 video.srcObject = stream;
+                document.getElementById('btnStartCam').classList.add('hidden');
+                document.getElementById('btnStopCam').classList.remove('hidden');
             } catch (err) {
                 alert("Izin kamera ditolak.");
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+                document.getElementById('scannerVideo').srcObject = null;
+                document.getElementById('btnStartCam').classList.remove('hidden');
+                document.getElementById('btnStopCam').classList.add('hidden');
             }
         }
 
@@ -233,7 +248,6 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
-            // 1. Ambil sampel gambar untuk cek kecerahan
             ctx.drawImage(video, 0, 0);
             const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             
@@ -243,12 +257,10 @@
             }
             const avgBrightness = brightness / (canvas.width * canvas.height);
 
-            // 2. Setting Filter: Mengubah putih menjadi abu-abu dan teks menjadi bold
             let finalContrast = 400;   
             let finalBrightness = 110; 
 
             if (avgBrightness > 160) { 
-                // Jika terlalu putih (layar monitor), turunkan kecerahan agar jadi abu-abu
                 finalBrightness = 65; 
                 finalContrast = 700; 
             }
@@ -290,7 +302,7 @@
                     tableArea.classList.remove('hidden');
                     if (navigator.vibrate) navigator.vibrate(100);
                 } else {
-                    alert("Nomor tidak terbaca. Pastikan nomor berada di tengah kotak merah dan tidak silau.");
+                    alert("Gagal membaca otomatis. Silakan input nomor secara manual.");
                     directInput.value = "";
                 }
             } catch (err) {
@@ -300,7 +312,7 @@
             }
         }
 
-        // --- SEMUA FUNGSI CORE TETAP SAMA ---
+        // --- CORE FUNCTIONS ---
         function openWaLinkCustom(num) {
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -506,10 +518,7 @@
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
-            if(id !== 'chat' && stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null;
-            }
+            if(id !== 'chat') stopCamera();
         }
 
         function updateTimers() {
