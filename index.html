@@ -692,7 +692,7 @@
         }
 
         function saveData() {
-            if (isSaving) return; // Mencegah klik ganda
+            if (isSaving) return;
 
             const area = document.getElementById('custArea').value;
             const name = document.getElementById('custName').value;
@@ -701,6 +701,23 @@
             const saveBtn = document.getElementById('saveBtn');
 
             if(!area || !name) return alert("Isi Area & Nama!");
+
+            // Fitur Tolak Nomor Duplikat di List Aktif
+            if (!editId && phone) {
+                const cleanInputPhone = phone.replace(/\D/g, '');
+                const isDuplicate = Object.values(allData).some(item => {
+                    if (item.status !== 'done') {
+                        const existingPhone = (item.phone || "").replace(/\D/g, '');
+                        return existingPhone === cleanInputPhone && cleanInputPhone !== "";
+                    }
+                    return false;
+                });
+
+                if (isDuplicate) {
+                    alert("Gagal! Nomor HP ini sudah ada dalam daftar antaran AKTIF.");
+                    return; 
+                }
+            }
 
             isSaving = true;
             saveBtn.disabled = true;
@@ -743,7 +760,6 @@
             document.getElementById('cancelBtn').classList.add('hidden');
             showPage('list');
             
-            // Pastikan state saving reset
             isSaving = false;
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.disabled = false;
