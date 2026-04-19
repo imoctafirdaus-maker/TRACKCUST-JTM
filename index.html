@@ -142,10 +142,12 @@
                         <i class="fab fa-whatsapp text-white text-2xl"></i>
                     </div>
                     <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
+                    
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
                         <div id="scannerOverlay" class="scanner-overlay"><div class="scanner-box"><div class="laser"></div></div></div>
                     </div>
+
                     <div id="camControls" class="hidden cam-controls text-left">
                         <div class="flex justify-between items-center mb-2 px-1">
                             <span class="text-[9px] font-black text-blue-900 uppercase">Mode BW:</span>
@@ -172,14 +174,18 @@
                             <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
                         </div>
                     </div>
+
                     <div class="flex gap-2 mb-3">
                         <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Kamera</button>
                         <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px]">Tutup</button>
                         <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Scan Nomor</button>
                     </div>
+
                     <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic"><div class="loader-ocr"></div> Membaca...</div>
+                    
                     <input type="tel" id="waDirectNumber" onkeyup="checkAndRedirect(this.value)" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">Chat Pelanggan</button>
+
                     <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
                         <table class="w-full text-[10px] bg-white rounded-lg overflow-hidden border">
                             <thead class="bg-blue-900 text-white uppercase italic"><tr><th class="p-2">Terdeteksi</th><th class="p-2">Chat</th></tr></thead>
@@ -200,6 +206,7 @@
     </div>
 
     <script>
+        // CONFIG & STATE
         const userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
@@ -207,14 +214,23 @@
             "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Rafli ramadhan": "0929"
         };
 
-        const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
+        const firebaseConfig = { 
+            apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", 
+            databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "trackcust-jtm" 
+        };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = ""; let stream = null; let videoTrack = null;
-        let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
+        let allData = {}; 
+        let photoBase64 = ""; 
+        let stream = null; 
+        let videoTrack = null;
+        let bwMode = 'off'; 
+        let isScanning = false;
 
+        // AUTH & INIT
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
             logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
@@ -223,263 +239,416 @@
             setInterval(updateTimers, 1000);
         };
 
-        function startDataListeners() { db.ref('customers').on('value', s => { allData = s.val() || {}; render(); }); }
+        function prosesLogin() {
+            const user = document.getElementById('selectUser').value;
+            const pin = document.getElementById('inputPin').value;
+            if(userPins[user] === pin) {
+                localStorage.setItem('jtm_user', user);
+                bukaApp(user);
+            } else {
+                alert("PIN SALAH!");
+            }
+        }
+
+        function bukaApp(user) {
+            currentUser = user;
+            document.getElementById('pinOverlay').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'flex';
+            document.getElementById('userDisplay').innerText = user;
+            startDataListeners();
+            updatePresence();
+            logDriverActivity();
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('jtm_user');
+            location.reload();
+        }
+
+        // FIREBASE SYNC
+        function startDataListeners() { 
+            db.ref('customers').on('value', s => { 
+                allData = s.val() || {}; 
+                render(); 
+                updateTopOTWStatus();
+            }); 
+        }
+
         function updatePresence() {
             if(!currentUser) return;
-            const ref = db.ref('presence/' + currentUser); ref.set(true); ref.onDisconnect().remove();
+            const ref = db.ref('presence/' + currentUser); 
+            ref.set(true); 
+            ref.onDisconnect().remove();
             db.ref('presence').on('value', s => {
-                const el = document.getElementById('onlineBar'); el.innerHTML = "";
+                const el = document.getElementById('onlineBar'); 
+                el.innerHTML = "";
                 s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
             });
         }
 
-        function logDriverActivity() { if (currentUser) db.ref('activities/' + currentUser).set({ driverName: currentUser, timestamp: Date.now() }); }
+        function logDriverActivity() { 
+            if (currentUser) db.ref('activities/' + currentUser).set({ driverName: currentUser, timestamp: Date.now() }); 
+        }
 
         function updateTopOTWStatus() {
-            const area = document.getElementById('otwStatusArea'); if (!area) return;
-            const now = Date.now(); const limit = 15 * 60 * 1000;
+            const area = document.getElementById('otwStatusArea');
+            if (!area) return;
+            const now = Date.now();
+            const limit = 15 * 60 * 1000;
             let activeDrivers = new Set();
+            
             Object.keys(allData).forEach(id => {
-                const i = allData[id]; if (i.status === 'otw' && i.startTime && (now - i.startTime < limit)) activeDrivers.add(i.driverBy);
+                const i = allData[id];
+                if (i.status === 'otw' && i.startTime && (now - i.startTime < limit)) activeDrivers.add(i.driverBy);
             });
+            
             db.ref('activities').once('value', snapshot => {
                 const acts = snapshot.val() || {};
-                Object.keys(acts).forEach(d => { if (now - acts[d].timestamp < limit) activeDrivers.add(acts[d].driverName); else db.ref('activities/' + d).remove(); });
+                Object.keys(acts).forEach(d => {
+                    if (now - acts[d].timestamp < limit) activeDrivers.add(acts[d].driverName);
+                    else db.ref('activities/' + d).remove();
+                });
                 area.innerHTML = activeDrivers.size > 0 ? Array.from(activeDrivers).map(n => `<div class="otw-item">[${n.toUpperCase()} SEDANG MENGANTAR]</div>`).join("") : "";
             });
         }
 
-        async function startCamera() {
-            try {
-                if (stream) stream.getTracks().forEach(t => t.stop());
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
-                document.getElementById('scannerVideo').srcObject = stream;
-                videoTrack = stream.getVideoTracks()[0];
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('camControls').classList.remove('hidden');
-                document.getElementById('scannerOverlay').style.display = 'block';
-                startAutoScan();
-            } catch (err) { alert("Kamera tidak diizinkan."); }
-        }
-
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop()); stream = null;
-                document.getElementById('btnStartCam').classList.remove('hidden');
-                document.getElementById('btnStopCam').classList.add('hidden');
-                document.getElementById('camControls').classList.add('hidden');
-                document.getElementById('scannerOverlay').style.display = 'none';
-                clearInterval(autoScanInterval); autoScanInterval = null;
-            }
-        }
-
-        function setZoom(l) { if (videoTrack) { videoTrack.applyConstraints({ advanced: [{ zoom: l }] }); document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active')); document.getElementById('z'+l).classList.add('active'); } }
-        function setBWMode(m) { bwMode = m; document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active')); document.getElementById('bw-'+m).classList.add('active'); document.getElementById('manualBWControls').classList.toggle('hidden', m !== 'manual'); updateVisualFilters(); }
-        function updateVisualFilters() {
-            const v = document.getElementById('scannerVideo');
-            if(bwMode === 'manual') v.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
-            else if(bwMode === 'auto') v.style.filter = `grayscale(100%) contrast(150%)`; else v.style.filter = `none`;
-        }
-
-        async function startAutoScan() {
-            autoScanInterval = setInterval(async () => {
-                if (isScanning || !stream || !videoTrack) return;
-                isScanning = true;
-                const video = document.getElementById('scannerVideo');
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.filter = video.style.filter; 
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                try {
-                    const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg'), 'eng');
-                    const matches = res.data.text.match(/(?:\+62|62|08)[0-9\s-]{8,15}/g);
-                    if (matches) {
-                        let clean = matches[0].replace(/\D/g, '');
-                        if (clean.length >= 10) {
-                            document.getElementById('waDirectNumber').value = clean;
-                            checkAndRedirect(clean);
-                        }
-                    }
-                } catch (e) {} finally { isScanning = false; }
-            }, 3000);
-        }
-
-        async function captureAndScan() {
-            const loading = document.getElementById('ocrLoading');
-            loading.classList.remove('hidden');
-            const video = document.getElementById('scannerVideo');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.filter = video.style.filter;
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            try {
-                const res = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 0.8), 'eng');
-                const matches = res.data.text.match(/(?:\+62|62|08)[0-9\s-]{8,15}/g);
-                if (matches && matches.length > 0) {
-                    let firstMatch = matches[0].replace(/\D/g, '');
-                    document.getElementById('waDirectNumber').value = firstMatch;
-                    renderAddressTable(matches);
-                } else {
-                    alert("Nomor tidak terdeteksi. Coba dekatkan kamera atau gunakan Mode BW.");
-                }
-            } catch (e) {
-                alert("Gagal scan. Pastikan koneksi stabil.");
-            } finally { loading.classList.add('hidden'); }
-        }
-
-        function renderAddressTable(matches) {
-            const body = document.getElementById('addressTableBody');
-            body.innerHTML = '';
-            const uniqueNumbers = [...new Set(matches.map(m => m.replace(/\D/g, '')))];
-            uniqueNumbers.forEach(num => {
-                if(num.length < 10) return;
-                let waFormat = num;
-                if (num.startsWith('0')) waFormat = '62' + num.slice(1);
-                if (num.startsWith('8')) waFormat = '62' + num;
-                body.innerHTML += `
-                    <tr>
-                        <td class="p-2 text-center font-black text-blue-900">${num}</td>
-                        <td class="p-2 text-center">
-                            <button onclick="openWaLinkCustom('${waFormat}')" 
-                                    class="bg-green-500 text-white w-8 h-8 rounded-lg flex items-center justify-center mx-auto">
-                                <i class="fab fa-whatsapp"></i>
-                            </button>
-                        </td>
-                    </tr>`;
-            });
-            if (uniqueNumbers.length > 0) document.getElementById('scanResultArea').classList.remove('hidden');
-        }
-
-        function openWaLinkCustom(num) { 
-            logDriverActivity(); 
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's Pizza Jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Terimakasih 😊`; 
-            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank'); 
-        }
-
-        function openWaDirect() { 
-            let num = document.getElementById('waDirectNumber').value.replace(/\D/g, ''); 
-            if(!num) return alert("Nomor kosong!"); 
-            let wa = num.startsWith('0') ? '62' + num.slice(1) : (num.startsWith('8') ? '62' + num : num);
-            openWaLinkCustom(wa); 
-        }
-
-        function checkAndRedirect(number) {
-            let target = number.startsWith('0') ? '62' + number.slice(1) : (number.startsWith('8') ? '62' + number : number);
-            Object.keys(allData).forEach(id => {
-                let p = (allData[id].phone || "").replace(/\D/g, '');
-                let waP = p.startsWith('0') ? '62' + p.slice(1) : (p.startsWith('8') ? '62' + p : p);
-                if(waP === target && allData[id].status !== 'done') {
-                    if(confirm("Ditemukan di antaran: " + allData[id].name + ". Lihat?")) { document.getElementById('searchInput').value = allData[id].name; showPage('list'); render(); }
-                }
-            });
-        }
-
-        function prosesLogin() { const u = document.getElementById('selectUser').value; const p = document.getElementById('inputPin').value; if(p === userPins[u]) bukaApp(u); else alert("PIN Salah!"); }
-        function bukaApp(n) { currentUser = n; localStorage.setItem('jtm_user', n); document.getElementById('userDisplay').innerText = n; document.getElementById('pinOverlay').style.display = "none"; document.getElementById('mainContent').style.display = "flex"; startDataListeners(); updatePresence(); }
-        function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
-
-        function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('nav-'+id)?.classList.add('active');
-            if(id !== 'chat') stopCamera();
+        // UI & RENDERING
+        function showPage(p) {
+            document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            document.getElementById('nav-' + p).classList.add('active');
+            if (p !== 'chat' && stream) stopCamera();
         }
 
         function render() {
-            const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
-            const filter = document.getElementById('searchInput').value.toLowerCase();
-            list.innerHTML = ""; hist.innerHTML = ""; let active = 0;
-            Object.keys(allData).reverse().forEach(id => {
-                const i = allData[id]; if(i.status !== 'done') active++;
-                const match = `${i.name} ${i.phone} ${i.area}`.toLowerCase().includes(filter);
-                const html = `
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                <h3 class="font-black text-blue-900 text-sm">${i.name}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
-                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
-                                </div>
+            const listEl = document.getElementById('activeList');
+            const histEl = document.getElementById('historyList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            let activeHtml = ''; let histHtml = ''; let activeCount = 0;
+
+            const sortedKeys = Object.keys(allData).sort((a,b) => (allData[b].createdAt || 0) - (allData[a].createdAt || 0));
+
+            sortedKeys.forEach(id => {
+                const i = allData[id];
+                const match = i.name.toLowerCase().includes(search) || i.phone.includes(search) || (i.driverBy && i.driverBy.toLowerCase().includes(search));
+                if(!match) return;
+
+                const card = `
+                    <div class="bg-white rounded-[1.5rem] p-4 shadow-lg border-l-4 ${i.status === 'otw' ? 'border-yellow-400' : 'border-blue-900'}">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <span class="bg-blue-900 text-white px-2 py-0.5 rounded-md text-[9px] font-black uppercase italic">${i.area || 'A-1'}</span>
+                                <h3 class="font-black text-blue-900 uppercase text-sm mt-1">${i.name}</h3>
+                                <p class="text-[10px] text-gray-400 font-bold">${i.phone}</p>
                             </div>
-                            <div class="flex gap-2">
-                                ${i.status !== 'done' ? `
-                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                    <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
-                                ` : `
-                                    <button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>
-                                    <button onclick="confirmDeleteHistory('${id}', '${i.driverBy || 'SYSTEM'}')" class="bg-red-50 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-trash-alt"></i></button>
-                                `}
+                            ${i.status === 'otw' ? `<div class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-lg text-[8px] font-black animate-pulse">OTW: <span id="timer-${id}">00:00</span></div>` : ''}
+                            ${i.status === 'done' ? `<div class="bg-green-100 text-green-700 px-2 py-1 rounded-lg text-[8px] font-black">SELESAI</div>` : ''}
+                        </div>
+                        
+                        <div class="flex gap-2 mb-3">
+                            <button onclick="openMaps('${i.maps}')" class="flex-1 bg-gray-100 py-2 rounded-xl text-[9px] font-black uppercase text-blue-900"><i class="fa fa-map-marker-alt mr-1"></i> Maps</button>
+                            <button onclick="window.open('https://wa.me/62${i.phone.startsWith('0') ? i.phone.slice(1) : i.phone}')" class="flex-1 bg-green-500 py-2 rounded-xl text-[9px] font-black uppercase text-white"><i class="fab fa-whatsapp mr-1"></i> Chat</button>
+                            <div class="qr-container w-10 h-10" onclick="showQR('${i.phone}', '${i.name}')" id="qr-${id}"></div>
+                        </div>
+
+                        ${i.photo ? `<img src="${i.photo}" onclick="zoomImg('${i.photo}', '${i.name}')" class="w-full h-24 object-cover rounded-xl mb-3 border-2 border-gray-50 shadow-inner">` : ''}
+                        
+                        <div class="flex justify-between items-center pt-2 border-t border-gray-50">
+                            <div class="flex gap-1 items-center">
+                                ${i.status === 'pending' ? `<button onclick="updateStatus('${id}', 'otw')" class="bg-yellow-400 text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase italic shadow-sm">Gas OTW!</button>` : ''}
+                                ${i.status === 'otw' ? `<button onclick="updateStatus('${id}', 'done')" class="bg-green-500 text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase italic shadow-sm">Done</button>` : ''}
+                                ${i.status !== 'done' ? `<button onclick="editData('${id}')" class="bg-blue-100 text-blue-900 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-xs"></i></button>` : ''}
+                                <button onclick="deleteData('${id}')" class="bg-red-50 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-xs"></i></button>
                             </div>
-                        </div>
-                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.maps ? `<div class="qr-container" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">MAPS</p></div>` : ''}
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH')" class="flex-1 h-20 object-cover rounded-xl border">` : ''}
-                        </div>
-                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 uppercase">Buka Maps</a>
-                            <a href="https://wa.me/${i.phone.startsWith('0')?'62'+i.phone.slice(1):i.phone}?text=Halo" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 uppercase">WA</a>
+                            <div class="text-right">
+                                <span class="driver-badge">${i.driverBy || 'No Name'}</span>
+                                <p class="text-[7px] text-gray-300 font-bold mt-1 uppercase italic">${new Date(i.createdAt).toLocaleString('id-ID')}</p>
+                            </div>
                         </div>
                     </div>`;
-                if(i.status === 'done') hist.innerHTML += html;
-                else if(match) {
-                    list.innerHTML += html;
-                    if(i.maps) setTimeout(() => { const el = document.getElementById(`qrcode-${id}`); if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" }); }, 100);
+
+                if(i.status === 'done') histHtml += card;
+                else { activeHtml += card; activeCount++; }
+            });
+
+            listEl.innerHTML = activeHtml || '<p class="text-center text-gray-400 font-bold italic py-10 uppercase text-xs">Belum ada antaran...</p>';
+            histEl.innerHTML = histHtml || '<p class="text-center text-gray-400 font-bold italic py-10 uppercase text-xs">History kosong...</p>';
+            document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
+            
+            // Generate QR Codes
+            sortedKeys.forEach(id => {
+                const container = document.getElementById('qr-' + id);
+                if(container) {
+                    container.innerHTML = "";
+                    new QRCode(container, { text: allData[id].phone, width: 32, height: 32, correctLevel: QRCode.CorrectLevel.L });
                 }
             });
-            document.getElementById('countActive').innerText = active + " AKTIF";
         }
 
-        function confirmDeleteHistory(id, driverName) { if (confirm(`Hapus permanen data antaran milik [ ${driverName.toUpperCase()} ]?\nData tidak bisa dikembalikan.`)) db.ref('customers/' + id).remove(); }
-        function clearAllHistory() { if(confirm("Hapus semua history secara permanen?")) { Object.keys(allData).forEach(id => { if(allData[id].status === 'done') db.ref('customers/'+id).remove(); }); } }
-
+        // DATA ACTIONS
         function saveData() {
-            const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
             const id = document.getElementById('editId').value;
-            (id ? db.ref('customers/'+id).update(data) : db.ref('customers').push(data)).then(() => resetForm());
+            const data = {
+                area: document.getElementById('custArea').value || 'A-1',
+                name: document.getElementById('custName').value,
+                phone: document.getElementById('custPhone').value,
+                maps: document.getElementById('custMaps').value,
+                photo: photoBase64,
+                status: 'pending',
+                driverBy: currentUser,
+                createdAt: Date.now()
+            };
+
+            if(!data.name || !data.phone) return alert("Nama & HP Wajib!");
+
+            if(id) {
+                db.ref('customers/' + id).update(data);
+                cancelEdit();
+            } else {
+                db.ref('customers').push(data);
+            }
+            
+            clearForm();
+            showPage('list');
         }
 
+        function updateStatus(id, stat) {
+            const up = { status: stat, driverBy: currentUser };
+            if(stat === 'otw') up.startTime = Date.now();
+            db.ref('customers/' + id).update(up);
+            logDriverActivity();
+        }
+
+        function deleteData(id) { if(confirm("Hapus data ini?")) db.ref('customers/' + id).remove(); }
+        function clearAllHistory() { if(confirm("Hapus semua history?")) { Object.keys(allData).forEach(id => { if(allData[id].status === 'done') db.ref('customers/' + id).remove(); }); } }
+
+        function editData(id) {
+            const i = allData[id];
+            document.getElementById('editId').value = id;
+            document.getElementById('custArea').value = i.area;
+            document.getElementById('custName').value = i.name;
+            document.getElementById('custPhone').value = i.phone;
+            document.getElementById('custMaps').value = i.maps;
+            if(i.photo) {
+                photoBase64 = i.photo;
+                document.getElementById('imgPrev').src = i.photo;
+                document.getElementById('imgPrev').classList.remove('hidden');
+                document.getElementById('btnRemovePhoto').classList.remove('hidden');
+            }
+            document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('saveBtn').innerText = "Update";
+            document.getElementById('cancelBtn').classList.remove('hidden');
+            showPage('add');
+        }
+
+        function cancelEdit() {
+            clearForm();
+            document.getElementById('editId').value = "";
+            document.getElementById('formTitle').innerText = "Tambah Antaran";
+            document.getElementById('saveBtn').innerText = "Simpan";
+            document.getElementById('cancelBtn').classList.add('hidden');
+            showPage('list');
+        }
+
+        function clearForm() {
+            document.getElementById('custArea').value = "";
+            document.getElementById('custName').value = "";
+            document.getElementById('custPhone').value = "";
+            document.getElementById('custMaps').value = "";
+            removePhoto();
+        }
+
+        // IMAGE HANDLING
         function processImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image(); img.onload = () => {
-                        const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = img.height * (600 / img.width);
-                        canvas.getContext('2d').drawImage(img, 0, 0, 600, canvas.height);
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        document.getElementById('imgPrev').src = photoBase64; document.getElementById('imgPrev').classList.remove('hidden');
-                        document.getElementById('btnRemovePhoto').classList.remove('hidden'); document.getElementById('photoStatus').innerText = "FOTO SIAP!";
-                    }; img.src = e.target.result;
-                }; reader.readAsDataURL(input.files[0]);
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width; let h = img.height;
+                    const max = 800;
+                    if(w > h) { if(w > max) { h *= max/w; w = max; } }
+                    else { if(h > max) { w *= max/h; h = max; } }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    document.getElementById('imgPrev').src = photoBase64;
+                    document.getElementById('imgPrev').classList.remove('hidden');
+                    document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                    document.getElementById('photoStatus').innerText = "Foto Berhasil!";
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removePhoto() {
+            photoBase64 = "";
+            document.getElementById('housePhoto').value = "";
+            document.getElementById('imgPrev').classList.add('hidden');
+            document.getElementById('btnRemovePhoto').classList.add('hidden');
+            document.getElementById('photoStatus').innerText = "Foto Rumah";
+        }
+
+        function zoomImg(src, cap) {
+            const modal = document.getElementById('imgModal');
+            const img = document.getElementById('fullImg');
+            img.src = src;
+            img.className = "max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain";
+            document.getElementById('modalCaption').innerText = cap;
+            modal.style.display = 'flex';
+        }
+
+        function showQR(num, name) {
+            const modal = document.getElementById('imgModal');
+            const content = document.getElementById('modalContent');
+            content.innerHTML = `<div id="largeQR" class="bg-white p-6 rounded-3xl"></div><p class="text-white mt-6 font-black italic uppercase tracking-widest text-xl">${name}</p><p class="text-red-400 font-bold">${num}</p>`;
+            new QRCode(document.getElementById('largeQR'), { text: num, width: 250, height: 250 });
+            modal.style.display = 'flex';
+            // Reset content on close
+            modal.onclick = () => {
+                modal.style.display = 'none';
+                content.innerHTML = `<img id="fullImg" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain"><p id="modalCaption" class="text-white mt-4 font-black italic uppercase tracking-widest"></p>`;
+            };
+        }
+
+        // UTILS
+        function updateTimers() {
+            const now = Date.now();
+            Object.keys(allData).forEach(id => {
+                const i = allData[id];
+                if(i.status === 'otw' && i.startTime) {
+                    const el = document.getElementById('timer-' + id);
+                    if(el) {
+                        const diff = Math.floor((now - i.startTime) / 1000);
+                        const m = Math.floor(diff/60).toString().padStart(2,'0');
+                        const s = (diff%60).toString().padStart(2,'0');
+                        el.innerText = `${m}:${s}`;
+                    }
+                }
+            });
+        }
+
+        function openMaps(url) {
+            if(!url) return alert("Link Maps Tidak Ada!");
+            window.open(url, '_blank');
+        }
+
+        // CAMERA & SCANNER LOGIC
+        async function startCamera() {
+            try {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                const video = document.getElementById('scannerVideo');
+                video.srcObject = stream;
+                videoTrack = stream.getVideoTracks()[0];
+                document.getElementById('btnStartCam').classList.add('hidden');
+                document.getElementById('btnStopCam').classList.remove('hidden');
+                document.getElementById('scannerOverlay').style.display = 'block';
+                document.getElementById('camControls').classList.remove('hidden');
+                updateVisualFilters();
+            } catch (err) {
+                alert("Gagal akses kamera: " + err.message);
             }
         }
 
-        function resetForm() { document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = ""; photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; showPage('list'); }
-        function goOTW(id) { if(allData[id].status !== 'otw') db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
-        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
-
-        function updateTimers() {
-            Object.keys(allData).forEach(id => {
-                if(allData[id].status === 'otw') {
-                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000); const rem = (20 * 60) - elapsed;
-                    const el = document.getElementById('timer-'+id); if(el) { const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60); el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`; }
-                }
-            });
-            updateTopOTWStatus();
+        function stopCamera() {
+            if (stream) stream.getTracks().forEach(t => t.stop());
+            stream = null;
+            document.getElementById('btnStartCam').classList.remove('hidden');
+            document.getElementById('btnStopCam').classList.add('hidden');
+            document.getElementById('scannerOverlay').style.display = 'none';
+            document.getElementById('camControls').classList.add('hidden');
+            document.getElementById('scannerVideo').style.filter = 'none';
         }
 
-        function openFullQR(id, name) {
-            const temp = document.createElement('div'); new QRCode(temp, { text: allData[id].maps, width: 500, height: 500 });
-            setTimeout(() => { document.getElementById('fullImg').src = temp.querySelector('canvas').toDataURL(); document.getElementById('modalCaption').innerText = "MAPS: " + name; document.getElementById('imgModal').style.display = 'flex'; }, 100);
+        function setZoom(val) {
+            if (!videoTrack) return;
+            const capabilities = videoTrack.getCapabilities();
+            if (capabilities.zoom) {
+                videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
+                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
+                document.getElementById('z' + val).classList.add('active');
+            }
         }
 
-        function openFullImg(url, cap) { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = cap; document.getElementById('imgModal').style.display = 'flex'; }
-        function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; }
-        function editData(id) { const i = allData[id]; document.getElementById('editId').value = id; document.getElementById('custArea').value = i.area; document.getElementById('custName').value = i.name; document.getElementById('custPhone').value = i.phone; document.getElementById('custMaps').value = i.maps; if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); } showPage('add'); }
+        function setBWMode(mode) {
+            bwMode = mode;
+            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+            document.getElementById('bw-' + mode).classList.add('active');
+            document.getElementById('manualBWControls').style.display = (mode === 'manual') ? 'grid' : 'none';
+            updateVisualFilters();
+        }
+
+        function updateVisualFilters() {
+            const video = document.getElementById('scannerVideo');
+            if (bwMode === 'off') {
+                video.style.filter = 'none';
+            } else if (bwMode === 'auto') {
+                video.style.filter = 'grayscale(1) contrast(1.5) brightness(1.2)';
+            } else {
+                const br = document.getElementById('brSlider').value;
+                const ct = document.getElementById('ctSlider').value;
+                video.style.filter = `grayscale(1) brightness(${br}%) contrast(${ct}%)`;
+            }
+        }
+
+        async function captureAndScan() {
+            if (!stream) return;
+            const video = document.getElementById('scannerVideo');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            
+            if (bwMode !== 'off') ctx.filter = video.style.filter;
+            ctx.drawImage(video, 0, 0);
+            
+            document.getElementById('ocrLoading').classList.remove('hidden');
+            try {
+                const { data: { text } } = await Tesseract.recognize(canvas, 'ind');
+                processOCR(text);
+            } catch (err) {
+                alert("Scan Gagal: " + err.message);
+            }
+            document.getElementById('ocrLoading').classList.add('hidden');
+        }
+
+        function processOCR(text) {
+            const phones = text.match(/(08|628)[0-9]{8,11}/g) || [];
+            const resultArea = document.getElementById('scanResultArea');
+            const tbody = document.getElementById('addressTableBody');
+            
+            if (phones.length > 0) {
+                resultArea.classList.remove('hidden');
+                tbody.innerHTML = [...new Set(phones)].map(p => `
+                    <tr>
+                        <td class="p-2 border-r">${p}</td>
+                        <td class="p-2 text-center">
+                            <button onclick="window.open('https://wa.me/62${p.startsWith('0') ? p.slice(1) : p}')" class="bg-green-500 text-white px-3 py-1 rounded-md">CHAT</button>
+                        </td>
+                    </tr>
+                `).join("");
+            } else {
+                alert("Nomor HP tidak ditemukan. Coba lagi dengan pencahayaan lebih baik.");
+            }
+        }
+
+        function checkAndRedirect(val) {
+            if (val.length >= 10) {
+                // Automatis arahkan jika mau, tapi user minta fitur tetap sama
+            }
+        }
+
+        function openWaDirect() {
+            const num = document.getElementById('waDirectNumber').value;
+            if(!num) return alert("Input nomor dulu!");
+            window.open(`https://wa.me/62${num.startsWith('0') ? num.slice(1) : num}`);
+        }
     </script>
 </body>
 </html>
