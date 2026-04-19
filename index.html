@@ -254,6 +254,10 @@
         let stream = null;
         let videoTrack = null;
         let bwMode = 'off'; // Default mode
+        
+        // Auto Scan Variables
+        let isScanning = false; 
+        let autoScanInterval = null;
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -322,10 +326,11 @@
                 document.getElementById('btnStopCam').classList.remove('hidden');
                 document.getElementById('camControls').classList.remove('hidden');
 
-                // Reset sliders to default on start
                 document.getElementById('brSlider').value = 100;
                 document.getElementById('ctSlider').value = 100;
                 updateVisualFilters();
+                
+                startAutoScan();
 
             } catch (err) {
                 alert("Izin kamera ditolak.");
@@ -341,6 +346,9 @@
                 document.getElementById('btnStartCam').classList.remove('hidden');
                 document.getElementById('btnStopCam').classList.add('hidden');
                 document.getElementById('camControls').classList.add('hidden');
+                
+                clearInterval(autoScanInterval);
+                autoScanInterval = null;
             }
         }
 
@@ -382,6 +390,60 @@
             }
         }
 
+        // --- AUTO SCAN LOGIC ---
+        async function startAutoScan() {
+            if (autoScanInterval) return;
+            autoScanInterval = setInterval(async () => {
+                if (isScanning || !stream) return;
+                isScanning = true;
+                const video = document.getElementById('scannerVideo');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.filter = video.style.filter;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                try {
+                    const result = await Tesseract.recognize(dataUrl, 'eng');
+                    const text = result.data.text;
+                    const phoneMatches = text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
+                    if (phoneMatches && phoneMatches.length > 0) {
+                        let cleanNumber = phoneMatches[0].replace(/\D/g, '');
+                        if (cleanNumber.length >= 10 && document.getElementById('waDirectNumber').value !== cleanNumber) {
+                            document.getElementById('waDirectNumber').value = cleanNumber;
+                            document.querySelector('.scanner-box').style.borderColor = '#22c55e';
+                            setTimeout(() => { document.querySelector('.scanner-box').style.borderColor = '#e31837'; }, 500);
+                            renderAddressTable(phoneMatches);
+                        }
+                    }
+                } catch (err) { console.error("AutoScan Error:", err); } finally { isScanning = false; }
+            }, 2000);
+        }
+
+        function renderAddressTable(matches) {
+            const tableBody = document.getElementById('addressTableBody');
+            const resultArea = document.getElementById('scanResultArea');
+            tableBody.innerHTML = '';
+            const uniqueNumbers = [...new Set(matches.map(m => m.replace(/\D/g, '')))];
+            uniqueNumbers.forEach(num => {
+                if (num.length < 10) return;
+                let cleanNum = num;
+                if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
+                else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
+                tableBody.innerHTML += `
+                    <tr>
+                        <td class="p-3 text-center text-blue-900 text-sm font-black">${num}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+            resultArea.classList.remove('hidden');
+        }
+
         async function captureAndScan() {
             const video = document.getElementById('scannerVideo');
             if (!video.srcObject) return alert("Buka kamera dulu!");
@@ -399,7 +461,6 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
-            // Logika BW Berdasarkan Mode
             if(bwMode === 'auto') {
                 ctx.drawImage(video, 0, 0);
                 const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
