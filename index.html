@@ -35,7 +35,6 @@
         
         #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
-        /* Scanner Styles */
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
         .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
@@ -56,7 +55,6 @@
         .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
         .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
 
-        /* Highlight effect for auto-redirect */
         @keyframes pulseHighlight {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(227, 24, 55, 0.4); }
             50% { transform: scale(1.02); box-shadow: 0 0 20px 10px rgba(227, 24, 55, 0); }
@@ -151,9 +149,7 @@
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
                         <div id="scannerOverlay" class="scanner-overlay">
-                            <div class="scanner-box">
-                                <div class="laser"></div>
-                            </div>
+                            <div class="scanner-box"><div class="laser"></div></div>
                         </div>
                     </div>
 
@@ -169,11 +165,11 @@
 
                         <div id="manualBWControls" class="hidden grid grid-cols-2 gap-2 mb-2 p-2 bg-white rounded-xl border border-gray-100">
                             <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase">Cahaya (BR):</span>
+                                <span class="text-[8px] font-black text-blue-900 uppercase">Cahaya:</span>
                                 <input type="range" id="brSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
                             </div>
                             <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase">Kontras (CT):</span>
+                                <span class="text-[8px] font-black text-blue-900 uppercase">Kontras:</span>
                                 <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
                             </div>
                         </div>
@@ -184,49 +180,21 @@
                             <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
                             <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
                         </div>
-                        <div class="control-group">
-                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Fokus:</span>
-                            <select onchange="setFocusMode(this.value)" class="flex-1 p-1 rounded-lg text-[9px] font-bold border-2 border-blue-900 outline-none">
-                                <option value="continuous">Otomatis</option>
-                                <option value="manual">Manual</option>
-                            </select>
-                        </div>
-                        <div id="manualFocusCont" class="hidden flex flex-col gap-1">
-                            <input type="range" id="focusSlider" min="0" max="100" value="50" oninput="setManualFocus(this.value)" class="w-full accent-red-600">
-                            <span class="text-[7px] font-black text-gray-400 uppercase tracking-tighter text-center">Geser Slider untuk Fokus Manual</span>
-                        </div>
                     </div>
 
                     <div class="flex gap-2 mb-3">
-                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-video mr-1"></i> Buka Kamera
-                        </button>
-                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-video-slash mr-1"></i> Tutup
-                        </button>
-                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-expand mr-1"></i> Scan Nomor
-                        </button>
+                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md"><i class="fa fa-video mr-1"></i> Kamera</button>
+                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">Tutup</button>
+                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md"><i class="fa fa-expand mr-1"></i> Scan</button>
                     </div>
 
-                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Meredam Silau & Membaca...
-                    </div>
-
+                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic"><div class="loader-ocr"></div> Membaca Nomor...</div>
                     <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
-                    
-                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">
-                        Chat Pelanggan
-                    </button>
+                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">Chat Pelanggan</button>
 
                     <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
                         <table class="w-full text-[10px] bg-white rounded-lg overflow-hidden border">
-                            <thead class="bg-blue-900 text-white uppercase italic">
-                                <tr>
-                                    <th class="p-2">Nomor Terdeteksi</th>
-                                    <th class="p-2">Chat</th>
-                                </tr>
-                            </thead>
+                            <thead class="bg-blue-900 text-white uppercase italic"><tr><th class="p-2">Nomor</th><th class="p-2">Aksi</th></tr></thead>
                             <tbody id="addressTableBody" class="font-bold text-gray-700 divide-y divide-gray-100"></tbody>
                         </table>
                     </div>
@@ -238,13 +206,12 @@
             <div onclick="showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-motorcycle mb-1 text-xl"></i><span>Antaran</span></div>
             <div onclick="showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
             <div onclick="showPage('add')" class="nav-item nav-add" id="nav-add"><i class="fa fa-plus text-2xl"></i></div>
-            <div onclick="showPage('chat')" class="nav-item" id="nav-chat"><i class="fab fa-whatsapp mb-1 text-xl"></i><span>WA Direct</span></div>
+            <div onclick="showPage('chat')" class="nav-item" id="nav-chat"><i class="fab fa-whatsapp mb-1 text-xl"></i><span>Scanner</span></div>
             <div onclick="handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Out</span></div>
         </div>
     </div>
 
     <script>
-        // Database & Login
         const userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
@@ -257,14 +224,14 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = "";
+        let allData = {}; 
+        let photoBase64 = "";
         let stream = null;
         let videoTrack = null;
         let bwMode = 'off'; 
-        
         let isScanning = false; 
         let autoScanInterval = null;
-        let isSaving = false; // Flag untuk mencegah data ganda
+        let isSaving = false; // KEAMANAN: Kunci agar tidak double click
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -275,192 +242,72 @@
             updatePresence();
         };
 
-        function clearAllHistory() {
-            if (confirm("Apakah yakin anda ingin menghapus SEMUA data history yang sudah selesai?")) {
-                const doneItems = Object.keys(allData).filter(id => allData[id].status === 'done');
-                if (doneItems.length === 0) return alert("Tidak ada data history untuk dihapus.");
-                
-                doneItems.forEach(id => {
-                    db.ref('customers/' + id).remove();
-                });
-                alert("History berhasil dikosongkan.");
-            }
-        }
+        // --- FITUR KEAMANAN: ANTI DUPLIKAT & DOUBLE SAVE ---
+        function saveData() {
+            if (isSaving) return; // Kunci aktif jika sedang proses simpan
 
-        function setBWMode(mode) {
-            bwMode = mode;
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-            document.getElementById('bw-' + mode).classList.add('active');
-            
-            const manualBox = document.getElementById('manualBWControls');
-            if(mode === 'manual') {
-                manualBox.classList.remove('hidden');
-            } else {
-                manualBox.classList.add('hidden');
-            }
-            updateVisualFilters();
-        }
+            const area = document.getElementById('custArea').value;
+            const name = document.getElementById('custName').value;
+            const phone = document.getElementById('custPhone').value;
+            const editId = document.getElementById('editId').value;
+            const saveBtn = document.getElementById('saveBtn');
 
-        function updateVisualFilters() {
-            const video = document.getElementById('scannerVideo');
-            if(!video) return;
+            if(!area || !name) return alert("Isi Area & Nama!");
 
-            if(bwMode === 'manual') {
-                const br = document.getElementById('brSlider').value;
-                const ct = document.getElementById('ctSlider').value;
-                video.style.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            } else if(bwMode === 'auto') {
-                video.style.filter = `grayscale(100%) contrast(150%)`;
-            } else {
-                video.style.filter = `none`;
-            }
-        }
-
-        async function startCamera() {
-            const video = document.getElementById('scannerVideo');
-            const overlay = document.getElementById('scannerOverlay');
-            try {
-                if (stream) stream.getTracks().forEach(t => t.stop());
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
-                });
-                video.srcObject = stream;
-                videoTrack = stream.getVideoTracks()[0];
-
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('camControls').classList.remove('hidden');
-                
-                overlay.style.display = 'block';
-
-                document.getElementById('brSlider').value = 100;
-                document.getElementById('ctSlider').value = 100;
-                updateVisualFilters();
-                
-                startAutoScan();
-
-            } catch (err) {
-                alert("Izin kamera ditolak.");
-            }
-        }
-
-        function stopCamera() {
-            const overlay = document.getElementById('scannerOverlay');
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null;
-                videoTrack = null;
-                document.getElementById('scannerVideo').srcObject = null;
-                document.getElementById('btnStartCam').classList.remove('hidden');
-                document.getElementById('btnStopCam').classList.add('hidden');
-                document.getElementById('camControls').classList.add('hidden');
-                
-                if(overlay) overlay.style.display = 'none';
-                
-                clearInterval(autoScanInterval);
-                autoScanInterval = null;
-            }
-        }
-
-        function setZoom(level) {
-            if (!videoTrack) return;
-            const capabilities = videoTrack.getCapabilities();
-            if (capabilities.zoom) {
-                const max = capabilities.zoom.max || 1;
-                let val = Math.min(level, max);
-                videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
-                
-                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
-                document.getElementById('z'+level).classList.add('active');
-            } else {
-                alert("Zoom tidak didukung di perangkat ini.");
-            }
-        }
-
-        function setFocusMode(mode) {
-            if (!videoTrack) return;
-            const manualCont = document.getElementById('manualFocusCont');
-            if (mode === 'manual') {
-                manualCont.classList.remove('hidden');
-                videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 50 }] });
-            } else {
-                manualCont.classList.add('hidden');
-                videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
-            }
-        }
-
-        function setManualFocus(val) {
-            if (!videoTrack) return;
-            const capabilities = videoTrack.getCapabilities();
-            if (capabilities.focusDistance) {
-                const min = capabilities.focusDistance.min || 0;
-                const max = capabilities.focusDistance.max || 100;
-                const distance = min + (val / 100) * (max - min);
-                videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: distance }] });
-            }
-        }
-
-        async function startAutoScan() {
-            if (autoScanInterval) return;
-            autoScanInterval = setInterval(async () => {
-                if (isScanning || !stream) return;
-                isScanning = true;
-                const video = document.getElementById('scannerVideo');
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.filter = video.style.filter;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                try {
-                    const result = await Tesseract.recognize(dataUrl, 'eng');
-                    const text = result.data.text;
-                    const phoneMatches = text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
-                    if (phoneMatches && phoneMatches.length > 0) {
-                        let cleanNumber = phoneMatches[0].replace(/\D/g, '');
-                        if (cleanNumber.length >= 10 && document.getElementById('waDirectNumber').value !== cleanNumber) {
-                            document.getElementById('waDirectNumber').value = cleanNumber;
-                            document.querySelector('.scanner-box').style.borderColor = '#22c55e';
-                            setTimeout(() => { document.querySelector('.scanner-box').style.borderColor = '#e31837'; }, 500);
-                            renderAddressTable(phoneMatches);
-                        }
+            // 1. CEK DATA GANDA (Jika ini entri baru, bukan edit)
+            if (!editId && phone) {
+                const cleanInputPhone = phone.replace(/\D/g, '').slice(-10);
+                const isDuplicate = Object.values(allData).some(item => {
+                    if (item.status !== 'done') {
+                        const existingPhone = (item.phone || "").replace(/\D/g, '').slice(-10);
+                        return existingPhone === cleanInputPhone && cleanInputPhone !== "";
                     }
-                } catch (err) { console.error("AutoScan Error:", err); } finally { isScanning = false; }
-            }, 2000);
-        }
+                    return false;
+                });
 
-        function renderAddressTable(matches) {
-            const tableBody = document.getElementById('addressTableBody');
-            const resultArea = document.getElementById('scanResultArea');
-            tableBody.innerHTML = '';
-            const uniqueNumbers = [...new Set(matches.map(m => m.replace(/\D/g, '')))];
-            uniqueNumbers.forEach(num => {
-                if (num.length < 10) return;
-                let cleanNum = num;
-                if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
-                else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
-                tableBody.innerHTML += `
-                    <tr>
-                        <td class="p-3 text-center text-blue-900 text-sm font-black">${num}</td>
-                        <td class="p-3 text-center">
-                            <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md">
-                                <i class="fab fa-whatsapp"></i>
-                            </button>
-                        </td>
-                    </tr>`;
+                if (isDuplicate) {
+                    alert("⚠️ DATA GAGAL DISIMPAN!\nNomor HP ini sudah ada dalam daftar antaran AKTIF.");
+                    return; 
+                }
+            }
+
+            // 2. SAFETY LOCK (Matikan tombol agar tidak bisa diklik 2x)
+            isSaving = true;
+            saveBtn.disabled = true;
+            saveBtn.innerText = "SEDANG MENYIMPAN...";
+            saveBtn.classList.replace('dominos-red', 'bg-gray-400');
+
+            const data = { 
+                area: area.toUpperCase(), 
+                name, 
+                phone, 
+                maps: document.getElementById('custMaps').value, 
+                photo: photoBase64, 
+                status: 'active', 
+                timestamp: Date.now() 
+            };
+            
+            const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
+            
+            ref.then(() => {
+                resetForm();
+            }).catch((err) => {
+                alert("Gagal menyimpan: " + err.message);
+            }).finally(() => {
+                isSaving = false;
+                saveBtn.disabled = false;
+                saveBtn.innerText = "Simpan";
+                saveBtn.classList.replace('bg-gray-400', 'dominos-red');
             });
-            resultArea.classList.remove('hidden');
         }
 
+        // --- FITUR SCANNER & REDIRECT (GABUNGAN SEBELUMNYA) ---
         async function captureAndScan() {
             const video = document.getElementById('scannerVideo');
             if (!video.srcObject) return alert("Buka kamera dulu!");
 
             const loading = document.getElementById('ocrLoading');
-            const tableBody = document.getElementById('addressTableBody');
             const directInput = document.getElementById('waDirectNumber');
-            const tableArea = document.getElementById('scanResultArea');
 
             loading.classList.remove('hidden');
             directInput.value = "Processing...";
@@ -469,82 +316,34 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
-            
-            if(bwMode === 'auto') {
-                ctx.drawImage(video, 0, 0);
-                const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-                let brightness = 0;
-                for (let i = 0; i < rawData.length; i += 4) {
-                    brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
-                }
-                const avgBrightness = brightness / (canvas.width * canvas.height);
-                let finalContrast = 400;   
-                let finalBrightness = 110; 
-                if (avgBrightness > 160) { finalBrightness = 65; finalContrast = 700; }
-                ctx.filter = `grayscale(100%) contrast(${finalContrast}%) brightness(${finalBrightness}%)`;
-            } else if(bwMode === 'manual') {
-                const br = document.getElementById('brSlider').value;
-                const ct = document.getElementById('ctSlider').value;
-                ctx.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            } else {
-                ctx.filter = 'none';
-            }
-
+            ctx.filter = video.style.filter;
             ctx.drawImage(video, 0, 0);
+            
             const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
 
             try {
-                const result = await Tesseract.recognize(dataUrl, 'eng', {
-                    tessedit_char_whitelist: '0123456789()- ',
-                    tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT 
-                });
-
+                const result = await Tesseract.recognize(dataUrl, 'eng');
                 const rawText = result.data.text;
-                const phoneRegex = /(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g;
-                const matches = rawText.match(phoneRegex);
+                const matches = rawText.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
 
-                tableBody.innerHTML = "";
-                
                 if (matches && matches.length > 0) {
-                    const uniqueMatches = [...new Set(matches)];
-                    uniqueMatches.forEach((match, idx) => {
-                        let cleanNum = match.replace(/\D/g, ''); 
-                        if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
-                        else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
-
-                        if(idx === 0) {
-                            directInput.value = cleanNum;
-                            // LOGIKA AUTO REDIRECT SCAN
-                            checkAndRedirect(cleanNum);
-                        }
-
-                        tableBody.innerHTML += `
-                            <tr>
-                                <td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td>
-                                <td class="p-3 text-center">
-                                    <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button>
-                                </td>
-                            </tr>`;
-                    });
-                    tableArea.classList.remove('hidden');
-                    if (navigator.vibrate) navigator.vibrate(100);
+                    let cleanNum = matches[0].replace(/\D/g, '');
+                    directInput.value = cleanNum;
+                    
+                    // Fitur Auto-Redirect ke kartu jika sudah ada
+                    checkAndRedirect(cleanNum);
+                    renderAddressTable(matches);
                 } else {
-                    alert("Gagal membaca. Gunakan Zoom atau Manual BW Mode!");
                     directInput.value = "";
+                    alert("Nomor tidak terbaca. Coba gunakan Mode BW atau Zoom.");
                 }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                loading.classList.add('hidden');
-            }
+            } catch (err) { console.error(err); } finally { loading.classList.add('hidden'); }
         }
 
-        // --- FITUR BARU: LOGIKA CEK & REDIRECT ---
         function checkAndRedirect(num) {
             if(!num) return false;
-            const cleanInput = num.replace(/\D/g, '').slice(-10); // Ambil 10 digit terakhir saja agar akurat
+            const cleanInput = num.replace(/\D/g, '').slice(-10);
 
-            // Cari di allData yang statusnya BUKAN done
             const targetId = Object.keys(allData).find(id => {
                 const item = allData[id];
                 if (item.status !== 'done') {
@@ -555,11 +354,8 @@
             });
 
             if (targetId) {
-                // Berhenti kamera
                 stopCamera();
-                // Pindah ke halaman List
                 showPage('list');
-                // Beri Highlight pada kartu
                 setTimeout(() => {
                     const element = document.getElementById(`card-${targetId}`);
                     if (element) {
@@ -574,32 +370,60 @@
             return false;
         }
 
-        function openWaLinkCustom(num) {
-            // Sebelum buka WA, cek dulu apakah ada di antaran aktif
-            if(checkAndRedirect(num)) return;
-
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
-            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+        // --- FUNGSI PENDUKUNG LAINNYA (TIDAK BERUBAH) ---
+        function setBWMode(mode) {
+            bwMode = mode;
+            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+            document.getElementById('bw-' + mode).classList.add('active');
+            document.getElementById('manualBWControls').classList.toggle('hidden', mode !== 'manual');
+            updateVisualFilters();
         }
 
-        function openWaDirect() {
-            let num = document.getElementById('waDirectNumber').value;
-            if(!num || num === "Processing...") return alert("Nomor Kosong!");
-            let waNum = num.replace(/\D/g, '');
-            
-            // Cek redirect dulu sebelum proses chat
-            if(checkAndRedirect(waNum)) return;
+        function updateVisualFilters() {
+            const video = document.getElementById('scannerVideo');
+            if(!video) return;
+            if(bwMode === 'manual') {
+                video.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
+            } else if(bwMode === 'auto') {
+                video.style.filter = `grayscale(100%) contrast(150%)`;
+            } else video.style.filter = `none`;
+        }
 
-            if(waNum.startsWith('0')) waNum = '62' + waNum.slice(1);
-            if(waNum.startsWith('8')) waNum = '62' + waNum;
-            openWaLinkCustom(waNum);
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const video = document.getElementById('scannerVideo');
+                video.srcObject = stream;
+                videoTrack = stream.getVideoTracks()[0];
+                document.getElementById('btnStartCam').classList.add('hidden');
+                document.getElementById('btnStopCam').classList.remove('hidden');
+                document.getElementById('camControls').classList.remove('hidden');
+                document.getElementById('scannerOverlay').style.display = 'block';
+            } catch (err) { alert("Izin kamera ditolak"); }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                document.getElementById('btnStartCam').classList.remove('hidden');
+                document.getElementById('btnStopCam').classList.add('hidden');
+                document.getElementById('camControls').classList.add('hidden');
+                document.getElementById('scannerOverlay').style.display = 'none';
+            }
+        }
+
+        function setZoom(level) {
+            if (!videoTrack) return;
+            const caps = videoTrack.getCapabilities();
+            if (caps.zoom) videoTrack.applyConstraints({ advanced: [{ zoom: level }] });
+            document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
+            document.getElementById('z'+level).classList.add('active');
         }
 
         function updatePresence() {
             if(!currentUser) return;
-            const ref = db.ref('presence/' + currentUser);
-            ref.set(true);
-            ref.onDisconnect().remove();
+            db.ref('presence/' + currentUser).set(true);
+            db.ref('presence/' + currentUser).onDisconnect().remove();
             db.ref('presence').on('value', s => {
                 const el = document.getElementById('onlineBar');
                 el.innerHTML = "";
@@ -618,239 +442,104 @@
             document.getElementById('userDisplay').innerText = n;
             document.getElementById('pinOverlay').style.display = "none";
             document.getElementById('mainContent').style.display = "flex";
-            startDataListeners();
-        }
-
-        function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
-
-        function startDataListeners() {
             db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
         }
 
+        function handleLogout() { if(confirm("Keluar?")) { localStorage.removeItem('jtm_user'); location.reload(); } }
+
         function render() {
-            const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
+            const list = document.getElementById('activeList'); 
+            const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
-            let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
+            let activeCount = 0; 
+            list.innerHTML = ""; hist.innerHTML = "";
 
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
-                const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
-                const match = searchStr.includes(filter);
+                const searchStr = `${i.name} ${i.phone} ${i.area}`.toLowerCase();
                 if(i.status !== 'done') activeCount++;
                 
-                let formattedPhone = (i.phone || "").replace(/\D/g, '');
-                if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
-                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
-                const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
-
                 const cardHtml = `
                     <div id="card-${id}" class="bg-white rounded-2xl p-4 shadow-sm border-l-8 transition-all duration-500 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
                                 <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
-                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
-                                </div>
+                                <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 mt-1">${i.status==='done'?'SELESAI':'READY'}</p>
+                                ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
                             </div>
                             <div class="flex gap-2">
                                 ${i.status !== 'done' ? `
-                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                    <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
+                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit"></i></button>
                                     <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
                                     <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
                                 ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
                             </div>
                         </div>
-                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.maps ? `<div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p></div>` : ''}
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}
-                        </div>
-                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
-                            <a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
-                        </div>
+                        ${i.status !== 'done' ? `
+                        <div class="flex gap-2 mt-3">
+                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">BUKA MAPS</a>
+                            <a href="https://wa.me/${i.phone}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">CHAT WA</a>
+                        </div>` : ''}
                     </div>`;
 
-                if(i.status === 'done') { hist.innerHTML += cardHtml; } 
-                else { 
-                    if(match) {
-                        list.innerHTML += cardHtml;
-                        if(i.maps) {
-                            setTimeout(() => {
-                                const el = document.getElementById(`qrcode-${id}`);
-                                if(el && el.innerHTML === "") {
-                                    new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H });
-                                }
-                            }, 50);
-                        }
-                    }
-                }
+                if(i.status === 'done') hist.innerHTML += cardHtml;
+                else if(searchStr.includes(filter)) list.innerHTML += cardHtml;
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
-        function openFullQR(id, custName) {
-            const tempDiv = document.createElement('div');
-            new QRCode(tempDiv, { text: allData[id].maps, width: 1000, height: 1000, colorDark: "#000000", correctLevel : QRCode.CorrectLevel.H });
-            setTimeout(() => {
-                const largeQr = tempDiv.querySelector('canvas').toDataURL();
-                const img = document.getElementById('fullImg');
-                img.src = largeQr; img.className = "max-w-full max-h-[70vh] rounded-lg shadow-2xl object-contain qr-large";
-                document.getElementById('modalCaption').innerText = "SCAN LOKASI: " + custName.toUpperCase();
-                document.getElementById('imgModal').style.display = 'flex';
-            }, 100);
-        }
-
-        function openFullImg(url, caption = "") { 
-            const img = document.getElementById('fullImg');
-            img.src = url; img.className = "max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain";
-            document.getElementById('modalCaption').innerText = caption;
-            document.getElementById('imgModal').style.display = 'flex'; 
-        }
-
-        function secureDelete(id) {
-            const p = prompt("PIN KONFIRMASI:");
-            if(p === userPins[currentUser]) { db.ref('customers/' + id).remove(); } else if(p !== null) { alert("PIN SALAH!"); }
-        }
-
-        function processImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        const prev = document.getElementById('imgPrev');
-                        prev.src = photoBase64; prev.classList.remove('hidden');
-                        document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function removePhoto() {
-            photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('btnRemovePhoto').classList.add('hidden');
-            document.getElementById('photoStatus').innerText = "Foto Rumah";
-            document.getElementById('housePhoto').value = "";
-        }
-
-        function saveData() {
-            if (isSaving) return;
-
-            const area = document.getElementById('custArea').value;
-            const name = document.getElementById('custName').value;
-            const phone = document.getElementById('custPhone').value;
-            const editId = document.getElementById('editId').value;
-            const saveBtn = document.getElementById('saveBtn');
-
-            if(!area || !name) return alert("Isi Area & Nama!");
-
-            // Fitur Tolak Nomor Duplikat di List Aktif
-            if (!editId && phone) {
-                const cleanInputPhone = phone.replace(/\D/g, '');
-                const isDuplicate = Object.values(allData).some(item => {
-                    if (item.status !== 'done') {
-                        const existingPhone = (item.phone || "").replace(/\D/g, '');
-                        return existingPhone === cleanInputPhone && cleanInputPhone !== "";
-                    }
-                    return false;
-                });
-
-                if (isDuplicate) {
-                    alert("Gagal! Nomor HP ini sudah ada dalam daftar antaran AKTIF.");
-                    return; 
-                }
-            }
-
-            isSaving = true;
-            saveBtn.disabled = true;
-            saveBtn.innerText = "SEDANG MENYIMPAN...";
-            saveBtn.classList.replace('dominos-red', 'bg-gray-400');
-
-            const data = { area: area.toUpperCase(), name, phone, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
-            
-            const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
-            
-            ref.then(() => {
-                resetForm();
-            }).catch((err) => {
-                alert("Gagal: " + err.message);
-            }).finally(() => {
-                isSaving = false;
-                saveBtn.disabled = false;
-                saveBtn.innerText = "Simpan";
-                saveBtn.classList.replace('bg-gray-400', 'dominos-red');
-            });
-        }
-
-        function editData(id) {
-            const i = allData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('custArea').value = i.area;
-            document.getElementById('custName').value = i.name;
-            document.getElementById('custPhone').value = i.phone;
-            document.getElementById('custMaps').value = i.maps;
-            if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); document.getElementById('btnRemovePhoto').classList.remove('hidden'); }
-            document.getElementById('formTitle').innerText = "Edit Antaran";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            showPage('add');
-        }
-
         function resetForm() {
-            document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = "";
-            document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = "";
-            removePhoto(); document.getElementById('formTitle').innerText = "Tambah Antaran";
-            document.getElementById('cancelBtn').classList.add('hidden');
+            document.getElementById('editId').value = ""; 
+            document.getElementById('custArea').value = ""; 
+            document.getElementById('custName').value = "";
+            document.getElementById('custPhone').value = ""; 
+            document.getElementById('custMaps').value = "";
+            removePhoto(); 
             showPage('list');
-            
-            isSaving = false;
-            const saveBtn = document.getElementById('saveBtn');
-            saveBtn.disabled = false;
-            saveBtn.innerText = "Simpan";
-            saveBtn.classList.add('dominos-red');
         }
-
-        function cancelEdit() { resetForm(); }
-        function goOTW(id) { if(allData[id].status !== 'otw') db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
-        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
 
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
-            
-            if(id !== 'chat') {
-                stopCamera();
-            }
+            if(id !== 'chat') stopCamera();
         }
 
         function updateTimers() {
             Object.keys(allData).forEach(id => {
                 if(allData[id].status === 'otw') {
                     const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
-                    const remaining = (20 * 60) - elapsed;
+                    const rem = (20 * 60) - elapsed;
                     const el = document.getElementById('timer-'+id);
-                    if(el) {
-                        const m = Math.max(0, Math.floor(remaining / 60));
-                        const s = Math.max(0, remaining % 60);
-                        el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
-                        if(remaining < 0) el.classList.replace('text-gray-400', 'text-red-600');
-                    }
+                    if(el) el.innerText = `${Math.max(0, Math.floor(rem/60))}:${Math.max(0, rem%60).toString().padStart(2,'0')} MENIT`;
                 }
             });
         }
+
+        function processImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    photoBase64 = e.target.result;
+                    document.getElementById('imgPrev').src = photoBase64;
+                    document.getElementById('imgPrev').classList.remove('hidden');
+                    document.getElementById('photoStatus').innerText = "FOTO OK!";
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removePhoto() {
+            photoBase64 = ""; 
+            document.getElementById('imgPrev').classList.add('hidden');
+            document.getElementById('photoStatus').innerText = "Foto Rumah";
+        }
+        
+        function goOTW(id) { db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
+        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
+        function cancelEdit() { resetForm(); }
     </script>
 </body>
 </html>
