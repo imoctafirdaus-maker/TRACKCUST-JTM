@@ -186,7 +186,7 @@
             updatePresence();
         };
 
-        // SCANNER LOGIC (IMPROVED)
+        // SCANNER LOGIC (IMPROVED FOR PHYSICAL LABELS)
         async function scanAddressTable(input) {
             if (!input.files || !input.files[0]) return;
             
@@ -209,8 +209,9 @@
                     const ctx = canvas.getContext('2d');
                     canvas.width = img.width;
                     canvas.height = img.height;
-                    //Menambahkan sedikit penurunan brightness untuk meredam silau background putih
-                    ctx.filter = 'grayscale(100%) contrast(250%) brightness(90%)';
+                    
+                    // Filter khusus label fisik: Kontras tinggi & sedikit redup untuk meredam refleksi kertas
+                    ctx.filter = 'grayscale(100%) contrast(300%) brightness(85%)';
                     ctx.drawImage(img, 0, 0);
 
                     const filteredImg = canvas.toDataURL('image/jpeg');
@@ -228,13 +229,17 @@
 
                         lines.forEach(line => {
                             let text = line.text.trim().toUpperCase();
+                            
+                            // Regex untuk menangkap nomor HP dengan berbagai format (dengan atau tanpa kurung/strip)
                             const phoneMatch = text.match(/(?:\(?\d{3,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4})/);
 
-                            if (text.length > 5 && (text.includes('JL') || text.includes('NO') || phoneMatch)) {
+                            // Mencari baris yang mengandung alamat (Keyword: JL, KEC, KAB, NO, atau mengandung no HP)
+                            if (text.length > 5 && (text.includes('JL') || text.includes('KEC') || text.includes('KAB') || text.includes('NO') || phoneMatch)) {
                                 foundCount++;
                                 let phoneNum = phoneMatch ? phoneMatch[0] : "";
                                 let cleanWaNumber = phoneNum.replace(/\D/g, '');
                                 
+                                // Normalisasi ke format internasional (62)
                                 if (cleanWaNumber.startsWith('0')) cleanWaNumber = '62' + cleanWaNumber.slice(1);
                                 else if (cleanWaNumber.startsWith('8')) cleanWaNumber = '62' + cleanWaNumber;
 
@@ -263,7 +268,7 @@
                             tableArea.classList.remove('hidden');
                             if(directInput.value === "Scanning...") directInput.value = "";
                         } else {
-                            alert("Data tidak terbaca jelas.");
+                            alert("Data tidak terbaca jelas. Pastikan foto tegak lurus.");
                             directInput.value = "";
                         }
                     } catch (err) {
