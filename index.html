@@ -231,26 +231,27 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
-            // Filter Kontras Tinggi agar (8962) terbaca jelas
-            ctx.filter = 'grayscale(100%) contrast(300%) brightness(85%)';
+            // --- OPTIMASI FILTER UNTUK LAYAR & LABEL BERKILAU ---
+            ctx.filter = 'grayscale(100%) contrast(350%) brightness(130%)';
             ctx.drawImage(video, 0, 0);
             
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
 
             try {
                 const result = await Tesseract.recognize(dataUrl, 'eng', {
                     tessedit_char_whitelist: '0123456789()- ',
+                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE 
                 });
 
                 const rawText = result.data.text;
-                // Regex: Cari (4 angka) + 4 angka + - + 3-4 angka
-                const phoneRegex = /\(\d{3,4}\)\s?\d{3,4}-\d{3,4}/g;
+                const phoneRegex = /(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g;
                 const matches = rawText.match(phoneRegex);
 
                 tableBody.innerHTML = "";
                 
                 if (matches && matches.length > 0) {
-                    matches.forEach((match, idx) => {
+                    const uniqueMatches = [...new Set(matches)];
+                    uniqueMatches.forEach((match, idx) => {
                         let cleanNum = match.replace(/\D/g, ''); 
                         if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
                         else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
@@ -266,8 +267,9 @@
                             </tr>`;
                     });
                     tableArea.classList.remove('hidden');
+                    if ("vibrate" in navigator) navigator.vibrate(100);
                 } else {
-                    alert("Nomor tidak terdeteksi. Dekatkan kamera ke area nomor.");
+                    alert("Nomor tidak terbaca. Pastikan label berada di dalam kotak.");
                     directInput.value = "";
                 }
             } catch (err) {
@@ -483,7 +485,6 @@
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
-            // Stop kamera jika pindah halaman
             if(id !== 'chat' && stream) {
                 stream.getTracks().forEach(t => t.stop());
                 stream = null;
