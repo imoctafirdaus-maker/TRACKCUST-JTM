@@ -55,26 +55,8 @@
         .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
         .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
 
-        /* Navbar OTW Style */
-        #otwStatusArea {
-            flex: 1;
-            margin: 0 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            max-height: 40px;
-            overflow-y: auto;
-            text-align: center;
-        }
-        .otw-item {
-            font-size: 9px;
-            font-weight: 900;
-            font-style: italic;
-            text-transform: uppercase;
-            color: #fbbf24;
-            animation: blinker 1.5s linear infinite;
-        }
+        #otwStatusArea { flex: 1; margin: 0 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; max-height: 40px; overflow-y: auto; text-align: center; }
+        .otw-item { font-size: 9px; font-weight: 900; font-style: italic; text-transform: uppercase; color: #fbbf24; animation: blinker 1.5s linear infinite; }
         @keyframes blinker { 50% { opacity: 0.5; } }
     </style>
 </head>
@@ -103,9 +85,7 @@
     <div id="mainContent" style="display:none;" class="flex flex-col h-full">
         <nav class="dominos-blue p-4 text-white shadow-md flex justify-between items-center">
             <h1 class="font-black italic uppercase text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            
             <div id="otwStatusArea"></div>
-
             <div class="flex items-center gap-2">
                 <span id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">User</span>
                 <button onclick="location.reload()" class="bg-red-500 w-7 h-7 rounded-full flex items-center justify-center"><i class="fa fa-sync-alt text-[10px]"></i></button>
@@ -115,7 +95,6 @@
         <div id="onlineBar" class="bg-blue-900/10 px-4 py-1 flex gap-2 overflow-x-auto text-[8px] font-black text-blue-900 uppercase italic"></div>
 
         <main class="flex-1 overflow-hidden relative">
-            
             <div id="page-list" class="page active p-4 overflow-y-auto">
                 <div class="flex justify-between items-center mb-3">
                     <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
@@ -163,14 +142,10 @@
                         <i class="fab fa-whatsapp text-white text-2xl"></i>
                     </div>
                     <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
-                    
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
-                        <div id="scannerOverlay" class="scanner-overlay">
-                            <div class="scanner-box"><div class="laser"></div></div>
-                        </div>
+                        <div id="scannerOverlay" class="scanner-overlay"><div class="scanner-box"><div class="laser"></div></div></div>
                     </div>
-
                     <div id="camControls" class="hidden cam-controls text-left">
                         <div class="flex justify-between items-center mb-2 px-1">
                             <span class="text-[9px] font-black text-blue-900 uppercase">Mode BW:</span>
@@ -197,20 +172,14 @@
                             <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
                         </div>
                     </div>
-
                     <div class="flex gap-2 mb-3">
                         <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Kamera</button>
                         <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px]">Tutup</button>
                         <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Scan Nomor</button>
                     </div>
-
-                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Membaca...
-                    </div>
-
+                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic"><div class="loader-ocr"></div> Membaca...</div>
                     <input type="tel" id="waDirectNumber" onkeyup="checkAndRedirect(this.value)" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">Chat Pelanggan</button>
-
                     <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
                         <table class="w-full text-[10px] bg-white rounded-lg overflow-hidden border">
                             <thead class="bg-blue-900 text-white uppercase italic"><tr><th class="p-2">Terdeteksi</th><th class="p-2">Chat</th></tr></thead>
@@ -243,14 +212,8 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; 
-        let photoBase64 = "";
-        let stream = null;
-        let videoTrack = null;
-        let bwMode = 'off'; 
-        let isScanning = false; 
-        let autoScanInterval = null;
-        let lastRedirectedNumber = ""; 
+        let allData = {}; let photoBase64 = ""; let stream = null; let videoTrack = null;
+        let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -258,70 +221,39 @@
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
-            updatePresence();
         };
 
-        // --- CORE DATABASE FUNCTIONS ---
-        function startDataListeners() { 
-            db.ref('customers').on('value', s => { 
-                allData = s.val() || {}; 
-                render(); 
-            }); 
-        }
-
+        function startDataListeners() { db.ref('customers').on('value', s => { allData = s.val() || {}; render(); }); }
         function updatePresence() {
             if(!currentUser) return;
-            const ref = db.ref('presence/' + currentUser);
-            ref.set(true);
-            ref.onDisconnect().remove();
+            const ref = db.ref('presence/' + currentUser); ref.set(true); ref.onDisconnect().remove();
             db.ref('presence').on('value', s => {
-                const el = document.getElementById('onlineBar');
-                el.innerHTML = "";
+                const el = document.getElementById('onlineBar'); el.innerHTML = "";
                 s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
             });
         }
 
-        // --- ACTIVITY LOGGING ---
-        function logDriverActivity() {
-            if (!currentUser) return;
-            db.ref('activities/' + currentUser).set({ driverName: currentUser, timestamp: Date.now() });
-        }
+        function logDriverActivity() { if (currentUser) db.ref('activities/' + currentUser).set({ driverName: currentUser, timestamp: Date.now() }); }
 
         function updateTopOTWStatus() {
-            const area = document.getElementById('otwStatusArea');
-            if (!area) return;
-            const now = Date.now();
-            const limit = 15 * 60 * 1000;
+            const area = document.getElementById('otwStatusArea'); if (!area) return;
+            const now = Date.now(); const limit = 15 * 60 * 1000;
             let activeDrivers = new Set();
-
             Object.keys(allData).forEach(id => {
-                const item = allData[id];
-                if (item.status === 'otw' && item.startTime && (now - item.startTime < limit)) activeDrivers.add(item.driverBy);
+                const i = allData[id]; if (i.status === 'otw' && i.startTime && (now - i.startTime < limit)) activeDrivers.add(i.driverBy);
             });
-
             db.ref('activities').once('value', snapshot => {
-                const activities = snapshot.val() || {};
-                Object.keys(activities).forEach(driver => {
-                    const act = activities[driver];
-                    if (now - act.timestamp < limit) activeDrivers.add(act.driverName);
-                    else db.ref('activities/' + driver).remove();
-                });
-
-                if (activeDrivers.size > 0) {
-                    area.innerHTML = Array.from(activeDrivers)
-                        .map(name => `<div class="otw-item">[${name.toUpperCase()} SEDANG MENGANTAR]</div>`)
-                        .join("");
-                } else { area.innerHTML = ""; }
+                const acts = snapshot.val() || {};
+                Object.keys(acts).forEach(d => { if (now - acts[d].timestamp < limit) activeDrivers.add(acts[d].driverName); else db.ref('activities/' + d).remove(); });
+                area.innerHTML = activeDrivers.size > 0 ? Array.from(activeDrivers).map(n => `<div class="otw-item">[${n.toUpperCase()} SEDANG MENGANTAR]</div>`).join("") : "";
             });
         }
 
-        // --- CAMERA & OCR ---
         async function startCamera() {
-            const video = document.getElementById('scannerVideo');
             try {
                 if (stream) stream.getTracks().forEach(t => t.stop());
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                video.srcObject = stream;
+                document.getElementById('scannerVideo').srcObject = stream;
                 videoTrack = stream.getVideoTracks()[0];
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
@@ -333,8 +265,7 @@
 
         function stopCamera() {
             if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null;
+                stream.getTracks().forEach(t => t.stop()); stream = null;
                 document.getElementById('btnStartCam').classList.remove('hidden');
                 document.getElementById('btnStopCam').classList.add('hidden');
                 document.getElementById('camControls').classList.add('hidden');
@@ -343,77 +274,41 @@
             }
         }
 
-        function setZoom(level) {
-            if (!videoTrack) return;
-            const caps = videoTrack.getCapabilities();
-            if (caps.zoom) {
-                videoTrack.applyConstraints({ advanced: [{ zoom: Math.min(level, caps.zoom.max) }] });
-                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
-                document.getElementById('z'+level).classList.add('active');
-            }
-        }
-
-        function setBWMode(mode) {
-            bwMode = mode;
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-            document.getElementById('bw-' + mode).classList.add('active');
-            document.getElementById('manualBWControls').classList.toggle('hidden', mode !== 'manual');
-            updateVisualFilters();
-        }
-
+        function setZoom(l) { if (videoTrack) { videoTrack.applyConstraints({ advanced: [{ zoom: l }] }); document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active')); document.getElementById('z'+l).classList.add('active'); } }
+        function setBWMode(m) { bwMode = m; document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active')); document.getElementById('bw-'+m).classList.add('active'); document.getElementById('manualBWControls').classList.toggle('hidden', m !== 'manual'); updateVisualFilters(); }
         function updateVisualFilters() {
-            const video = document.getElementById('scannerVideo');
-            if(bwMode === 'manual') {
-                const br = document.getElementById('brSlider').value;
-                const ct = document.getElementById('ctSlider').value;
-                video.style.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            } else if(bwMode === 'auto') video.style.filter = `grayscale(100%) contrast(150%)`;
-            else video.style.filter = `none`;
+            const v = document.getElementById('scannerVideo');
+            if(bwMode === 'manual') v.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
+            else if(bwMode === 'auto') v.style.filter = `grayscale(100%) contrast(150%)`; else v.style.filter = `none`;
         }
 
         async function startAutoScan() {
             autoScanInterval = setInterval(async () => {
                 if (isScanning || !stream) return;
-                isScanning = true;
-                const video = document.getElementById('scannerVideo');
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                isScanning = true; const video = document.getElementById('scannerVideo');
+                const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 canvas.getContext('2d').drawImage(video, 0, 0);
                 try {
-                    const result = await Tesseract.recognize(canvas.toDataURL(), 'eng');
-                    const matches = result.data.text.match(/(?:\+62|62|08)[0-9]{8,15}/g);
-                    if (matches) {
-                        let clean = matches[0].replace(/\D/g, '');
-                        if (clean.length >= 10) {
-                            document.getElementById('waDirectNumber').value = clean;
-                            checkAndRedirect(clean);
-                        }
-                    }
+                    const res = await Tesseract.recognize(canvas.toDataURL(), 'eng');
+                    const matches = res.data.text.match(/(?:\+62|62|08)[0-9]{8,15}/g);
+                    if (matches) { let clean = matches[0].replace(/\D/g, ''); if (clean.length >= 10) { document.getElementById('waDirectNumber').value = clean; checkAndRedirect(clean); } }
                 } catch (e) {} finally { isScanning = false; }
             }, 3000);
         }
 
         async function captureAndScan() {
-            const video = document.getElementById('scannerVideo');
-            const loading = document.getElementById('ocrLoading');
-            loading.classList.remove('hidden');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            const loading = document.getElementById('ocrLoading'); loading.classList.remove('hidden');
+            const video = document.getElementById('scannerVideo'); const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight; canvas.getContext('2d').drawImage(video, 0, 0);
             try {
                 const res = await Tesseract.recognize(canvas.toDataURL(), 'eng');
                 const matches = res.data.text.match(/(\+?62|08)[0-9\s-]{8,15}/g);
-                if (matches) {
-                    let clean = matches[0].replace(/\D/g, '');
-                    document.getElementById('waDirectNumber').value = clean;
-                    renderAddressTable(matches);
-                }
+                if (matches) { let clean = matches[0].replace(/\D/g, ''); document.getElementById('waDirectNumber').value = clean; renderAddressTable(matches); }
             } catch (e) { alert("Gagal scan."); } finally { loading.classList.add('hidden'); }
         }
 
         function renderAddressTable(matches) {
-            const body = document.getElementById('addressTableBody');
-            body.innerHTML = '';
+            const body = document.getElementById('addressTableBody'); body.innerHTML = '';
             [...new Set(matches.map(m => m.replace(/\D/g, '')))].forEach(num => {
                 if(num.length < 10) return;
                 let wa = num.startsWith('0') ? '62' + num.slice(1) : (num.startsWith('8') ? '62' + num : num);
@@ -422,18 +317,8 @@
             document.getElementById('scanResultArea').classList.remove('hidden');
         }
 
-        function openWaLinkCustom(num) {
-            logDriverActivity();
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's Pizza Jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Terimakasih 😊`;
-            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        function openWaDirect() {
-            let num = document.getElementById('waDirectNumber').value.replace(/\D/g, '');
-            if(!num) return alert("Nomor kosong!");
-            let wa = num.startsWith('0') ? '62' + num.slice(1) : (num.startsWith('8') ? '62' + num : num);
-            openWaLinkCustom(wa);
-        }
+        function openWaLinkCustom(num) { logDriverActivity(); const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's Pizza Jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Terimakasih 😊`; window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank'); }
+        function openWaDirect() { let num = document.getElementById('waDirectNumber').value.replace(/\D/g, ''); if(!num) return alert("Nomor kosong!"); openWaLinkCustom(num.startsWith('0') ? '62' + num.slice(1) : (num.startsWith('8') ? '62' + num : num)); }
 
         function checkAndRedirect(number) {
             let target = number.startsWith('0') ? '62' + number.slice(1) : (number.startsWith('8') ? '62' + number : number);
@@ -441,48 +326,27 @@
                 let p = allData[id].phone.replace(/\D/g, '');
                 let waP = p.startsWith('0') ? '62' + p.slice(1) : (p.startsWith('8') ? '62' + p : p);
                 if(waP === target && allData[id].status !== 'done') {
-                    if(confirm("Ditemukan di antaran: " + allData[id].name + ". Lihat?")) {
-                        document.getElementById('searchInput').value = allData[id].name;
-                        showPage('list'); render();
-                    }
+                    if(confirm("Ditemukan di antaran: " + allData[id].name + ". Lihat?")) { document.getElementById('searchInput').value = allData[id].name; showPage('list'); render(); }
                 }
             });
         }
 
-        // --- AUTH & NAV ---
-        function prosesLogin() {
-            const u = document.getElementById('selectUser').value;
-            const p = document.getElementById('inputPin').value;
-            if(p === userPins[u]) bukaApp(u); else alert("PIN Salah!");
-        }
-
-        function bukaApp(n) {
-            currentUser = n; localStorage.setItem('jtm_user', n);
-            document.getElementById('userDisplay').innerText = n;
-            document.getElementById('pinOverlay').style.display = "none";
-            document.getElementById('mainContent').style.display = "flex";
-            startDataListeners(); updatePresence();
-        }
-
+        function prosesLogin() { const u = document.getElementById('selectUser').value; const p = document.getElementById('inputPin').value; if(p === userPins[u]) bukaApp(u); else alert("PIN Salah!"); }
+        function bukaApp(n) { currentUser = n; localStorage.setItem('jtm_user', n); document.getElementById('userDisplay').innerText = n; document.getElementById('pinOverlay').style.display = "none"; document.getElementById('mainContent').style.display = "flex"; startDataListeners(); updatePresence(); }
         function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
 
         function showPage(id) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-'+id).classList.add('active');
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-            document.getElementById('nav-'+id)?.classList.add('active');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.getElementById('page-'+id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.getElementById('nav-'+id)?.classList.add('active');
             if(id !== 'chat') stopCamera();
         }
 
-        // --- RENDER & DATA ---
         function render() {
             const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
-            list.innerHTML = ""; hist.innerHTML = "";
-            let active = 0;
+            list.innerHTML = ""; hist.innerHTML = ""; let active = 0;
             Object.keys(allData).reverse().forEach(id => {
-                const i = allData[id];
-                if(i.status !== 'done') active++;
+                const i = allData[id]; if(i.status !== 'done') active++;
                 const match = `${i.name} ${i.phone} ${i.area}`.toLowerCase().includes(filter);
                 const html = `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
@@ -500,7 +364,10 @@
                                     <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
                                     <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
                                     <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
-                                ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
+                                ` : `
+                                    <button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>
+                                    <button onclick="confirmDeleteHistory('${id}', '${i.driverBy || 'SYSTEM'}')" class="bg-red-50 text-red-500 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-trash-alt"></i></button>
+                                `}
                             </div>
                         </div>
                         <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
@@ -515,108 +382,58 @@
                 if(i.status === 'done') hist.innerHTML += html;
                 else if(match) {
                     list.innerHTML += html;
-                    if(i.maps) setTimeout(() => {
-                        const el = document.getElementById(`qrcode-${id}`);
-                        if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
-                    }, 100);
+                    if(i.maps) setTimeout(() => { const el = document.getElementById(`qrcode-${id}`); if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" }); }, 100);
                 }
             });
             document.getElementById('countActive').innerText = active + " AKTIF";
         }
 
+        function confirmDeleteHistory(id, driverName) { if (confirm(`Hapus permanen data antaran milik [ ${driverName.toUpperCase()} ]?\nData tidak bisa dikembalikan.`)) db.ref('customers/' + id).remove(); }
+        function clearAllHistory() { if(confirm("Hapus semua history secara permanen?")) { Object.keys(allData).forEach(id => { if(allData[id].status === 'done') db.ref('customers/'+id).remove(); }); } }
+
         function saveData() {
-            const data = {
-                area: document.getElementById('custArea').value.toUpperCase(),
-                name: document.getElementById('custName').value,
-                phone: document.getElementById('custPhone').value,
-                maps: document.getElementById('custMaps').value,
-                photo: photoBase64,
-                status: 'active',
-                timestamp: Date.now()
-            };
+            const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
             const id = document.getElementById('editId').value;
-            const ref = id ? db.ref('customers/'+id).update(data) : db.ref('customers').push(data);
-            ref.then(() => resetForm());
+            (id ? db.ref('customers/'+id).update(data) : db.ref('customers').push(data)).then(() => resetForm());
         }
 
         function processImage(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 600; canvas.height = img.height * (600 / img.width);
+                    const img = new Image(); img.onload = () => {
+                        const canvas = document.createElement('canvas'); canvas.width = 600; canvas.height = img.height * (600 / img.width);
                         canvas.getContext('2d').drawImage(img, 0, 0, 600, canvas.height);
                         photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        document.getElementById('imgPrev').src = photoBase64;
-                        document.getElementById('imgPrev').classList.remove('hidden');
-                        document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
+                        document.getElementById('imgPrev').src = photoBase64; document.getElementById('imgPrev').classList.remove('hidden');
+                        document.getElementById('btnRemovePhoto').classList.remove('hidden'); document.getElementById('photoStatus').innerText = "FOTO SIAP!";
+                    }; img.src = e.target.result;
+                }; reader.readAsDataURL(input.files[0]);
             }
         }
 
-        function resetForm() {
-            document.getElementById('editId').value = ""; document.getElementById('custArea').value = "";
-            document.getElementById('custName').value = ""; document.getElementById('custPhone').value = "";
-            document.getElementById('custMaps').value = ""; photoBase64 = "";
-            document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('btnRemovePhoto').classList.add('hidden');
-            document.getElementById('photoStatus').innerText = "Foto Rumah";
-            showPage('list');
-        }
-
+        function resetForm() { document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = ""; photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; showPage('list'); }
         function goOTW(id) { if(allData[id].status !== 'otw') db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); }
         function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
 
         function updateTimers() {
             Object.keys(allData).forEach(id => {
                 if(allData[id].status === 'otw') {
-                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
-                    const remaining = (20 * 60) - elapsed;
-                    const el = document.getElementById('timer-'+id);
-                    if(el) {
-                        const m = Math.max(0, Math.floor(remaining / 60));
-                        const s = Math.max(0, remaining % 60);
-                        el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
-                    }
+                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000); const rem = (20 * 60) - elapsed;
+                    const el = document.getElementById('timer-'+id); if(el) { const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60); el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`; }
                 }
             });
             updateTopOTWStatus();
         }
 
         function openFullQR(id, name) {
-            const temp = document.createElement('div');
-            new QRCode(temp, { text: allData[id].maps, width: 500, height: 500 });
-            setTimeout(() => {
-                document.getElementById('fullImg').src = temp.querySelector('canvas').toDataURL();
-                document.getElementById('modalCaption').innerText = "MAPS: " + name;
-                document.getElementById('imgModal').style.display = 'flex';
-            }, 100);
+            const temp = document.createElement('div'); new QRCode(temp, { text: allData[id].maps, width: 500, height: 500 });
+            setTimeout(() => { document.getElementById('fullImg').src = temp.querySelector('canvas').toDataURL(); document.getElementById('modalCaption').innerText = "MAPS: " + name; document.getElementById('imgModal').style.display = 'flex'; }, 100);
         }
 
-        function openFullImg(url, cap) {
-            document.getElementById('fullImg').src = url;
-            document.getElementById('modalCaption').innerText = cap;
-            document.getElementById('imgModal').style.display = 'flex';
-        }
-        
-        function clearAllHistory() { if(confirm("Hapus semua history?")) { Object.keys(allData).forEach(id => { if(allData[id].status === 'done') db.ref('customers/'+id).remove(); }); } }
+        function openFullImg(url, cap) { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = cap; document.getElementById('imgModal').style.display = 'flex'; }
         function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; }
-        function editData(id) {
-            const i = allData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('custArea').value = i.area;
-            document.getElementById('custName').value = i.name;
-            document.getElementById('custPhone').value = i.phone;
-            document.getElementById('custMaps').value = i.maps;
-            if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); }
-            showPage('add');
-        }
+        function editData(id) { const i = allData[id]; document.getElementById('editId').value = id; document.getElementById('custArea').value = i.area; document.getElementById('custName').value = i.name; document.getElementById('custPhone').value = i.phone; document.getElementById('custMaps').value = i.maps; if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); } showPage('add'); }
     </script>
 </body>
 </html>
