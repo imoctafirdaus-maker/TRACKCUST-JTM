@@ -143,7 +143,7 @@
                     </div>
 
                     <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Membaca & Menyesuaikan...
+                        <div class="loader-ocr"></div> Meredam Silau & Membaca...
                     </div>
 
                     <input type="tel" id="waDirectNumber" placeholder="Hasil Scan" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
@@ -177,7 +177,7 @@
     </div>
 
     <script>
-        // Data Login
+        // Database & Login
         const userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
@@ -185,7 +185,6 @@
             "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929"
         };
 
-        // Firebase Config
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -203,7 +202,7 @@
             updatePresence();
         };
 
-        // --- SCANNER LOGIC WITH AUTO-BRIGHTNESS ---
+        // --- SCANNER LOGIC DENGAN AUTO-BRIGHTNESS (ANTI SILAU MONITOR) ---
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
             try {
@@ -234,32 +233,26 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
-            // 1. Ambil gambar asli dulu untuk cek kecerahan
+            // 1. Ambil sampel gambar untuk cek kecerahan
             ctx.drawImage(video, 0, 0);
             const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
             
-            // 2. Hitung Rata-rata Kecerahan (Luminance)
             let brightness = 0;
             for (let i = 0; i < rawData.length; i += 4) {
                 brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
             }
             const avgBrightness = brightness / (canvas.width * canvas.height);
 
-            // 3. Algoritma Penyesuaian (Sangat Penting untuk Layar Monitor)
-            let finalContrast = 400;   // Kontras tinggi untuk teks
-            let finalBrightness = 110; // Default sedikit terang
+            // 2. Setting Filter: Mengubah putih menjadi abu-abu dan teks menjadi bold
+            let finalContrast = 400;   
+            let finalBrightness = 110; 
 
-            if (avgBrightness > 170) { 
-                // Jika layar monitor terlalu silau, turunkan kecerahan secara drastis
-                finalBrightness = 70; 
-                finalContrast = 600; 
-            } else if (avgBrightness < 60) {
-                // Jika ruangan gelap, naikkan kecerahan
-                finalBrightness = 160;
-                finalContrast = 300;
+            if (avgBrightness > 160) { 
+                // Jika terlalu putih (layar monitor), turunkan kecerahan agar jadi abu-abu
+                finalBrightness = 65; 
+                finalContrast = 700; 
             }
 
-            // 4. Terapkan filter ke Canvas
             ctx.filter = `grayscale(100%) contrast(${finalContrast}%) brightness(${finalBrightness}%)`;
             ctx.drawImage(video, 0, 0);
             
@@ -268,7 +261,7 @@
             try {
                 const result = await Tesseract.recognize(dataUrl, 'eng', {
                     tessedit_char_whitelist: '0123456789()- ',
-                    tessedit_pageseg_mode: Tesseract.PSM.SINGLE_LINE 
+                    tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT 
                 });
 
                 const rawText = result.data.text;
@@ -297,7 +290,7 @@
                     tableArea.classList.remove('hidden');
                     if (navigator.vibrate) navigator.vibrate(100);
                 } else {
-                    alert("Gagal membaca. Coba posisikan nomor tepat di tengah kotak merah.");
+                    alert("Nomor tidak terbaca. Pastikan nomor berada di tengah kotak merah dan tidak silau.");
                     directInput.value = "";
                 }
             } catch (err) {
@@ -307,7 +300,7 @@
             }
         }
 
-        // --- SEMUA FITUR CORE SEBELUMNYA ---
+        // --- SEMUA FUNGSI CORE TETAP SAMA ---
         function openWaLinkCustom(num) {
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
