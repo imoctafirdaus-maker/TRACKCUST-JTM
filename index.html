@@ -81,6 +81,7 @@
         <div id="onlineBar" class="bg-blue-900/10 px-4 py-1 flex gap-2 overflow-x-auto text-[8px] font-black text-blue-900 uppercase italic"></div>
 
         <main class="flex-1 overflow-hidden relative">
+            
             <div id="page-list" class="page active p-4 overflow-y-auto">
                 <div class="flex justify-between items-center mb-3">
                     <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
@@ -142,7 +143,7 @@
                     </div>
 
                     <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Membaca Label...
+                        <div class="loader-ocr"></div> Membaca & Menyesuaikan...
                     </div>
 
                     <input type="tel" id="waDirectNumber" placeholder="Hasil Scan" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
@@ -176,6 +177,7 @@
     </div>
 
     <script>
+        // Data Login
         const userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
@@ -183,6 +185,7 @@
             "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Acong": "0929"
         };
 
+        // Firebase Config
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -200,7 +203,7 @@
             updatePresence();
         };
 
-        // --- SCANNER LOGIC ---
+        // --- SCANNER LOGIC WITH AUTO-BRIGHTNESS ---
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
             try {
@@ -210,7 +213,7 @@
                 });
                 video.srcObject = stream;
             } catch (err) {
-                alert("Izin kamera ditolak atau tidak tersedia.");
+                alert("Izin kamera ditolak.");
             }
         }
 
@@ -224,15 +227,40 @@
             const tableArea = document.getElementById('scanResultArea');
 
             loading.classList.remove('hidden');
-            directInput.value = "Scanning...";
+            directInput.value = "Processing...";
 
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
-            // --- OPTIMASI FILTER UNTUK LAYAR & LABEL BERKILAU ---
-            ctx.filter = 'grayscale(100%) contrast(350%) brightness(130%)';
+            // 1. Ambil gambar asli dulu untuk cek kecerahan
+            ctx.drawImage(video, 0, 0);
+            const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            
+            // 2. Hitung Rata-rata Kecerahan (Luminance)
+            let brightness = 0;
+            for (let i = 0; i < rawData.length; i += 4) {
+                brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
+            }
+            const avgBrightness = brightness / (canvas.width * canvas.height);
+
+            // 3. Algoritma Penyesuaian (Sangat Penting untuk Layar Monitor)
+            let finalContrast = 400;   // Kontras tinggi untuk teks
+            let finalBrightness = 110; // Default sedikit terang
+
+            if (avgBrightness > 170) { 
+                // Jika layar monitor terlalu silau, turunkan kecerahan secara drastis
+                finalBrightness = 70; 
+                finalContrast = 600; 
+            } else if (avgBrightness < 60) {
+                // Jika ruangan gelap, naikkan kecerahan
+                finalBrightness = 160;
+                finalContrast = 300;
+            }
+
+            // 4. Terapkan filter ke Canvas
+            ctx.filter = `grayscale(100%) contrast(${finalContrast}%) brightness(${finalBrightness}%)`;
             ctx.drawImage(video, 0, 0);
             
             const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
@@ -267,9 +295,9 @@
                             </tr>`;
                     });
                     tableArea.classList.remove('hidden');
-                    if ("vibrate" in navigator) navigator.vibrate(100);
+                    if (navigator.vibrate) navigator.vibrate(100);
                 } else {
-                    alert("Nomor tidak terbaca. Pastikan label berada di dalam kotak.");
+                    alert("Gagal membaca. Coba posisikan nomor tepat di tengah kotak merah.");
                     directInput.value = "";
                 }
             } catch (err) {
@@ -279,7 +307,7 @@
             }
         }
 
-        // --- CORE FUNCTIONS (UNTUK FITUR LAMA) ---
+        // --- SEMUA FITUR CORE SEBELUMNYA ---
         function openWaLinkCustom(num) {
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -287,7 +315,7 @@
 
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
-            if(!num || num === "Scanning...") return alert("Nomor Kosong!");
+            if(!num || num === "Processing...") return alert("Nomor Kosong!");
             let waNum = num.replace(/\D/g, '');
             if(waNum.startsWith('0')) waNum = '62' + waNum.slice(1);
             if(waNum.startsWith('8')) waNum = '62' + waNum;
@@ -410,7 +438,7 @@
         }
 
         function secureDelete(id) {
-            const p = prompt("MASUKKAN PIN ANDA UNTUK MENGHAPUS:");
+            const p = prompt("PIN KONFIRMASI:");
             if(p === userPins[currentUser]) { db.ref('customers/' + id).remove(); } else if(p !== null) { alert("PIN SALAH!"); }
         }
 
