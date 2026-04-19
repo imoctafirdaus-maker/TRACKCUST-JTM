@@ -26,7 +26,7 @@
         .page.active { display: flex; }
         
         #page-chat { background-color: #f0f2f5; }
-        .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
+        .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 250px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
 
         .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
         
@@ -38,7 +38,8 @@
         /* Scanner Styles */
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
-        .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; }
+        /* Bingkai Scanner default hidden */
+        .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
         .scanner-box { width: 100%; height: 100%; border: 2px solid #e31837; position: relative; }
         .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
         @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
@@ -143,7 +144,7 @@
                     
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
-                        <div class="scanner-overlay">
+                        <div id="scannerOverlay" class="scanner-overlay">
                             <div class="scanner-box">
                                 <div class="laser"></div>
                             </div>
@@ -253,9 +254,8 @@
         let allData = {}; let photoBase64 = "";
         let stream = null;
         let videoTrack = null;
-        let bwMode = 'off'; // Default mode
+        let bwMode = 'off'; 
         
-        // Auto Scan Variables
         let isScanning = false; 
         let autoScanInterval = null;
 
@@ -268,38 +268,28 @@
             updatePresence();
         };
 
-        // --- CLEAR HISTORY FEATURE ---
         function clearAllHistory() {
             if (confirm("Apakah yakin anda ingin menghapus SEMUA data history yang sudah selesai?")) {
                 const doneItems = Object.keys(allData).filter(id => allData[id].status === 'done');
                 if (doneItems.length === 0) return alert("Tidak ada data history untuk dihapus.");
-                
-                doneItems.forEach(id => {
-                    db.ref('customers/' + id).remove();
-                });
+                doneItems.forEach(id => { db.ref('customers/' + id).remove(); });
                 alert("History berhasil dikosongkan.");
             }
         }
 
-        // --- NEW BW MODE LOGIC ---
         function setBWMode(mode) {
             bwMode = mode;
             document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
             document.getElementById('bw-' + mode).classList.add('active');
-            
             const manualBox = document.getElementById('manualBWControls');
-            if(mode === 'manual') {
-                manualBox.classList.remove('hidden');
-            } else {
-                manualBox.classList.add('hidden');
-            }
+            if(mode === 'manual') manualBox.classList.remove('hidden');
+            else manualBox.classList.add('hidden');
             updateVisualFilters();
         }
 
         function updateVisualFilters() {
             const video = document.getElementById('scannerVideo');
             if(!video) return;
-
             if(bwMode === 'manual') {
                 const br = document.getElementById('brSlider').value;
                 const ct = document.getElementById('ctSlider').value;
@@ -311,7 +301,7 @@
             }
         }
 
-        // --- CAMERA LOGIC WITH ZOOM & FOCUS ---
+        // --- CAMERA LOGIC UPDATED ---
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
             try {
@@ -325,16 +315,15 @@
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
                 document.getElementById('camControls').classList.remove('hidden');
+                
+                // MUNCULKAN BINGKAI SCANNER
+                document.getElementById('scannerOverlay').style.display = 'block';
 
                 document.getElementById('brSlider').value = 100;
                 document.getElementById('ctSlider').value = 100;
                 updateVisualFilters();
-                
                 startAutoScan();
-
-            } catch (err) {
-                alert("Izin kamera ditolak.");
-            }
+            } catch (err) { alert("Izin kamera ditolak."); }
         }
 
         function stopCamera() {
@@ -346,6 +335,9 @@
                 document.getElementById('btnStartCam').classList.remove('hidden');
                 document.getElementById('btnStopCam').classList.add('hidden');
                 document.getElementById('camControls').classList.add('hidden');
+                
+                // SEMBUNYIKAN BINGKAI SCANNER
+                document.getElementById('scannerOverlay').style.display = 'none';
                 
                 clearInterval(autoScanInterval);
                 autoScanInterval = null;
@@ -359,12 +351,9 @@
                 const max = capabilities.zoom.max || 1;
                 let val = Math.min(level, max);
                 videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
-                
                 document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
                 document.getElementById('z'+level).classList.add('active');
-            } else {
-                alert("Zoom tidak didukung di perangkat ini.");
-            }
+            } else { alert("Zoom tidak didukung."); }
         }
 
         function setFocusMode(mode) {
@@ -390,7 +379,6 @@
             }
         }
 
-        // --- AUTO SCAN LOGIC ---
         async function startAutoScan() {
             if (autoScanInterval) return;
             autoScanInterval = setInterval(async () => {
@@ -398,8 +386,7 @@
                 isScanning = true;
                 const video = document.getElementById('scannerVideo');
                 const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.filter = video.style.filter;
                 ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -417,7 +404,7 @@
                             renderAddressTable(phoneMatches);
                         }
                     }
-                } catch (err) { console.error("AutoScan Error:", err); } finally { isScanning = false; }
+                } catch (err) {} finally { isScanning = false; }
             }, 2000);
         }
 
@@ -431,15 +418,7 @@
                 let cleanNum = num;
                 if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
                 else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
-                tableBody.innerHTML += `
-                    <tr>
-                        <td class="p-3 text-center text-blue-900 text-sm font-black">${num}</td>
-                        <td class="p-3 text-center">
-                            <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md">
-                                <i class="fab fa-whatsapp"></i>
-                            </button>
-                        </td>
-                    </tr>`;
+                tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${num}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button></td></tr>`;
             });
             resultArea.classList.remove('hidden');
         }
@@ -447,86 +426,52 @@
         async function captureAndScan() {
             const video = document.getElementById('scannerVideo');
             if (!video.srcObject) return alert("Buka kamera dulu!");
-
             const loading = document.getElementById('ocrLoading');
             const tableBody = document.getElementById('addressTableBody');
             const directInput = document.getElementById('waDirectNumber');
             const tableArea = document.getElementById('scanResultArea');
-
             loading.classList.remove('hidden');
             directInput.value = "Processing...";
-
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
-            
             if(bwMode === 'auto') {
                 ctx.drawImage(video, 0, 0);
                 const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                 let brightness = 0;
-                for (let i = 0; i < rawData.length; i += 4) {
-                    brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
-                }
+                for (let i = 0; i < rawData.length; i += 4) brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
                 const avgBrightness = brightness / (canvas.width * canvas.height);
-                let finalContrast = 400;   
-                let finalBrightness = 110; 
+                let finalContrast = 400; let finalBrightness = 110; 
                 if (avgBrightness > 160) { finalBrightness = 65; finalContrast = 700; }
                 ctx.filter = `grayscale(100%) contrast(${finalContrast}%) brightness(${finalBrightness}%)`;
             } else if(bwMode === 'manual') {
                 const br = document.getElementById('brSlider').value;
                 const ct = document.getElementById('ctSlider').value;
                 ctx.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            } else {
-                ctx.filter = 'none';
-            }
-
+            } else ctx.filter = 'none';
             ctx.drawImage(video, 0, 0);
             const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
-
             try {
-                const result = await Tesseract.recognize(dataUrl, 'eng', {
-                    tessedit_char_whitelist: '0123456789()- ',
-                    tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT 
-                });
-
+                const result = await Tesseract.recognize(dataUrl, 'eng', { tessedit_char_whitelist: '0123456789()- ', tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
                 const rawText = result.data.text;
                 const phoneRegex = /(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g;
                 const matches = rawText.match(phoneRegex);
-
                 tableBody.innerHTML = "";
-                
                 if (matches && matches.length > 0) {
                     const uniqueMatches = [...new Set(matches)];
                     uniqueMatches.forEach((match, idx) => {
                         let cleanNum = match.replace(/\D/g, ''); 
                         if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
                         else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
-
                         if(idx === 0) directInput.value = cleanNum;
-
-                        tableBody.innerHTML += `
-                            <tr>
-                                <td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td>
-                                <td class="p-3 text-center">
-                                    <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button>
-                                </td>
-                            </tr>`;
+                        tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button></td></tr>`;
                     });
                     tableArea.classList.remove('hidden');
                     if (navigator.vibrate) navigator.vibrate(100);
-                } else {
-                    alert("Gagal membaca. Gunakan Zoom atau Manual BW Mode!");
-                    directInput.value = "";
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                loading.classList.add('hidden');
-            }
+                } else { alert("Gagal membaca."); directInput.value = ""; }
+            } catch (err) {} finally { loading.classList.add('hidden'); }
         }
 
-        // --- CORE FUNCTIONS ---
         function openWaLinkCustom(num) {
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -544,8 +489,7 @@
         function updatePresence() {
             if(!currentUser) return;
             const ref = db.ref('presence/' + currentUser);
-            ref.set(true);
-            ref.onDisconnect().remove();
+            ref.set(true); ref.onDisconnect().remove();
             db.ref('presence').on('value', s => {
                 const el = document.getElementById('onlineBar');
                 el.innerHTML = "";
@@ -568,71 +512,24 @@
         }
 
         function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
-
-        function startDataListeners() {
-            db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-        }
+        function startDataListeners() { db.ref('customers').on('value', s => { allData = s.val() || {}; render(); }); }
 
         function render() {
             const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
             let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
-
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
                 const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                 const match = searchStr.includes(filter);
                 if(i.status !== 'done') activeCount++;
-                
                 let formattedPhone = (i.phone || "").replace(/\D/g, '');
                 if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
-
-                const cardHtml = `
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
-                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                ${i.status !== 'done' ? `
-                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                    <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
-                                    <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
-                                ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
-                            </div>
-                        </div>
-                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.maps ? `<div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p></div>` : ''}
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}
-                        </div>
-                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
-                            <a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
-                        </div>
-                    </div>`;
-
-                if(i.status === 'done') { hist.innerHTML += cardHtml; } 
-                else { 
-                    if(match) {
-                        list.innerHTML += cardHtml;
-                        if(i.maps) {
-                            setTimeout(() => {
-                                const el = document.getElementById(`qrcode-${id}`);
-                                if(el && el.innerHTML === "") {
-                                    new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H });
-                                }
-                            }, 50);
-                        }
-                    }
-                }
+                const cardHtml = `<div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}"><div class="flex justify-between items-start"><div class="flex-1"><p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p><h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3><div class="flex items-center gap-2 mt-1"><p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}</div></div><div class="flex gap-2">${i.status !== 'done' ? `<button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button><button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button><button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button><button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}</div></div><div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">${i.maps ? `<div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p></div>` : ''}${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}</div><div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}"><a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a><a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a></div></div>`;
+                if(i.status === 'done') hist.innerHTML += cardHtml; 
+                else if(match) { list.innerHTML += cardHtml; if(i.maps) setTimeout(() => { const el = document.getElementById(`qrcode-${id}`); if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H }); }, 50); }
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
@@ -658,7 +555,7 @@
 
         function secureDelete(id) {
             const p = prompt("PIN KONFIRMASI:");
-            if(p === userPins[currentUser]) { db.ref('customers/' + id).remove(); } else if(p !== null) { alert("PIN SALAH!"); }
+            if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); else if(p !== null) alert("PIN SALAH!");
         }
 
         function processImage(input) {
