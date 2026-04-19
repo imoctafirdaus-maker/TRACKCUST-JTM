@@ -301,23 +301,53 @@
             }
         }
 
+        // --- LOGGING ACTIVITY ---
+        function logDriverActivity() {
+            if (!currentUser) return;
+            db.ref('activities/' + currentUser).set({
+                driverName: currentUser,
+                timestamp: Date.now()
+            });
+        }
+
         // --- NAVBAR OTW STATUS ---
         function updateTopOTWStatus() {
             const area = document.getElementById('otwStatusArea');
+            if (!area) return;
+
             const now = Date.now();
-            let activeOTW = [];
+            const limit = 15 * 60 * 1000; 
+            let activeDrivers = new Set();
+
+            // 1. Ambil dari data Antaran (Tombol Motor / OTW)
             Object.keys(allData).forEach(id => {
                 const item = allData[id];
-                if(item.status === 'otw' && item.startTime && (now - item.startTime < 900000)) {
-                    if(!activeOTW.includes(item.driverBy)) activeOTW.push(item.driverBy);
+                if (item.status === 'otw' && item.startTime && (now - item.startTime < limit)) {
+                    activeDrivers.add(item.driverBy);
                 }
             });
-            if(activeOTW.length > 0) {
-                const text = activeOTW.map(name => `[${name} SEDANG MENGANTAR]`).join(" ");
-                area.innerHTML = `<span class="otw-text">${text}</span>`;
-            } else {
-                area.innerHTML = "";
-            }
+
+            // 2. Ambil dari data Aktivitas (Hasil Scan/Input Manual)
+            db.ref('activities').once('value', snapshot => {
+                const activities = snapshot.val() || {};
+                Object.keys(activities).forEach(driver => {
+                    const act = activities[driver];
+                    if (now - act.timestamp < limit) {
+                        activeDrivers.add(act.driverName);
+                    } else {
+                        db.ref('activities/' + driver).remove();
+                    }
+                });
+
+                if (activeDrivers.size > 0) {
+                    const text = Array.from(activeDrivers)
+                        .map(name => `[${name.toUpperCase()} SEDANG MENGANTAR]`)
+                        .join(" ");
+                    area.innerHTML = `<span class="otw-text">${text}</span>`;
+                } else {
+                    area.innerHTML = "";
+                }
+            });
         }
 
         // --- CAMERA & SCANNER FUNCTIONS ---
@@ -507,6 +537,7 @@
         }
 
         function openWaLinkCustom(num) {
+            logDriverActivity(); 
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
@@ -514,6 +545,7 @@
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
             if(!num || num === "Membaca...") return alert("Nomor Kosong!");
+            logDriverActivity();
             let waNum = num.replace(/\D/g, '');
             if(waNum.startsWith('0')) waNum = '62' + waNum.slice(1);
             else if(waNum.startsWith('8')) waNum = '62' + waNum;
