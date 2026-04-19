@@ -38,13 +38,11 @@
         /* Scanner Styles */
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
-        /* Diperbarui: Default tersembunyi */
         .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
         .scanner-box { width: 100%; height: 100%; border: 2px solid #e31837; position: relative; }
         .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
         @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
 
-        /* Zoom & Focus & Visual Controls Styles */
         .cam-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #e2e8f0; }
         .control-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .btn-zoom { flex: 1; padding: 6px; background: white; border: 2px solid #006491; color: #006491; border-radius: 8px; font-size: 10px; font-weight: 900; }
@@ -238,7 +236,6 @@
     </div>
 
     <script>
-        // Database & Login
         const userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
@@ -255,7 +252,6 @@
         let stream = null;
         let videoTrack = null;
         let bwMode = 'off'; 
-        
         let isScanning = false; 
         let autoScanInterval = null;
 
@@ -272,10 +268,7 @@
             if (confirm("Apakah yakin anda ingin menghapus SEMUA data history yang sudah selesai?")) {
                 const doneItems = Object.keys(allData).filter(id => allData[id].status === 'done');
                 if (doneItems.length === 0) return alert("Tidak ada data history untuk dihapus.");
-                
-                doneItems.forEach(id => {
-                    db.ref('customers/' + id).remove();
-                });
+                doneItems.forEach(id => { db.ref('customers/' + id).remove(); });
                 alert("History berhasil dikosongkan.");
             }
         }
@@ -284,29 +277,22 @@
             bwMode = mode;
             document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
             document.getElementById('bw-' + mode).classList.add('active');
-            
             const manualBox = document.getElementById('manualBWControls');
-            if(mode === 'manual') {
-                manualBox.classList.remove('hidden');
-            } else {
-                manualBox.classList.add('hidden');
-            }
+            if(mode === 'manual') manualBox.classList.remove('hidden');
+            else manualBox.classList.add('hidden');
             updateVisualFilters();
         }
 
         function updateVisualFilters() {
             const video = document.getElementById('scannerVideo');
             if(!video) return;
-
             if(bwMode === 'manual') {
                 const br = document.getElementById('brSlider').value;
                 const ct = document.getElementById('ctSlider').value;
                 video.style.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
             } else if(bwMode === 'auto') {
                 video.style.filter = `grayscale(100%) contrast(150%)`;
-            } else {
-                video.style.filter = `none`;
-            }
+            } else { video.style.filter = `none`; }
         }
 
         async function startCamera() {
@@ -319,23 +305,15 @@
                 });
                 video.srcObject = stream;
                 videoTrack = stream.getVideoTracks()[0];
-
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
                 document.getElementById('camControls').classList.remove('hidden');
-                
-                // TAMPILKAN OVERLAY SAAT KAMERA AKTIF
                 overlay.style.display = 'block';
-
                 document.getElementById('brSlider').value = 100;
                 document.getElementById('ctSlider').value = 100;
                 updateVisualFilters();
-                
                 startAutoScan();
-
-            } catch (err) {
-                alert("Izin kamera ditolak.");
-            }
+            } catch (err) { alert("Izin kamera ditolak."); }
         }
 
         function stopCamera() {
@@ -348,10 +326,7 @@
                 document.getElementById('btnStartCam').classList.remove('hidden');
                 document.getElementById('btnStopCam').classList.add('hidden');
                 document.getElementById('camControls').classList.add('hidden');
-                
-                // SEMBUNYIKAN OVERLAY SAAT KAMERA MATI
                 if(overlay) overlay.style.display = 'none';
-                
                 clearInterval(autoScanInterval);
                 autoScanInterval = null;
             }
@@ -364,12 +339,9 @@
                 const max = capabilities.zoom.max || 1;
                 let val = Math.min(level, max);
                 videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
-                
                 document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
                 document.getElementById('z'+level).classList.add('active');
-            } else {
-                alert("Zoom tidak didukung di perangkat ini.");
-            }
+            } else { alert("Zoom tidak didukung di perangkat ini."); }
         }
 
         function setFocusMode(mode) {
@@ -414,6 +386,24 @@
                     const phoneMatches = text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
                     if (phoneMatches && phoneMatches.length > 0) {
                         let cleanNumber = phoneMatches[0].replace(/\D/g, '');
+
+                        // LOGIKA AUTO-REDIRECT CEK DATA AKTIF
+                        const searchNum = cleanNumber.startsWith('0') ? cleanNumber.slice(1) : (cleanNumber.startsWith('62') ? cleanNumber.slice(2) : cleanNumber);
+                        const activeId = Object.keys(allData).find(id => {
+                            const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
+                            return allData[id].status !== 'done' && cleanDataNum.includes(searchNum);
+                        });
+
+                        if (activeId) {
+                            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                            document.getElementById('searchInput').value = allData[activeId].phone;
+                            render();
+                            showPage('list');
+                            stopCamera();
+                            isScanning = false;
+                            return;
+                        }
+
                         if (cleanNumber.length >= 10 && document.getElementById('waDirectNumber').value !== cleanNumber) {
                             document.getElementById('waDirectNumber').value = cleanNumber;
                             document.querySelector('.scanner-box').style.borderColor = '#22c55e';
@@ -451,83 +441,51 @@
         async function captureAndScan() {
             const video = document.getElementById('scannerVideo');
             if (!video.srcObject) return alert("Buka kamera dulu!");
-
             const loading = document.getElementById('ocrLoading');
             const tableBody = document.getElementById('addressTableBody');
             const directInput = document.getElementById('waDirectNumber');
             const tableArea = document.getElementById('scanResultArea');
-
             loading.classList.remove('hidden');
             directInput.value = "Processing...";
-
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
-            
             if(bwMode === 'auto') {
                 ctx.drawImage(video, 0, 0);
                 const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
                 let brightness = 0;
-                for (let i = 0; i < rawData.length; i += 4) {
-                    brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
-                }
+                for (let i = 0; i < rawData.length; i += 4) brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
                 const avgBrightness = brightness / (canvas.width * canvas.height);
-                let finalContrast = 400;   
-                let finalBrightness = 110; 
+                let finalContrast = 400; let finalBrightness = 110; 
                 if (avgBrightness > 160) { finalBrightness = 65; finalContrast = 700; }
                 ctx.filter = `grayscale(100%) contrast(${finalContrast}%) brightness(${finalBrightness}%)`;
             } else if(bwMode === 'manual') {
                 const br = document.getElementById('brSlider').value;
                 const ct = document.getElementById('ctSlider').value;
                 ctx.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            } else {
-                ctx.filter = 'none';
-            }
-
+            } else ctx.filter = 'none';
             ctx.drawImage(video, 0, 0);
             const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
-
             try {
-                const result = await Tesseract.recognize(dataUrl, 'eng', {
-                    tessedit_char_whitelist: '0123456789()- ',
-                    tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT 
-                });
-
+                const result = await Tesseract.recognize(dataUrl, 'eng', { tessedit_char_whitelist: '0123456789()- ', tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
                 const rawText = result.data.text;
                 const phoneRegex = /(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g;
                 const matches = rawText.match(phoneRegex);
-
                 tableBody.innerHTML = "";
-                
                 if (matches && matches.length > 0) {
                     const uniqueMatches = [...new Set(matches)];
                     uniqueMatches.forEach((match, idx) => {
                         let cleanNum = match.replace(/\D/g, ''); 
                         if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
                         else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
-
                         if(idx === 0) directInput.value = cleanNum;
-
-                        tableBody.innerHTML += `
-                            <tr>
-                                <td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td>
-                                <td class="p-3 text-center">
-                                    <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button>
-                                </td>
-                            </tr>`;
+                        tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button></td></tr>`;
                     });
                     tableArea.classList.remove('hidden');
                     if (navigator.vibrate) navigator.vibrate(100);
-                } else {
-                    alert("Gagal membaca. Gunakan Zoom atau Manual BW Mode!");
-                    directInput.value = "";
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                loading.classList.add('hidden');
-            }
+                } else { alert("Gagal membaca. Gunakan Zoom atau Manual BW Mode!"); directInput.value = ""; }
+            } catch (err) { console.error(err); } finally { loading.classList.add('hidden'); }
         }
 
         function openWaLinkCustom(num) {
@@ -539,16 +497,32 @@
             let num = document.getElementById('waDirectNumber').value;
             if(!num || num === "Processing...") return alert("Nomor Kosong!");
             let waNum = num.replace(/\D/g, '');
-            if(waNum.startsWith('0')) waNum = '62' + waNum.slice(1);
-            if(waNum.startsWith('8')) waNum = '62' + waNum;
-            openWaLinkCustom(waNum);
+
+            // LOGIKA AUTO-REDIRECT KE ANTARAN AKTIF
+            const searchNum = waNum.startsWith('0') ? waNum.slice(1) : (waNum.startsWith('62') ? waNum.slice(2) : waNum);
+            const activeId = Object.keys(allData).find(id => {
+                const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
+                return allData[id].status !== 'done' && cleanDataNum.includes(searchNum);
+            });
+
+            if (activeId) {
+                document.getElementById('searchInput').value = allData[activeId].phone;
+                render();
+                showPage('list');
+                stopCamera();
+                return;
+            }
+
+            let waLinkNum = waNum;
+            if(waLinkNum.startsWith('0')) waLinkNum = '62' + waLinkNum.slice(1);
+            if(waLinkNum.startsWith('8')) waLinkNum = '62' + waLinkNum;
+            openWaLinkCustom(waLinkNum);
         }
 
         function updatePresence() {
             if(!currentUser) return;
             const ref = db.ref('presence/' + currentUser);
-            ref.set(true);
-            ref.onDisconnect().remove();
+            ref.set(true); ref.onDisconnect().remove();
             db.ref('presence').on('value', s => {
                 const el = document.getElementById('onlineBar');
                 el.innerHTML = "";
@@ -572,26 +546,21 @@
 
         function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
 
-        function startDataListeners() {
-            db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-        }
+        function startDataListeners() { db.ref('customers').on('value', s => { allData = s.val() || {}; render(); }); }
 
         function render() {
             const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
             let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
-
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
                 const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                 const match = searchStr.includes(filter);
                 if(i.status !== 'done') activeCount++;
-                
                 let formattedPhone = (i.phone || "").replace(/\D/g, '');
                 if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
-
                 const cardHtml = `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                         <div class="flex justify-between items-start">
@@ -621,20 +590,10 @@
                             <a href="${waLink}" target="_blank" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
                         </div>
                     </div>`;
-
-                if(i.status === 'done') { hist.innerHTML += cardHtml; } 
-                else { 
-                    if(match) {
-                        list.innerHTML += cardHtml;
-                        if(i.maps) {
-                            setTimeout(() => {
-                                const el = document.getElementById(`qrcode-${id}`);
-                                if(el && el.innerHTML === "") {
-                                    new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H });
-                                }
-                            }, 50);
-                        }
-                    }
+                if(i.status === 'done') hist.innerHTML += cardHtml; 
+                else if(match) {
+                    list.innerHTML += cardHtml;
+                    if(i.maps) setTimeout(() => { const el = document.getElementById(`qrcode-${id}`); if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H }); }, 50);
                 }
             });
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
@@ -659,10 +618,7 @@
             document.getElementById('imgModal').style.display = 'flex'; 
         }
 
-        function secureDelete(id) {
-            const p = prompt("PIN KONFIRMASI:");
-            if(p === userPins[currentUser]) { db.ref('customers/' + id).remove(); } else if(p !== null) { alert("PIN SALAH!"); }
-        }
+        function secureDelete(id) { const p = prompt("PIN KONFIRMASI:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); else if(p !== null) alert("PIN SALAH!"); }
 
         function processImage(input) {
             if (input.files && input.files[0]) {
@@ -687,12 +643,7 @@
             }
         }
 
-        function removePhoto() {
-            photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('btnRemovePhoto').classList.add('hidden');
-            document.getElementById('photoStatus').innerText = "Foto Rumah";
-            document.getElementById('housePhoto').value = "";
-        }
+        function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; document.getElementById('housePhoto').value = ""; }
 
         function saveData() {
             const area = document.getElementById('custArea').value;
@@ -735,11 +686,7 @@
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
-            
-            // Saat pindah halaman, pastikan kamera mati & overlay hilang
-            if(id !== 'chat') {
-                stopCamera();
-            }
+            if(id !== 'chat') stopCamera();
         }
 
         function updateTimers() {
