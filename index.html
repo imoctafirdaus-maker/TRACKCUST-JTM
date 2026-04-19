@@ -43,6 +43,12 @@
         .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
         @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
 
+        /* Zoom & Focus Controls Styles */
+        .cam-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #e2e8f0; }
+        .control-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .btn-zoom { flex: 1; padding: 6px; background: white; border: 2px solid #006491; color: #006491; border-radius: 8px; font-size: 10px; font-weight: 900; }
+        .btn-zoom.active { background: #006491; color: white; }
+
         .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -133,12 +139,32 @@
                         </div>
                     </div>
 
+                    <div id="camControls" class="hidden cam-controls">
+                        <div class="control-group">
+                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Zoom:</span>
+                            <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
+                            <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
+                            <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
+                        </div>
+                        <div class="control-group">
+                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Fokus:</span>
+                            <select onchange="setFocusMode(this.value)" class="flex-1 p-1 rounded-lg text-[9px] font-bold border-2 border-blue-900 outline-none">
+                                <option value="continuous">Otomatis</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                        <div id="manualFocusCont" class="hidden flex flex-col gap-1">
+                            <input type="range" id="focusSlider" min="0" max="100" value="50" oninput="setManualFocus(this.value)" class="w-full accent-red-600">
+                            <span class="text-[7px] font-black text-gray-400 uppercase tracking-tighter text-center">Geser Slider untuk Fokus Manual</span>
+                        </div>
+                    </div>
+
                     <div class="flex gap-2 mb-3">
                         <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
                             <i class="fa fa-video mr-1"></i> Buka Kamera
                         </button>
                         <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-video-slash mr-1"></i> Tutup Kamera
+                            <i class="fa fa-video-slash mr-1"></i> Tutup
                         </button>
                         <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
                             <i class="fa fa-expand mr-1"></i> Scan Nomor
@@ -195,6 +221,7 @@
         let currentUser = localStorage.getItem('jtm_user') || "";
         let allData = {}; let photoBase64 = "";
         let stream = null;
+        let videoTrack = null;
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -205,7 +232,7 @@
             updatePresence();
         };
 
-        // --- SCANNER LOGIC ---
+        // --- CAMERA LOGIC WITH ZOOM & FOCUS ---
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
             try {
@@ -214,8 +241,18 @@
                     video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
                 });
                 video.srcObject = stream;
+                videoTrack = stream.getVideoTracks()[0];
+
                 document.getElementById('btnStartCam').classList.add('hidden');
                 document.getElementById('btnStopCam').classList.remove('hidden');
+                document.getElementById('camControls').classList.remove('hidden');
+
+                // Check capabilities after stream starts
+                setTimeout(() => {
+                    const caps = videoTrack.getCapabilities();
+                    console.log("Camera Caps:", caps);
+                }, 500);
+
             } catch (err) {
                 alert("Izin kamera ditolak.");
             }
@@ -225,9 +262,49 @@
             if (stream) {
                 stream.getTracks().forEach(t => t.stop());
                 stream = null;
+                videoTrack = null;
                 document.getElementById('scannerVideo').srcObject = null;
                 document.getElementById('btnStartCam').classList.remove('hidden');
                 document.getElementById('btnStopCam').classList.add('hidden');
+                document.getElementById('camControls').classList.add('hidden');
+            }
+        }
+
+        function setZoom(level) {
+            if (!videoTrack) return;
+            const capabilities = videoTrack.getCapabilities();
+            if (capabilities.zoom) {
+                const max = capabilities.zoom.max || 1;
+                let val = Math.min(level, max);
+                videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
+                
+                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
+                document.getElementById('z'+level).classList.add('active');
+            } else {
+                alert("Zoom tidak didukung di perangkat ini.");
+            }
+        }
+
+        function setFocusMode(mode) {
+            if (!videoTrack) return;
+            const manualCont = document.getElementById('manualFocusCont');
+            if (mode === 'manual') {
+                manualCont.classList.remove('hidden');
+                videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 50 }] });
+            } else {
+                manualCont.classList.add('hidden');
+                videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+            }
+        }
+
+        function setManualFocus(val) {
+            if (!videoTrack) return;
+            const capabilities = videoTrack.getCapabilities();
+            if (capabilities.focusDistance) {
+                const min = capabilities.focusDistance.min || 0;
+                const max = capabilities.focusDistance.max || 100;
+                const distance = min + (val / 100) * (max - min);
+                videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: distance }] });
             }
         }
 
@@ -302,7 +379,7 @@
                     tableArea.classList.remove('hidden');
                     if (navigator.vibrate) navigator.vibrate(100);
                 } else {
-                    alert("Gagal membaca otomatis. Silakan input nomor secara manual.");
+                    alert("Gagal membaca. Gunakan Zoom atau Manual Fokus untuk hasil lebih jelas!");
                     directInput.value = "";
                 }
             } catch (err) {
@@ -312,7 +389,7 @@
             }
         }
 
-        // --- CORE FUNCTIONS ---
+        // --- CORE FUNCTIONS (SAME AS BEFORE) ---
         function openWaLinkCustom(num) {
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
