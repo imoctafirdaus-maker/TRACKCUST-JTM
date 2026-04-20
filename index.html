@@ -35,7 +35,6 @@
         
         #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
-        /* Scanner Styles */
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
         .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
@@ -56,7 +55,6 @@
         .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
         .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
 
-        /* Style Baru Untuk Delivery Status */
         #deliveryStatusBar {
             max-height: 60px;
             overflow-y: auto;
@@ -276,10 +274,9 @@
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
             updatePresence();
-            startDeliveryStatusListener(); // Jalankan listener status delivery
+            startDeliveryStatusListener();
         };
 
-        // Fungsi Baru: Memperbarui Status Mengantar ke Firebase
         function pushDeliveryStatus(nama) {
             const now = Date.now();
             db.ref('delivery_activity/' + nama).set({
@@ -288,7 +285,6 @@
             });
         }
 
-        // Fungsi Baru: Mendengarkan Perubahan Status Mengantar
         function startDeliveryStatusListener() {
             db.ref('delivery_activity').on('value', s => {
                 const bar = document.getElementById('deliveryStatusBar');
@@ -298,7 +294,6 @@
 
                 s.forEach(child => {
                     const data = child.val();
-                    // Jika data sudah lebih dari 15 menit (900.000 ms), hapus dari database
                     if (now - data.timestamp > 900000) {
                         db.ref('delivery_activity/' + child.key).remove();
                     } else {
@@ -437,14 +432,11 @@
                     const phoneMatches = text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
                     if (phoneMatches && phoneMatches.length > 0) {
                         let cleanNumber = phoneMatches[0].replace(/\D/g, '');
-
-                        // LOGIKA AUTO-REDIRECT CEK DATA AKTIF
                         const searchNum = cleanNumber.startsWith('0') ? cleanNumber.slice(1) : (cleanNumber.startsWith('62') ? cleanNumber.slice(2) : cleanNumber);
                         const activeId = Object.keys(allData).find(id => {
                             const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
                             return allData[id].status !== 'done' && cleanDataNum.includes(searchNum);
                         });
-
                         if (activeId) {
                             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
                             document.getElementById('searchInput').value = allData[activeId].phone;
@@ -454,7 +446,6 @@
                             isScanning = false;
                             return;
                         }
-
                         if (cleanNumber.length >= 10 && document.getElementById('waDirectNumber').value !== cleanNumber) {
                             document.getElementById('waDirectNumber').value = cleanNumber;
                             document.querySelector('.scanner-box').style.borderColor = '#22c55e';
@@ -540,7 +531,7 @@
         }
 
         function openWaLinkCustom(num) {
-            pushDeliveryStatus(currentUser); // Trigger status "Sedang Mengantar"
+            pushDeliveryStatus(currentUser);
             const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
             window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
@@ -549,14 +540,11 @@
             let num = document.getElementById('waDirectNumber').value;
             if(!num || num === "Processing...") return alert("Nomor Kosong!");
             let waNum = num.replace(/\D/g, '');
-
-            // LOGIKA AUTO-REDIRECT KE ANTARAN AKTIF
             const searchNum = waNum.startsWith('0') ? waNum.slice(1) : (waNum.startsWith('62') ? waNum.slice(2) : waNum);
             const activeId = Object.keys(allData).find(id => {
                 const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
                 return allData[id].status !== 'done' && cleanDataNum.includes(searchNum);
             });
-
             if (activeId) {
                 document.getElementById('searchInput').value = allData[activeId].phone;
                 render();
@@ -564,7 +552,6 @@
                 stopCamera();
                 return;
             }
-
             let waLinkNum = waNum;
             if(waLinkNum.startsWith('0')) waLinkNum = '62' + waLinkNum.slice(1);
             if(waLinkNum.startsWith('8')) waLinkNum = '62' + waLinkNum;
@@ -613,6 +600,7 @@
                 if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
+                
                 const cardHtml = `
                     <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                         <div class="flex justify-between items-start">
@@ -628,8 +616,6 @@
                                 ${i.status !== 'done' ? `
                                     <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
                                     <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
-                                    <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
                                 ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
                             </div>
                         </div>
@@ -642,6 +628,7 @@
                             <a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
                         </div>
                     </div>`;
+
                 if(i.status === 'done') hist.innerHTML += cardHtml; 
                 else if(match) {
                     list.innerHTML += cardHtml;
@@ -733,7 +720,7 @@
         function goOTW(id) { 
             if(allData[id].status !== 'otw') {
                 db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser });
-                pushDeliveryStatus(currentUser); // Trigger status ke bar atas
+                pushDeliveryStatus(currentUser);
             }
         }
         function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
