@@ -219,7 +219,7 @@
                         <div class="loader-ocr"></div> Meredam Silau & Membaca...
                     </div>
 
-                    <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
+                    <input type="tel" id="waDirectNumber" oninput="checkManualInputActive(this.value)" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">
                         Chat Pelanggan
@@ -415,6 +415,28 @@
             }
         }
 
+        // FUNGSI CEK MANUAL INPUT APAKAH ADA DI DAFTAR AKTIF
+        function checkManualInputActive(val) {
+            if (!val || val.length < 9) return;
+            let cleanInput = val.replace(/\D/g, '');
+            // Ambil 9 digit terakhir untuk kecocokan universal (08/62/...)
+            let searchTail = cleanInput.length > 9 ? cleanInput.slice(-9) : cleanInput;
+
+            const activeId = Object.keys(allData).find(id => {
+                const existingPhone = (allData[id].phone || "").replace(/\D/g, '');
+                return allData[id].status !== 'done' && existingPhone.includes(searchTail);
+            });
+
+            if (activeId) {
+                if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                document.getElementById('searchInput').value = allData[activeId].phone;
+                document.getElementById('waDirectNumber').value = ""; // Bersihkan input manual
+                render();
+                showPage('list');
+                stopCamera();
+            }
+        }
+
         async function startAutoScan() {
             if (autoScanInterval) return;
             autoScanInterval = setInterval(async () => {
@@ -524,6 +546,23 @@
                     const uniqueMatches = [...new Set(matches)];
                     uniqueMatches.forEach((match, idx) => {
                         let cleanNum = match.replace(/\D/g, ''); 
+                        
+                        // CEK APAKAH HASIL CAPTURE ADA DI LIST AKTIF
+                        const searchTail = cleanNum.length > 9 ? cleanNum.slice(-9) : cleanNum;
+                        const activeId = Object.keys(allData).find(id => {
+                            const existingPhone = (allData[id].phone || "").replace(/\D/g, '');
+                            return allData[id].status !== 'done' && existingPhone.includes(searchTail);
+                        });
+
+                        if (activeId) {
+                            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                            document.getElementById('searchInput').value = allData[activeId].phone;
+                            render();
+                            showPage('list');
+                            stopCamera();
+                            return;
+                        }
+
                         if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
                         else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
                         if(idx === 0) directInput.value = cleanNum;
@@ -692,7 +731,6 @@
 
         function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; document.getElementById('housePhoto').value = ""; }
 
-        // FUNGSI SIMPAN DENGAN PERINGATAN DATA GANDA
         function saveData() {
             const area = document.getElementById('custArea').value;
             const name = document.getElementById('custName').value;
@@ -701,21 +739,19 @@
             
             if(!area || !name) return alert("Isi Area & Nama!");
 
-            // Logika Cek Duplikat Nomor di Antaran Aktif
             if (phone) {
                 const cleanInputPhone = phone.replace(/\D/g, '');
-                // Ambil 9 digit terakhir untuk pencocokan lebih akurat (menghindari beda 08/62)
                 const checkNum = cleanInputPhone.length > 9 ? cleanInputPhone.slice(-9) : cleanInputPhone;
 
                 const isDuplicate = Object.keys(allData).some(id => {
-                    if (id === editId) return false; // Abaikan jika sedang edit data yang sama
+                    if (id === editId) return false;
                     const existingPhone = (allData[id].phone || "").replace(/\D/g, '');
                     return allData[id].status !== 'done' && existingPhone.includes(checkNum);
                 });
 
                 if (isDuplicate) {
                     const confirmSave = confirm("PERINGATAN: Nomor telepon ini sudah terdaftar dalam antaran AKTIF. Apakah Anda yakin ingin menambahkannya lagi?");
-                    if (!confirmSave) return; // Batalkan proses simpan
+                    if (!confirmSave) return;
                 }
             }
 
