@@ -3,86 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrackCust JTM - Official</title>
+    <title>TrackCust JTM - Maps System</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <script src='https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js'></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
         ::-webkit-scrollbar { width: 0; background: transparent; }
-        
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; justify-content: space-around; padding: 10px 0; border-top: 2px solid #f1f5f9; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; font-size: 10px; font-weight: 800; text-transform: uppercase; width: 20%; cursor: pointer; }
         .nav-item.active { color: #006491; }
         .nav-add { background: #006491 !important; color: white !important; width: 50px !important; height: 50px; border-radius: 50%; margin-top: -25px; justify-content: center; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,100,145,0.3); }
-        
         .page { display: none; height: 100%; flex-direction: column; }
         .page.active { display: flex; }
-        
-        #page-chat { background-color: #f0f2f5; }
-        .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
-
-        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        
-        .qr-container { background: white; padding: 8px; border-radius: 12px; border: 2px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; }
-        .qr-container:active { transform: scale(0.95); background: #f8fafc; }
-        
-        #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
-
-        /* Scanner Styles */
-        .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
-        #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
-        .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
-        .scanner-box { width: 100%; height: 100%; border: 2px solid #e31837; position: relative; }
-        .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
-        @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
-
-        .cam-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #e2e8f0; }
-        .control-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .btn-zoom { flex: 1; padding: 6px; background: white; border: 2px solid #006491; color: #006491; border-radius: 8px; font-size: 10px; font-weight: 900; }
-        .btn-zoom.active { background: #006491; color: white; }
-
-        .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .visual-slider { flex: 1; accent-color: #006491; height: 4px; }
-        
-        .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
-        .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
-
-        /* Style Baru Untuk Delivery Status */
-        #deliveryStatusBar {
-            max-height: 100px;
-            overflow-y: auto;
-            border-bottom: 1px solid #e2e8f0;
-            scrollbar-width: none;
-        }
-        .status-item {
-            padding: 6px;
-            border-bottom: 1px dashed rgba(0,100,145,0.1);
-        }
+        #map { height: 100%; width: 100%; z-index: 1; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
 
-    <div id="imgModal" class="fixed inset-0 bg-black/95 z-[10001] hidden flex-col items-center justify-center p-4" onclick="this.style.display='none'">
-        <button class="absolute top-6 right-6 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-2xl"></i></button>
-        <div id="modalContent" class="flex flex-col items-center">
-             <img id="fullImg" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain">
-             <p id="modalCaption" class="text-white mt-4 font-black italic uppercase tracking-widest"></p>
-        </div>
-    </div>
-
     <div id="pinOverlay" class="fixed inset-0 dominos-blue z-[10000] flex flex-col items-center justify-center p-6">
         <div class="text-center mb-8 text-white">
             <h1 class="font-black italic text-4xl uppercase">Domino's</h1>
-            <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Track System</p>
+            <p class="text-red-400 font-bold uppercase tracking-widest text-sm">JTM Maps Tracking</p>
         </div>
         <div class="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
             <select id="selectUser" class="w-full p-4 bg-gray-100 rounded-2xl mb-4 font-bold text-blue-900 outline-none uppercase text-xs"></select>
@@ -94,243 +42,113 @@
     <div id="mainContent" style="display:none;" class="flex flex-col h-full">
         <nav class="dominos-blue p-4 text-white shadow-md flex justify-between items-center">
             <h1 class="font-black italic uppercase text-lg">Domino's <span class="text-red-400">JTM</span></h1>
-            <div class="flex items-center gap-2">
-                <span id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">User</span>
-                <button onclick="location.reload()" class="bg-red-500 w-7 h-7 rounded-full flex items-center justify-center"><i class="fa fa-sync-alt text-[10px]"></i></button>
-            </div>
+            <span id="userDisplay" class="bg-white text-blue-900 px-3 py-1 rounded-full text-[10px] font-black uppercase">User</span>
         </nav>
-        
-        <div id="deliveryStatusBar" class="bg-white px-4 flex flex-col text-[9px] font-black text-blue-900 uppercase italic"></div>
-        
-        <div id="onlineBar" class="bg-blue-900/10 px-4 py-1 flex gap-2 overflow-x-auto text-[8px] font-black text-blue-900 uppercase italic"></div>
 
         <main class="flex-1 overflow-hidden relative">
-            
             <div id="page-list" class="page active p-4 overflow-y-auto">
-                <div class="flex justify-between items-center mb-3">
-                    <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
-                    <div id="countActive" class="bg-red-500 text-white px-3 py-2 rounded-xl text-[10px] font-black italic">0 AKTIF</div>
-                </div>
+                <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Antaran..." class="w-full p-3 mb-4 rounded-xl shadow-sm outline-none font-bold italic text-sm border">
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
-            <div id="page-history" class="page p-4 overflow-y-auto">
-                <div class="flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-2xl border-b-2 border-gray-200">
-                    <h3 class="font-black text-blue-900 uppercase italic text-[11px]">Daftar Selesai</h3>
-                    <button onclick="clearAllHistory()" class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">
-                        <i class="fa fa-trash-alt mr-1"></i> Kosongkan
-                    </button>
-                </div>
-                <div id="historyList" class="space-y-4 pb-32"></div>
+            <div id="page-maps" class="page">
+                <div id="map"></div>
             </div>
 
-            <div id="page-add" class="page p-4 overflow-y-auto">
+            <div id="page-add" class="page p-4">
                 <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-blue-900 space-y-3">
-                    <h2 id="formTitle" class="font-black text-blue-900 text-center uppercase text-xs">Tambah Antaran</h2>
-                    <input type="hidden" id="editId">
-                    <input type="text" id="custArea" placeholder="KODE AREA (A-1)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold uppercase outline-none">
-                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="tel" id="custPhone" placeholder="Nomor HP" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                    
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-dashed border-blue-200 text-center relative">
-                        <label class="cursor-pointer">
-                            <i class="fa fa-camera text-blue-400 text-xl"></i>
-                            <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Foto Rumah</p>
-                            <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processImage(this)">
-                        </label>
-                        <button onclick="removePhoto()" id="btnRemovePhoto" class="hidden absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-[10px]"></i></button>
-                        <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
-                    </div>
-                    <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase text-sm">Simpan</button>
-                    <button onclick="cancelEdit()" id="cancelBtn" class="hidden w-full bg-gray-400 text-white py-3 rounded-xl font-bold uppercase text-[10px]">Batal</button>
-                </div>
-            </div>
-
-            <div id="page-chat" class="page h-full items-center p-4 bg-gray-100 overflow-y-auto">
-                <div class="wa-card mb-20 mx-auto">
-                    <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg">
-                        <i class="fab fa-whatsapp text-white text-2xl"></i>
-                    </div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
-                    
-                    <div class="scanner-container">
-                        <video id="scannerVideo" autoplay playsinline></video>
-                        <div id="scannerOverlay" class="scanner-overlay">
-                            <div class="scanner-box">
-                                <div class="laser"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="camControls" class="hidden cam-controls text-left">
-                        <div class="flex justify-between items-center mb-2 px-1">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Mode BW:</span>
-                            <div class="flex gap-1">
-                                <button onclick="setBWMode('off')" id="bw-off" class="btn-mode active">OFF</button>
-                                <button onclick="setBWMode('auto')" id="bw-auto" class="btn-mode">AUTO</button>
-                                <button onclick="setBWMode('manual')" id="bw-manual" class="btn-mode">MANUAL</button>
-                            </div>
-                        </div>
-
-                        <div id="manualBWControls" class="hidden grid grid-cols-2 gap-2 mb-2 p-2 bg-white rounded-xl border border-gray-100">
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase">Cahaya (BR):</span>
-                                <input type="range" id="brSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase">Kontras (CT):</span>
-                                <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
-                            </div>
-                        </div>
-
-                        <div class="control-group">
-                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Zoom:</span>
-                            <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
-                            <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
-                            <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
-                        </div>
-                        <div class="control-group">
-                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Fokus:</span>
-                            <select onchange="setFocusMode(this.value)" class="flex-1 p-1 rounded-lg text-[9px] font-bold border-2 border-blue-900 outline-none">
-                                <option value="continuous">Otomatis</option>
-                                <option value="manual">Manual</option>
-                            </select>
-                        </div>
-                        <div id="manualFocusCont" class="hidden flex flex-col gap-1">
-                            <input type="range" id="focusSlider" min="0" max="100" value="50" oninput="setManualFocus(this.value)" class="w-full accent-red-600">
-                            <span class="text-[7px] font-black text-gray-400 uppercase tracking-tighter text-center">Geser Slider untuk Fokus Manual</span>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2 mb-3">
-                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-video mr-1"></i> Buka Kamera
-                        </button>
-                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-video-slash mr-1"></i> Tutup
-                        </button>
-                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">
-                            <i class="fa fa-expand mr-1"></i> Scan Nomor
-                        </button>
-                    </div>
-
-                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Meredam Silau & Membaca...
-                    </div>
-
-                    <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
-                    
-                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">
-                        Chat Pelanggan
-                    </button>
-
-                    <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
-                        <table class="w-full text-[10px] bg-white rounded-lg overflow-hidden border">
-                            <thead class="bg-blue-900 text-white uppercase italic">
-                                <tr>
-                                    <th class="p-2">Nomor Terdeteksi</th>
-                                    <th class="p-2">Chat</th>
-                                </tr>
-                            </thead>
-                            <tbody id="addressTableBody" class="font-bold text-gray-700 divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                    <input type="text" id="custArea" placeholder="KODE AREA" class="w-full bg-gray-50 p-4 rounded-xl font-bold uppercase">
+                    <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl font-bold">
+                    <input type="tel" id="custPhone" placeholder="Nomor HP" class="w-full bg-gray-50 p-4 rounded-xl font-bold">
+                    <button onclick="saveData()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase">Simpan Antaran</button>
                 </div>
             </div>
         </main>
 
         <div class="bottom-nav">
             <div onclick="showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-motorcycle mb-1 text-xl"></i><span>Antaran</span></div>
-            <div onclick="showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
+            <div onclick="showPage('maps')" class="nav-item" id="nav-maps"><i class="fa fa-map-marked-alt mb-1 text-xl"></i><span>Peta JTM</span></div>
             <div onclick="showPage('add')" class="nav-item nav-add" id="nav-add"><i class="fa fa-plus text-2xl"></i></div>
-            <div onclick="showPage('chat')" class="nav-item" id="nav-chat"><i class="fab fa-whatsapp mb-1 text-xl"></i><span>WA Direct</span></div>
             <div onclick="handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Out</span></div>
         </div>
     </div>
 
     <script>
-        const userPins = { 
-            "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
-            "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "0972", 
-            "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Gemilang": "0967",
-            "Sadewa": "0976", "Fahran": "0975", "Rafli": "0974", "Rafli ramadhan": "0929"
-        };
-
+        const userPins = { "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971" };
         const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = "";
-        let stream = null;
-        let videoTrack = null;
-        let bwMode = 'off'; 
-        let isScanning = false; 
-        let autoScanInterval = null;
+        let allData = {};
+        let map, markers = {};
+        const jtmLocation = [-6.2848, 106.9284]; // Lokasi Domino's Jatimakmur
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
-            logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
-            setInterval(updateTimers, 1000);
-            updatePresence();
-            startDeliveryStatusListener();
+            initMap();
         };
 
-        // --- FITUR AUTO TRACKING DRIVER 15 MENIT ---
-        function activateDriverTracking(driverName) {
-            if (!navigator.geolocation) return;
-            navigator.geolocation.getCurrentPosition((position) => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                const expiryTime = Date.now() + (15 * 60 * 1000);
-                db.ref('tracking/' + driverName).set({
-                    name: driverName,
-                    lat: lat,
-                    lng: lng,
-                    expiry: expiryTime,
-                    mapsLink: `https://www.google.com/maps?q=${lat},${lng}`
-                });
-            });
-        }
-
-        function startDeliveryStatusListener() {
-            const statusContainer = document.getElementById('deliveryStatusBar');
-            db.ref('tracking').on('value', (snapshot) => {
+        function initMap() {
+            map = L.map('map').setView(jtmLocation, 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            L.marker(jtmLocation).addTo(map).bindPopup("<b>Domino's Jatimakmur</b>").openPopup();
+            
+            // Listener real-time untuk marker driver
+            db.ref('tracking').on('value', snapshot => {
                 const trackers = snapshot.val();
-                statusContainer.innerHTML = "";
-                if (!trackers) return;
                 const now = Date.now();
-                Object.keys(trackers).forEach(key => {
-                    const data = trackers[key];
-                    if (now > data.expiry) {
-                        db.ref('tracking/' + key).remove();
-                    } else {
-                        const sisa = Math.ceil((data.expiry - now) / 60000);
-                        const div = document.createElement('div');
-                        div.className = "status-item flex justify-between items-center bg-blue-50 mb-1 rounded border-l-4 border-blue-900 px-2 py-1";
-                        div.innerHTML = `
-                            <span class="text-[8px]"><i class="fa fa-motorcycle text-red-500"></i> ${data.name} - OTW</span>
-                            <div class="flex gap-2 items-center">
-                                <a href="${data.mapsLink}" target="_blank" class="bg-blue-900 text-white px-2 py-1 rounded-[4px] text-[7px]">PETA</a>
-                                <span class="text-red-600 font-black">${sisa}M</span>
-                            </div>`;
-                        statusContainer.appendChild(div);
-                    }
+                
+                // Hapus marker lama
+                Object.values(markers).forEach(m => map.removeLayer(m));
+                markers = {};
+
+                if (trackers) {
+                    Object.keys(trackers).forEach(name => {
+                        const data = trackers[name];
+                        if (now < data.expiry) {
+                            markers[name] = L.marker([data.lat, data.lng])
+                                .addTo(map)
+                                .bindPopup(`<b>Driver: ${name}</b><br>Sisa: ${Math.ceil((data.expiry - now)/60000)} menit`);
+                        } else {
+                            db.ref('tracking/' + name).remove();
+                        }
+                    });
+                }
+            });
+        }
+
+        function activateTracking() {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(pos => {
+                db.ref('tracking/' + currentUser).set({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    expiry: Date.now() + (15 * 60 * 1000)
                 });
             });
         }
 
-        // --- LOGIKA APLIKASI ASLI ---
+        function openWa(num) {
+            activateTracking();
+            window.open(`https://wa.me/62${num}`, '_blank');
+        }
+
+        function showPage(p) {
+            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(nv => nv.classList.remove('active'));
+            document.getElementById('page-' + p).classList.add('active');
+            document.getElementById('nav-' + p).classList.add('active');
+            if(p === 'maps') { setTimeout(() => map.invalidateSize(), 200); }
+        }
+
         function prosesLogin() {
             const u = document.getElementById('selectUser').value;
             const p = document.getElementById('inputPin').value;
-            if(userPins[u] === p) {
-                localStorage.setItem('jtm_user', u);
-                bukaApp(u);
-            } else { alert("PIN SALAH!"); }
+            if(userPins[u] === p) { localStorage.setItem('jtm_user', u); bukaApp(u); }
+            else { alert("PIN SALAH!"); }
         }
 
         function bukaApp(u) {
@@ -341,258 +159,43 @@
             db.ref('antaran').on('value', s => { allData = s.val() || {}; render(); });
         }
 
-        function handleLogout() {
-            localStorage.removeItem('jtm_user');
-            location.reload();
-        }
-
-        function showPage(p) {
-            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(nv => nv.classList.remove('active'));
-            document.getElementById('page-' + p).classList.add('active');
-            if(document.getElementById('nav-' + p)) document.getElementById('nav-' + p).classList.add('active');
-            if(p !== 'chat') stopCamera();
-        }
-
-        // Fungsi Chat Diperbarui dengan Tracking
-        function openWa(num) {
-            activateDriverTracking(currentUser);
-            window.open(`https://wa.me/62${num}`, '_blank');
-        }
-
-        function openWaDirect() {
-            const num = document.getElementById('waDirectNumber').value;
-            if(!num) return alert("Isi nomor!");
-            activateDriverTracking(currentUser);
-            let clean = num.replace(/\D/g, '');
-            if(clean.startsWith('0')) clean = '62' + clean.slice(1);
-            window.open(`https://wa.me/${clean}`, '_blank');
-        }
-
         function render() {
-            const q = document.getElementById('searchInput').value.toLowerCase();
             const list = document.getElementById('activeList');
-            const hist = document.getElementById('historyList');
-            list.innerHTML = ''; hist.innerHTML = '';
-            let activeCount = 0;
-
-            Object.keys(allData).sort((a,b) => allData[b].timestamp - allData[a].timestamp).forEach(id => {
+            list.innerHTML = '';
+            Object.keys(allData).forEach(id => {
                 const d = allData[id];
-                const match = d.custName.toLowerCase().includes(q) || d.custPhone.includes(q) || d.custArea.toLowerCase().includes(q) || (d.driver && d.driver.toLowerCase().includes(q));
-                if(!match) return;
-
-                const card = `
-                <div class="bg-white rounded-[2rem] p-5 shadow-lg border-l-8 ${d.status === 'selesai' ? 'border-gray-400' : 'border-blue-900'} relative">
-                    <div class="flex justify-between items-start mb-2">
-                        <div>
-                            <span class="bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-[10px] font-black italic uppercase">${d.custArea}</span>
-                            <h3 class="font-black text-blue-900 uppercase mt-2 text-sm">${d.custName}</h3>
-                        </div>
-                        <div class="text-right">
-                             <p class="text-[9px] font-bold text-gray-400">${new Date(d.timestamp).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</p>
-                             ${d.status !== 'selesai' ? `<p class="text-[10px] font-black text-red-600 italic mt-1 timer" data-start="${d.timestamp}">00:00</p>` : ''}
-                        </div>
+                if(d.status === 'selesai') return;
+                list.innerHTML += `
+                <div class="bg-white rounded-2xl p-4 shadow border-l-4 border-blue-900">
+                    <div class="flex justify-between">
+                        <span class="font-black text-blue-900">${d.custArea}</span>
+                        <span class="text-[10px] text-gray-400">${new Date(d.timestamp).toLocaleTimeString()}</span>
                     </div>
-                    <div class="flex gap-2 mt-4">
-                        <button onclick="openWa('${d.custPhone}')" class="flex-1 bg-green-500 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-md"><i class="fab fa-whatsapp mr-1"></i> Chat</button>
-                        ${d.custMaps ? `<button onclick="window.open('${d.custMaps}')" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black text-[10px] uppercase shadow-md"><i class="fa fa-map-marker-alt mr-1"></i> Maps</button>` : ''}
-                        ${d.photo ? `<button onclick="viewImg('${d.photo}', '${d.custName}')" class="w-12 bg-yellow-500 text-white rounded-xl shadow-md"><i class="fa fa-camera"></i></button>` : ''}
-                    </div>
-                    <div class="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
-                        ${d.status !== 'selesai' ? 
-                        `<button onclick="finishOrder('${id}')" class="bg-red-600 text-white px-6 py-2 rounded-full font-black text-[9px] uppercase italic">Selesaikan</button>` : 
-                        `<span class="text-[9px] font-black text-gray-400 italic">SELESAI OLEH: ${d.driver}</span>`}
-                        <div class="flex gap-2">
-                            <button onclick="editData('${id}')" class="text-blue-400"><i class="fa fa-edit"></i></button>
-                            <button onclick="deleteData('${id}')" class="text-red-400"><i class="fa fa-trash"></i></button>
-                        </div>
-                    </div>
+                    <h3 class="font-bold uppercase my-1">${d.custName}</h3>
+                    <button onclick="openWa('${d.custPhone}')" class="w-full bg-green-500 text-white py-2 rounded-lg font-bold mt-2">
+                        <i class="fab fa-whatsapp mr-1"></i> CHAT & TRACKING
+                    </button>
+                    <button onclick="db.ref('antaran/${id}').update({status:'selesai', driver:currentUser})" class="w-full bg-red-600 text-white py-2 rounded-lg font-bold mt-2 text-[10px]">SELESAIKAN</button>
                 </div>`;
-
-                if(d.status === 'selesai') hist.innerHTML += card;
-                else { list.innerHTML += card; activeCount++; }
             });
-            document.getElementById('countActive').innerText = activeCount + " AKTIF";
         }
 
-        // --- SISANYA FUNGSI STANDAR ---
         function saveData() {
-            const id = document.getElementById('editId').value;
             const data = {
                 custArea: document.getElementById('custArea').value,
                 custName: document.getElementById('custName').value,
                 custPhone: document.getElementById('custPhone').value,
-                custMaps: document.getElementById('custMaps').value,
-                photo: photoBase64,
-                timestamp: id ? allData[id].timestamp : Date.now(),
-                status: id ? allData[id].status : 'aktif'
+                timestamp: Date.now(),
+                status: 'aktif'
             };
-            if(!data.custName || !data.custPhone) return alert("Nama & HP Wajib!");
-            const ref = id ? db.ref('antaran/' + id) : db.ref('antaran').push();
-            ref.set(data).then(() => {
-                cancelEdit();
+            db.ref('antaran').push(data).then(() => {
+                document.getElementById('custName').value = '';
+                document.getElementById('custPhone').value = '';
                 showPage('list');
             });
         }
 
-        function finishOrder(id) {
-            db.ref('antaran/' + id).update({ status: 'selesai', driver: currentUser });
-        }
-
-        function deleteData(id) {
-            if(confirm("Hapus data?")) db.ref('antaran/' + id).remove();
-        }
-
-        function editData(id) {
-            const d = allData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('custArea').value = d.custArea;
-            document.getElementById('custName').value = d.custName;
-            document.getElementById('custPhone').value = d.custPhone;
-            document.getElementById('custMaps').value = d.custMaps;
-            if(d.photo) {
-                photoBase64 = d.photo;
-                document.getElementById('imgPrev').src = d.photo;
-                document.getElementById('imgPrev').classList.remove('hidden');
-                document.getElementById('btnRemovePhoto').classList.remove('hidden');
-            }
-            document.getElementById('formTitle').innerText = "Edit Antaran";
-            document.getElementById('saveBtn').innerText = "Update";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            showPage('add');
-        }
-
-        function cancelEdit() {
-            document.getElementById('editId').value = '';
-            document.getElementById('custArea').value = '';
-            document.getElementById('custName').value = '';
-            document.getElementById('custPhone').value = '';
-            document.getElementById('custMaps').value = '';
-            removePhoto();
-            document.getElementById('formTitle').innerText = "Tambah Antaran";
-            document.getElementById('saveBtn').innerText = "Simpan";
-            document.getElementById('cancelBtn').classList.add('hidden');
-        }
-
-        function processImage(input) {
-            if(input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    photoBase64 = e.target.result;
-                    document.getElementById('imgPrev').src = photoBase64;
-                    document.getElementById('imgPrev').classList.remove('hidden');
-                    document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                    document.getElementById('photoStatus').innerText = "Foto Berhasil";
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
-        function removePhoto() {
-            photoBase64 = "";
-            document.getElementById('housePhoto').value = "";
-            document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('btnRemovePhoto').classList.add('hidden');
-            document.getElementById('photoStatus').innerText = "Foto Rumah";
-        }
-
-        function viewImg(src, cap) {
-            document.getElementById('fullImg').src = src;
-            document.getElementById('modalCaption').innerText = cap;
-            document.getElementById('imgModal').style.display = 'flex';
-        }
-
-        function updateTimers() {
-            document.querySelectorAll('.timer').forEach(el => {
-                const start = parseInt(el.dataset.start);
-                const diff = Math.floor((Date.now() - start) / 1000);
-                const m = Math.floor(diff / 60).toString().padStart(2, '0');
-                const s = (diff % 60).toString().padStart(2, '0');
-                el.innerText = `${m}:${s}`;
-                if(diff > 1200) el.classList.replace('text-red-600', 'text-red-800');
-            });
-        }
-
-        function updatePresence() {
-            if(!currentUser) return;
-            const ref = db.ref('online/' + currentUser);
-            ref.set(Date.now());
-            ref.onDisconnect().remove();
-            db.ref('online').on('value', s => {
-                const bar = document.getElementById('onlineBar');
-                bar.innerHTML = '';
-                const users = s.val() || {};
-                Object.keys(users).forEach(u => {
-                    bar.innerHTML += `<span class="bg-blue-900 text-white px-2 py-1 rounded-full whitespace-nowrap"><i class="fa fa-circle text-[6px] text-green-400 mr-1"></i>${u}</span>`;
-                });
-            });
-        }
-
-        function clearAllHistory() {
-            if(confirm("Hapus semua riwayat selesai?")) {
-                Object.keys(allData).forEach(id => {
-                    if(allData[id].status === 'selesai') db.ref('antaran/' + id).remove();
-                });
-            }
-        }
-
-        // --- FITUR KAMERA/SCANNER ---
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', focusMode: 'continuous' } });
-                document.getElementById('scannerVideo').srcObject = stream;
-                videoTrack = stream.getVideoTracks()[0];
-                document.getElementById('scannerOverlay').style.display = 'block';
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('camControls').classList.remove('hidden');
-            } catch (err) { alert("Kamera gagal: " + err); }
-        }
-
-        function stopCamera() {
-            if(stream) stream.getTracks().forEach(t => t.stop());
-            document.getElementById('scannerOverlay').style.display = 'none';
-            document.getElementById('btnStartCam').classList.remove('hidden');
-            document.getElementById('btnStopCam').classList.add('hidden');
-            document.getElementById('camControls').classList.add('hidden');
-        }
-
-        async function captureAndScan() {
-            const video = document.getElementById('scannerVideo');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
-            
-            document.getElementById('ocrLoading').classList.remove('hidden');
-            const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-            document.getElementById('ocrLoading').classList.add('hidden');
-
-            const nums = text.match(/(08|628)\d{8,11}/g);
-            if(nums) {
-                const body = document.getElementById('addressTableBody');
-                body.innerHTML = '';
-                [...new Set(nums)].forEach(n => {
-                    body.innerHTML += `<tr><td class="p-2">${n}</td><td class="p-2 text-center"><button onclick="directChat('${n}')" class="text-green-500 text-xl"><i class="fab fa-whatsapp"></i></button></td></tr>`;
-                });
-                document.getElementById('scanResultArea').classList.remove('hidden');
-            } else { alert("Nomor HP tidak ditemukan!"); }
-        }
-
-        function directChat(n) {
-            let clean = n.replace(/\D/g, '');
-            if(clean.startsWith('0')) clean = '62' + clean.slice(1);
-            activateDriverTracking(currentUser);
-            window.open(`https://wa.me/${clean}`, '_blank');
-        }
-
-        function setZoom(val) {
-            if(videoTrack && videoTrack.getCapabilities().zoom) {
-                videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
-                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
-                document.getElementById('z'+val).classList.add('active');
-            }
-        }
+        function handleLogout() { localStorage.removeItem('jtm_user'); location.reload(); }
     </script>
 </body>
 </html>
