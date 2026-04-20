@@ -31,21 +31,27 @@
         #page-chat { background-color: #f0f2f5; }
         .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
 
-        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        
-        .qr-container { background: white; padding: 8px; border-radius: 12px; border: 2px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; }
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
         .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
+        .scanner-box { width: 100%; height: 100%; border: 2px solid #e31837; position: relative; }
         .laser { position: absolute; width: 100%; height: 2px; background: #e31837; top: 50%; animation: scanAnim 2s infinite; }
         @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
 
         .cam-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #e2e8f0; }
+        .control-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .btn-zoom { flex: 1; padding: 6px; background: white; border: 2px solid #006491; color: #006491; border-radius: 8px; font-size: 10px; font-weight: 900; }
         .btn-zoom.active { background: #006491; color: white; }
 
+        .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
+        .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
+        
+        .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         #deliveryStatusBar { max-height: 60px; overflow-y: auto; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
         .status-item { padding: 2px 0; border-bottom: 1px dashed rgba(0,100,145,0.1); }
+        .visual-slider { flex: 1; accent-color: #006491; height: 4px; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -113,22 +119,56 @@
                         <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
                     </div>
                     <button onclick="saveData()" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase text-sm">Simpan</button>
-                    <button onclick="resetForm()" class="w-full bg-gray-400 text-white py-3 rounded-xl font-bold uppercase text-[10px]">Batal</button>
                 </div>
             </div>
 
             <div id="page-chat" class="page h-full items-center p-4 bg-gray-100 overflow-y-auto">
                 <div class="wa-card mb-20 mx-auto">
                     <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg"><i class="fab fa-whatsapp text-white text-2xl"></i></div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner Nomor</h2>
+                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
+                    
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
-                        <div id="scannerOverlay" class="scanner-overlay"><div class="laser"></div></div>
+                        <div id="scannerOverlay" class="scanner-overlay">
+                            <div class="scanner-box"><div class="laser"></div></div>
+                        </div>
                     </div>
+
+                    <div id="camControls" class="hidden cam-controls text-left">
+                        <div class="flex justify-between items-center mb-2 px-1">
+                            <span class="text-[9px] font-black text-blue-900 uppercase">Mode BW:</span>
+                            <div class="flex gap-1">
+                                <button onclick="setBWMode('off')" id="bw-off" class="btn-mode active">OFF</button>
+                                <button onclick="setBWMode('auto')" id="bw-auto" class="btn-mode">AUTO</button>
+                                <button onclick="setBWMode('manual')" id="bw-manual" class="btn-mode">MANUAL</button>
+                            </div>
+                        </div>
+                        <div id="manualBWControls" class="hidden grid grid-cols-2 gap-2 mb-2 p-2 bg-white rounded-xl border border-gray-100">
+                            <div class="flex flex-col"><span class="text-[8px] font-black">BR:</span><input type="range" id="brSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider"></div>
+                            <div class="flex flex-col"><span class="text-[8px] font-black">CT:</span><input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider"></div>
+                        </div>
+                        <div class="control-group">
+                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Zoom:</span>
+                            <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
+                            <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
+                            <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
+                        </div>
+                        <div class="control-group">
+                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Fokus:</span>
+                            <select onchange="setFocusMode(this.value)" class="flex-1 p-1 rounded-lg text-[9px] font-bold border border-blue-900 outline-none">
+                                <option value="continuous">Otomatis</option>
+                                <option value="manual">Manual</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="flex gap-2 mb-3">
-                        <button onclick="startCamera()" id="btnStartCam" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">Buka Kamera</button>
-                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">Scan Nomor</button>
+                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Buka Kamera</button>
+                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px]">Tutup</button>
+                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Scan Nomor</button>
                     </div>
+                    
+                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic"><div class="loader-ocr"></div> Reading...</div>
                     <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">Chat Pelanggan</button>
                     <div id="scanResultArea" class="hidden"><table class="w-full text-[10px] bg-white rounded-lg border font-bold text-left"><tbody id="addressTableBody"></tbody></table></div>
@@ -152,9 +192,10 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = ""; let stream = null;
-        let map, centerMarker, driverMarkers = {};
-        const STORE_COORDS = [-6.2798, 106.9248]; // Domino's Pizza Jatimakmur
+        let allData = {}; let photoBase64 = ""; 
+        let stream = null; let videoTrack = null; let bwMode = 'off'; let autoScanInterval = null;
+        let map, driverMarkers = {};
+        const STORE_COORDS = [-6.2798, 106.9248];
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -173,8 +214,7 @@
             L.marker(STORE_COORDS).addTo(map).bindPopup("<b>Domino's Pizza Jatimakmur</b>").openPopup();
         }
 
-        // Fitur Lokasi Driver (Aktif 15 Menit)
-        function updateDriverLocationOnChat() {
+        function updateDriverLocation() {
             if ("geolocation" in navigator) {
                 navigator.geolocation.getCurrentPosition(pos => {
                     db.ref('delivery_activity/' + currentUser).set({
@@ -190,43 +230,93 @@
         function startDeliveryStatusListener() {
             db.ref('delivery_activity').on('value', s => {
                 const bar = document.getElementById('deliveryStatusBar');
-                bar.innerHTML = ""; const now = Date.now(); let hasData = false;
-                
-                // Clear old markers
+                bar.innerHTML = ""; const now = Date.now();
                 Object.values(driverMarkers).forEach(m => map.removeLayer(m));
                 driverMarkers = {};
 
                 s.forEach(child => {
                     const data = child.val();
-                    if (now - data.timestamp > 900000) { 
-                        db.ref('delivery_activity/' + child.key).remove(); 
-                    } else {
-                        hasData = true;
+                    if (now - data.timestamp > 900000) { db.ref('delivery_activity/' + child.key).remove(); } 
+                    else {
                         bar.innerHTML += `<div class="status-item flex items-center"><i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i><span>(${data.name} SEDANG MENGANTAR)</span></div>`;
-                        
-                        // Add to Map
                         if(data.lat && data.lng) {
-                            driverMarkers[data.name] = L.marker([data.lat, data.lng])
-                                .addTo(map)
-                                .bindPopup(`Driver: ${data.name}`)
-                                .openPopup();
+                            driverMarkers[data.name] = L.marker([data.lat, data.lng]).addTo(map).bindPopup(data.name);
                         }
                     }
                 });
-                bar.style.display = hasData ? "block" : "none";
+                bar.style.display = bar.innerHTML ? "block" : "none";
             });
         }
 
         async function startCamera() {
             const video = document.getElementById('scannerVideo');
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                video.srcObject = stream;
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } } });
+                video.srcObject = stream; videoTrack = stream.getVideoTracks()[0];
+                document.getElementById('btnStartCam').classList.add('hidden');
+                document.getElementById('btnStopCam').classList.remove('hidden');
+                document.getElementById('camControls').classList.remove('hidden');
                 document.getElementById('scannerOverlay').style.display = 'block';
+                startAutoScan();
             } catch (err) { alert("Error kamera."); }
         }
 
+        function stopCamera() {
+            if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+            document.getElementById('btnStartCam').classList.remove('hidden');
+            document.getElementById('btnStopCam').classList.add('hidden');
+            document.getElementById('camControls').classList.add('hidden');
+            document.getElementById('scannerOverlay').style.display = 'none';
+            clearInterval(autoScanInterval); autoScanInterval = null;
+        }
+
+        function setBWMode(mode) {
+            bwMode = mode;
+            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+            document.getElementById('bw-' + mode).classList.add('active');
+            document.getElementById('manualBWControls').classList.toggle('hidden', mode !== 'manual');
+            updateVisualFilters();
+        }
+
+        function updateVisualFilters() {
+            const video = document.getElementById('scannerVideo');
+            if(bwMode === 'manual') {
+                video.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
+            } else if(bwMode === 'auto') { video.style.filter = `grayscale(100%) contrast(150%)`; } 
+            else { video.style.filter = `none`; }
+        }
+
+        function setZoom(level) {
+            if (videoTrack && videoTrack.getCapabilities().zoom) {
+                videoTrack.applyConstraints({ advanced: [{ zoom: level }] });
+                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
+                document.getElementById('z'+level).classList.add('active');
+            }
+        }
+
+        function setFocusMode(mode) {
+            if (videoTrack) videoTrack.applyConstraints({ advanced: [{ focusMode: mode === 'manual' ? 'manual' : 'continuous' }] });
+        }
+
+        async function startAutoScan() {
+            autoScanInterval = setInterval(async () => {
+                if (!stream) return;
+                const video = document.getElementById('scannerVideo');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.getContext('2d').drawImage(video, 0, 0);
+                const result = await Tesseract.recognize(canvas.toDataURL(), 'eng');
+                const matches = result.data.text.match(/(?:\+62|62|08)[0-9\-\s]{8,15}/g);
+                if (matches) {
+                    let num = matches[0].replace(/\D/g, '');
+                    if (num.length >= 10) { document.getElementById('waDirectNumber').value = num; }
+                }
+            }, 3000);
+        }
+
         async function captureAndScan() {
+            document.getElementById('ocrLoading').classList.remove('hidden');
             const video = document.getElementById('scannerVideo');
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth; canvas.height = video.videoHeight;
@@ -240,19 +330,16 @@
                     tableBody.innerHTML += `<tr><td class="p-3">${num}</td><td class="p-3"><button onclick="document.getElementById('waDirectNumber').value='${num}';openWaDirect()" class="bg-green-500 text-white p-2 rounded">Chat</button></td></tr>`;
                 });
                 document.getElementById('scanResultArea').classList.remove('hidden');
-            } else { alert("Tidak ditemukan nomor."); }
-        }
-
-        function openWaLinkCustom(num) {
-            updateDriverLocationOnChat();
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
-            window.open(`https://wa.me/${num.replace(/\D/g, '').replace(/^0/, '62').replace(/^8/, '628')}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+            document.getElementById('ocrLoading').classList.add('hidden');
         }
 
         function openWaDirect() {
             let num = document.getElementById('waDirectNumber').value;
             if(!num) return alert("Isi nomor!");
-            openWaLinkCustom(num);
+            updateDriverLocation();
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Terimakasih 😊`;
+            window.open(`https://wa.me/${num.replace(/\D/g, '').replace(/^0/, '62').replace(/^8/, '628')}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function prosesLogin() {
@@ -274,8 +361,8 @@
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-'+id));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.id === 'nav-'+id));
-            if(id === 'maps') { setTimeout(() => map.invalidateSize(), 200); }
-            if(id !== 'chat' && stream) { stream.getTracks().forEach(t => t.stop()); }
+            if(id === 'maps') setTimeout(() => map.invalidateSize(), 200);
+            if(id !== 'chat') stopCamera();
         }
 
         function render() {
@@ -285,8 +372,7 @@
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
                 if(i.status === 'done') return;
-                const match = `${i.name} ${i.phone} ${i.area}`.toLowerCase().includes(filter);
-                if(match) {
+                if(`${i.name} ${i.phone} ${i.area}`.toLowerCase().includes(filter)) {
                     activeCount++;
                     list.innerHTML += `
                         <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 border-red-500">
@@ -294,20 +380,12 @@
                                 <div class="flex-1">
                                     <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
                                     <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
-                                    <div class="flex items-center gap-2 mt-1">
-                                        <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">READY</p>
-                                        ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
-                                    </div>
+                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">READY</p>
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
+                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white'}"><i class="fa fa-motorcycle"></i></button>
                                     <button onclick="setStatus('${id}', 'done')" class="bg-green-500 text-white w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-check text-[10px]"></i></button>
                                 </div>
-                            </div>
-                            <div class="flex gap-2 mt-3">
-                                <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">BUKA MAPS</a>
-                                <button onclick="openWaLinkCustom('${i.phone}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">CHAT WA</button>
                             </div>
                         </div>`;
                 }
@@ -315,46 +393,25 @@
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
+        function goOTW(id) { if(allData[id].status !== 'otw') { db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); updateDriverLocation(); } }
+        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
         function saveData() {
             const data = { area: document.getElementById('custArea').value, name: document.getElementById('custName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
-            const id = document.getElementById('editId').value;
-            (id ? db.ref('customers/'+id).update(data) : db.ref('customers').push(data)).then(() => resetForm());
+            db.ref('customers').push(data).then(() => { showPage('list'); });
         }
-
-        function resetForm() { document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = ""; document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = ""; document.getElementById('imgPrev').classList.add('hidden'); showPage('list'); }
-        
-        function goOTW(id) { if(allData[id].status !== 'otw') { db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); updateDriverLocationOnChat(); } }
-        
-        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
-
-        function processImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    photoBase64 = e.target.result;
-                    document.getElementById('imgPrev').src = e.target.result;
-                    document.getElementById('imgPrev').classList.remove('hidden');
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
-
+        function processImage(input) { if (input.files && input.files[0]) { const reader = new FileReader(); reader.onload = (e) => { photoBase64 = e.target.result; document.getElementById('imgPrev').src = e.target.result; document.getElementById('imgPrev').classList.remove('hidden'); }; reader.readAsDataURL(input.files[0]); } }
         function updateTimers() {
             Object.keys(allData).forEach(id => {
                 if(allData[id].status === 'otw') {
                     const rem = (20 * 60) - Math.floor((Date.now() - allData[id].startTime) / 1000);
                     const el = document.getElementById('timer-'+id);
-                    if(el) {
-                        const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60);
-                        el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
-                    }
+                    if(el) { const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60); el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`; }
                 }
             });
         }
-
         function updatePresence() {
             if(!currentUser) return;
-            db.ref('presence/' + currentUser).set(true); db.ref('presence/' + currentUser).onDisconnect().remove();
+            db.ref('presence/' + currentUser).set(true);
             db.ref('presence').on('value', s => {
                 const el = document.getElementById('onlineBar'); el.innerHTML = "";
                 s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
