@@ -419,7 +419,6 @@
         function checkManualInputActive(val) {
             if (!val || val.length < 9) return;
             let cleanInput = val.replace(/\D/g, '');
-            // Ambil 9 digit terakhir untuk kecocokan universal (08/62/...)
             let searchTail = cleanInput.length > 9 ? cleanInput.slice(-9) : cleanInput;
 
             const activeId = Object.keys(allData).find(id => {
@@ -429,11 +428,18 @@
 
             if (activeId) {
                 if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                document.getElementById('searchInput').value = allData[activeId].phone;
+                // FITUR AUTO SWITCH: Langsung pindah tanpa sisa di pencarian
+                document.getElementById('searchInput').value = ""; // Langsung Bersihkan Search agar tidak lag
                 document.getElementById('waDirectNumber').value = ""; // Bersihkan input manual
-                render();
+                render(); 
                 showPage('list');
                 stopCamera();
+
+                // Scroll otomatis ke kartu yang dimaksud
+                setTimeout(() => {
+                    const card = document.getElementById(`card-${activeId}`);
+                    if(card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
             }
         }
 
@@ -465,11 +471,17 @@
 
                         if (activeId) {
                             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                            document.getElementById('searchInput').value = allData[activeId].phone;
+                            // FITUR AUTO SWITCH: Langsung pindah tanpa sisa di pencarian
+                            document.getElementById('searchInput').value = ""; 
                             render();
                             showPage('list');
                             stopCamera();
                             isScanning = false;
+                            
+                            setTimeout(() => {
+                                const card = document.getElementById(`card-${activeId}`);
+                                if(card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 300);
                             return;
                         }
 
@@ -547,7 +559,6 @@
                     uniqueMatches.forEach((match, idx) => {
                         let cleanNum = match.replace(/\D/g, ''); 
                         
-                        // CEK APAKAH HASIL CAPTURE ADA DI LIST AKTIF
                         const searchTail = cleanNum.length > 9 ? cleanNum.slice(-9) : cleanNum;
                         const activeId = Object.keys(allData).find(id => {
                             const existingPhone = (allData[id].phone || "").replace(/\D/g, '');
@@ -556,10 +567,16 @@
 
                         if (activeId) {
                             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                            document.getElementById('searchInput').value = allData[activeId].phone;
+                            // FITUR AUTO SWITCH: Langsung pindah tanpa sisa di pencarian
+                            document.getElementById('searchInput').value = ""; 
                             render();
                             showPage('list');
                             stopCamera();
+
+                            setTimeout(() => {
+                                const card = document.getElementById(`card-${activeId}`);
+                                if(card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }, 300);
                             return;
                         }
 
@@ -592,10 +609,16 @@
             });
 
             if (activeId) {
-                document.getElementById('searchInput').value = allData[activeId].phone;
+                // FITUR AUTO SWITCH: Langsung pindah tanpa sisa di pencarian
+                document.getElementById('searchInput').value = ""; 
                 render();
                 showPage('list');
                 stopCamera();
+
+                setTimeout(() => {
+                    const card = document.getElementById(`card-${activeId}`);
+                    if(card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
                 return;
             }
 
@@ -648,7 +671,7 @@
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
                 const cardHtml = `
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
+                    <div id="card-${id}" class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
