@@ -35,6 +35,10 @@
         
         #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
+        /* Style Deteksi Nomor (Hijau) */
+        .bg-detected { background-color: #dcfce7 !important; border-color: #22c55e !important; animation: pulse-green 2s infinite; }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
         /* Scanner Styles */
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
@@ -219,7 +223,7 @@
                         <div class="loader-ocr"></div> Meredam Silau & Membaca...
                     </div>
 
-                    <input type="tel" id="waDirectNumber" oninput="checkManualInputActive(this.value)" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
+                    <input type="tel" id="waDirectNumber" oninput="checkManualInputActive(this.value); render();" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">
                         Chat Pelanggan
@@ -489,6 +493,7 @@
                             document.getElementById('waDirectNumber').value = cleanNumber;
                             document.querySelector('.scanner-box').style.borderColor = '#22c55e';
                             setTimeout(() => { document.querySelector('.scanner-box').style.borderColor = '#e31837'; }, 500);
+                            render(); // Update warna kartu real-time saat scan
                             renderAddressTable(phoneMatches);
                         }
                     }
@@ -585,6 +590,7 @@
                         if(idx === 0) directInput.value = cleanNum;
                         tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button></td></tr>`;
                     });
+                    render(); // Update warna kartu setelah scan manual
                     tableArea.classList.remove('hidden');
                     if (navigator.vibrate) navigator.vibrate(100);
                 } else { alert("Gagal membaca. Gunakan Zoom atau Manual BW Mode!"); directInput.value = ""; }
@@ -660,18 +666,29 @@
         function render() {
             const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
+            
+            // Ambil nomor yang sedang ada di kolom WA Direct untuk highlight warna hijau
+            const waDirectVal = document.getElementById('waDirectNumber').value.replace(/\D/g, '');
+            const waSearchTail = waDirectVal.length >= 9 ? waDirectVal.slice(-9) : (waDirectVal.length > 0 ? waDirectVal : null);
+
             let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
                 const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                 const match = searchStr.includes(filter);
                 if(i.status !== 'done') activeCount++;
-                let formattedPhone = (i.phone || "").replace(/\D/g, '');
+                
+                let cleanPhone = (i.phone || "").replace(/\D/g, '');
+                let formattedPhone = cleanPhone;
                 if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
+                
+                // Cek apakah kartu ini harus berwarna hijau (Kecocokan dengan WA Direct)
+                const isDetected = waSearchTail && cleanPhone.includes(waSearchTail);
+
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                 const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
                 const cardHtml = `
-                    <div id="card-${id}" class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
+                    <div id="card-${id}" class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'} ${isDetected ? 'bg-detected' : ''}">
                         <div class="flex justify-between items-start">
                             <div class="flex-1">
                                 <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
@@ -819,6 +836,7 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
             if(id !== 'chat') stopCamera();
+            render(); // Re-render saat pindah halaman untuk pastikan highlight akurat
         }
 
         function updateTimers() {
