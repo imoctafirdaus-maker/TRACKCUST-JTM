@@ -12,6 +12,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src='https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js'></script>
     
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
     <style>
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
@@ -25,15 +28,11 @@
         .page { display: none; height: 100%; flex-direction: column; }
         .page.active { display: flex; }
         
+        #map-container { height: 100%; width: 100%; position: relative; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+
         #page-chat { background-color: #f0f2f5; }
         .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
-
-        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        
-        .qr-container { background: white; padding: 8px; border-radius: 12px; border: 2px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; }
-        .qr-container:active { transform: scale(0.95); background: #f8fafc; }
-        
-        #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
@@ -57,17 +56,12 @@
 
         #deliveryStatusBar { max-height: 60px; overflow-y: auto; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
         .status-item { padding: 2px 0; border-bottom: 1px dashed rgba(0,100,145,0.1); }
+        
+        .qr-container { background: white; padding: 8px; border-radius: 12px; border: 2px solid #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.2s; }
+        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
-
-    <div id="imgModal" class="fixed inset-0 bg-black/95 z-[10001] hidden flex-col items-center justify-center p-4" onclick="this.style.display='none'">
-        <button class="absolute top-6 right-6 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-2xl"></i></button>
-        <div id="modalContent" class="flex flex-col items-center">
-             <img id="fullImg" class="max-w-full max-h-[80vh] rounded-lg shadow-2xl object-contain">
-             <p id="modalCaption" class="text-white mt-4 font-black italic uppercase tracking-widest"></p>
-        </div>
-    </div>
 
     <div id="pinOverlay" class="fixed inset-0 dominos-blue z-[10000] flex flex-col items-center justify-center p-6">
         <div class="text-center mb-8 text-white">
@@ -91,25 +85,24 @@
         </nav>
         
         <div id="deliveryStatusBar" class="bg-white px-4 flex flex-col text-[9px] font-black text-blue-900 uppercase italic"></div>
-        <div id="onlineBar" class="bg-blue-900/10 px-4 py-1 flex gap-2 overflow-x-auto text-[8px] font-black text-blue-900 uppercase italic"></div>
 
         <main class="flex-1 overflow-hidden relative">
             <div id="page-list" class="page active p-4 overflow-y-auto">
                 <div class="flex justify-between items-center mb-3">
-                    <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Driver/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
+                    <input type="text" id="searchInput" onkeyup="render()" placeholder="Cari Nama/HP/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
                     <div id="countActive" class="bg-red-500 text-white px-3 py-2 rounded-xl text-[10px] font-black italic">0 AKTIF</div>
                 </div>
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
-            <div id="page-history" class="page p-4 overflow-y-auto">
-                <div class="flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-2xl border-b-2 border-gray-200">
-                    <h3 class="font-black text-blue-900 uppercase italic text-[11px]">Daftar Selesai</h3>
-                    <button onclick="clearAllHistory()" class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase shadow-md active:scale-95 transition-all">
-                        <i class="fa fa-trash-alt mr-1"></i> Kosongkan
-                    </button>
+            <div id="page-history" class="page h-full">
+                <div id="map-container">
+                    <div id="map"></div>
+                    <div class="absolute top-2 left-2 z-[1000] bg-white/90 p-2 rounded-lg shadow-md border-2 border-blue-900 text-[8px] font-bold">
+                        <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-600"></span> Aktif</div>
+                        <div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-500"></span> Selesai</div>
+                    </div>
                 </div>
-                <div id="historyList" class="space-y-4 pb-32"></div>
             </div>
 
             <div id="page-add" class="page p-4 overflow-y-auto">
@@ -119,19 +112,9 @@
                     <input type="text" id="custArea" placeholder="KODE AREA (A-1)" class="w-full bg-yellow-50 p-4 rounded-xl text-sm font-bold uppercase outline-none">
                     <input type="text" id="custName" placeholder="Nama Pelanggan" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <input type="tel" id="custPhone" placeholder="Nomor HP" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
-                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none">
-                    
-                    <div class="bg-blue-50 p-4 rounded-xl border-2 border-dashed border-blue-200 text-center relative">
-                        <label class="cursor-pointer">
-                            <i class="fa fa-camera text-blue-400 text-xl"></i>
-                            <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Foto Rumah</p>
-                            <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processImage(this)">
-                        </label>
-                        <button onclick="removePhoto()" id="btnRemovePhoto" class="hidden absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-[10px]"></i></button>
-                        <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
-                    </div>
+                    <input type="text" id="custMaps" placeholder="Link Google Maps" class="w-full bg-gray-50 p-4 rounded-xl text-sm outline-none font-bold">
                     <button onclick="saveData()" id="saveBtn" class="w-full dominos-red text-white py-4 rounded-2xl font-black uppercase text-sm">Simpan</button>
-                    <button onclick="cancelEdit()" id="cancelBtn" class="hidden w-full bg-gray-400 text-white py-3 rounded-xl font-bold uppercase text-[10px]">Batal</button>
+                    <button onclick="showPage('list')" class="w-full bg-gray-400 text-white py-3 rounded-xl font-bold uppercase text-[10px]">Batal</button>
                 </div>
             </div>
 
@@ -140,68 +123,24 @@
                     <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg">
                         <i class="fab fa-whatsapp text-white text-2xl"></i>
                     </div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
-                    
+                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner Nomor</h2>
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
-                        <div id="scannerOverlay" class="scanner-overlay">
-                            <div class="scanner-box"><div class="laser"></div></div>
-                        </div>
+                        <div id="scannerOverlay" class="scanner-overlay"><div class="scanner-box"><div class="laser"></div></div></div>
                     </div>
-
-                    <div id="camControls" class="hidden cam-controls text-left">
-                        <div class="flex justify-between items-center mb-2 px-1">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Mode BW:</span>
-                            <div class="flex gap-1">
-                                <button onclick="setBWMode('off')" id="bw-off" class="btn-mode active">OFF</button>
-                                <button onclick="setBWMode('auto')" id="bw-auto" class="btn-mode">AUTO</button>
-                                <button onclick="setBWMode('manual')" id="bw-manual" class="btn-mode">MANUAL</button>
-                            </div>
-                        </div>
-                        <div id="manualBWControls" class="hidden grid grid-cols-2 gap-2 mb-2 p-2 bg-white rounded-xl border border-gray-100">
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase">Cahaya (BR):</span>
-                                <input type="range" id="brSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase">Kontras (CT):</span>
-                                <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="visual-slider">
-                            </div>
-                        </div>
-                        <div class="control-group">
-                            <span class="text-[9px] font-black text-blue-900 italic uppercase">Zoom:</span>
-                            <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
-                            <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
-                            <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
-                        </div>
-                    </div>
-
                     <div class="flex gap-2 mb-3">
-                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">Buka Kamera</button>
-                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">Tutup</button>
-                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px] shadow-md">Scan Nomor</button>
+                        <button onclick="startCamera()" id="btnStartCam" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Buka Kamera</button>
+                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Scan</button>
                     </div>
-
-                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic">
-                        <div class="loader-ocr"></div> Meredam Silau & Membaca...
-                    </div>
-
-                    <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
-                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">Chat Pelanggan</button>
-
-                    <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
-                        <table class="w-full text-[10px] bg-white rounded-lg overflow-hidden border">
-                            <thead class="bg-blue-900 text-white uppercase italic"><tr><th class="p-2">Nomor Terdeteksi</th><th class="p-2">Chat</th></tr></thead>
-                            <tbody id="addressTableBody" class="font-bold text-gray-700 divide-y divide-gray-100"></tbody>
-                        </table>
-                    </div>
+                    <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 mb-3">
+                    <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md">Chat Pelanggan</button>
                 </div>
             </div>
         </main>
 
         <div class="bottom-nav">
             <div onclick="showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-motorcycle mb-1 text-xl"></i><span>Antaran</span></div>
-            <div onclick="showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
+            <div onclick="showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-map-marked-alt mb-1 text-xl"></i><span>Peta</span></div>
             <div onclick="showPage('add')" class="nav-item nav-add" id="nav-add"><i class="fa fa-plus text-2xl"></i></div>
             <div onclick="showPage('chat')" class="nav-item" id="nav-chat"><i class="fab fa-whatsapp mb-1 text-xl"></i><span>WA Direct</span></div>
             <div onclick="handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Out</span></div>
@@ -221,316 +160,188 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = "";
-        let stream = null; let videoTrack = null;
-        let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
+        let allData = {};
+        let map = null;
+        let mapMarkers = [];
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
             logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
-            setInterval(updateTimers, 1000);
-            updatePresence();
             startDeliveryStatusListener();
         };
-
-        function pushDeliveryStatus(nama) {
-            db.ref('delivery_activity/' + nama).set({ name: nama, timestamp: Date.now() });
-        }
-
-        function startDeliveryStatusListener() {
-            db.ref('delivery_activity').on('value', s => {
-                const bar = document.getElementById('deliveryStatusBar');
-                bar.innerHTML = ""; const now = Date.now(); let hasData = false;
-                s.forEach(child => {
-                    const data = child.val();
-                    if (now - data.timestamp > 900000) db.ref('delivery_activity/' + child.key).remove();
-                    else {
-                        hasData = true;
-                        bar.innerHTML += `<div class="status-item py-1 border-b border-gray-100 flex items-center"><i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i><span>(${data.name} SEDANG MENGANTAR)</span></div>`;
-                    }
-                });
-                bar.style.display = hasData ? "block" : "none";
-            });
-        }
-
-        function setBWMode(mode) {
-            bwMode = mode;
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-            document.getElementById('bw-' + mode).classList.add('active');
-            const manualBox = document.getElementById('manualBWControls');
-            if(mode === 'manual') manualBox.classList.remove('hidden');
-            else manualBox.classList.add('hidden');
-            updateVisualFilters();
-        }
-
-        function updateVisualFilters() {
-            const video = document.getElementById('scannerVideo');
-            if(!video) return;
-            if(bwMode === 'manual') {
-                const br = document.getElementById('brSlider').value;
-                const ct = document.getElementById('ctSlider').value;
-                video.style.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            } else if(bwMode === 'auto') video.style.filter = `grayscale(100%) contrast(150%)`;
-            else video.style.filter = `none`;
-        }
-
-        async function startCamera() {
-            const video = document.getElementById('scannerVideo');
-            const overlay = document.getElementById('scannerOverlay');
-            try {
-                if (stream) stream.getTracks().forEach(t => t.stop());
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
-                video.srcObject = stream; videoTrack = stream.getVideoTracks()[0];
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('camControls').classList.remove('hidden');
-                overlay.style.display = 'block';
-                updateVisualFilters();
-                startAutoScan();
-            } catch (err) { alert("Izin kamera ditolak."); }
-        }
-
-        function stopCamera() {
-            if (stream) {
-                stream.getTracks().forEach(t => t.stop());
-                stream = null; videoTrack = null;
-                document.getElementById('scannerVideo').srcObject = null;
-                document.getElementById('btnStartCam').classList.remove('hidden');
-                document.getElementById('btnStopCam').classList.add('hidden');
-                document.getElementById('camControls').classList.add('hidden');
-                document.getElementById('scannerOverlay').style.display = 'none';
-                clearInterval(autoScanInterval); autoScanInterval = null;
-            }
-        }
-
-        function setZoom(level) {
-            if (!videoTrack) return;
-            const capabilities = videoTrack.getCapabilities();
-            if (capabilities.zoom) {
-                videoTrack.applyConstraints({ advanced: [{ zoom: Math.min(level, capabilities.zoom.max || 1) }] });
-                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
-                document.getElementById('z'+level).classList.add('active');
-            } else alert("Zoom tidak didukung.");
-        }
-
-        async function startAutoScan() {
-            if (autoScanInterval) return;
-            autoScanInterval = setInterval(async () => {
-                if (isScanning || !stream) return;
-                isScanning = true;
-                const video = document.getElementById('scannerVideo');
-                const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.filter = video.style.filter;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                try {
-                    const result = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 0.8), 'eng');
-                    const phoneMatches = result.data.text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
-                    if (phoneMatches) {
-                        let cleanNumber = phoneMatches[0].replace(/\D/g, '');
-                        const searchNum = cleanNumber.startsWith('0') ? cleanNumber.slice(1) : (cleanNumber.startsWith('62') ? cleanNumber.slice(2) : cleanNumber);
-                        const activeId = Object.keys(allData).find(id => (allData[id].phone || "").replace(/\D/g, '').includes(searchNum));
-                        if (activeId) {
-                            if (navigator.vibrate) navigator.vibrate([100, 50]);
-                            document.getElementById('searchInput').value = allData[activeId].phone;
-                            render(); showPage('list'); stopCamera(); isScanning = false; return;
-                        }
-                        document.getElementById('waDirectNumber').value = cleanNumber;
-                        renderAddressTable(phoneMatches);
-                    }
-                } catch (err) {} finally { isScanning = false; }
-            }, 2500);
-        }
-
-        function renderAddressTable(matches) {
-            const tableBody = document.getElementById('addressTableBody');
-            tableBody.innerHTML = '';
-            [...new Set(matches.map(m => m.replace(/\D/g, '')))].forEach(num => {
-                if (num.length < 10) return;
-                let cleanNum = num.startsWith('0') ? '62' + num.slice(1) : (num.startsWith('8') ? '62' + num : num);
-                tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${num}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button></td></tr>`;
-            });
-            document.getElementById('scanResultArea').classList.remove('hidden');
-        }
-
-        async function captureAndScan() {
-            const video = document.getElementById('scannerVideo');
-            if (!video.srcObject) return alert("Buka kamera dulu!");
-            document.getElementById('ocrLoading').classList.remove('hidden');
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.filter = video.style.filter;
-            ctx.drawImage(video, 0, 0);
-            try {
-                const result = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 1.0), 'eng');
-                const matches = result.data.text.match(/(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g);
-                if (matches) {
-                    document.getElementById('waDirectNumber').value = matches[0].replace(/\D/g, '');
-                    renderAddressTable(matches);
-                } else alert("Gagal membaca. Coba Zoom!");
-            } catch (err) {} finally { document.getElementById('ocrLoading').classList.add('hidden'); }
-        }
-
-        function openWaLinkCustom(num) {
-            pushDeliveryStatus(currentUser);
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Terimakasih 😊`;
-            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        function openWaDirect() {
-            let num = document.getElementById('waDirectNumber').value.replace(/\D/g, '');
-            if(!num) return alert("Nomor Kosong!");
-            const searchNum = num.startsWith('0') ? num.slice(1) : (num.startsWith('62') ? num.slice(2) : num);
-            const activeId = Object.keys(allData).find(id => (allData[id].phone || "").replace(/\D/g, '').includes(searchNum));
-            if (activeId) {
-                document.getElementById('searchInput').value = allData[activeId].phone;
-                render(); showPage('list'); stopCamera(); return;
-            }
-            let waLinkNum = num.startsWith('0') ? '62' + num.slice(1) : (num.startsWith('8') ? '62' + num : num);
-            openWaLinkCustom(waLinkNum);
-        }
-
-        function updatePresence() {
-            if(!currentUser) return;
-            db.ref('presence/' + currentUser).set(true);
-            db.ref('presence/' + currentUser).onDisconnect().remove();
-            db.ref('presence').on('value', s => {
-                const el = document.getElementById('onlineBar'); el.innerHTML = "";
-                s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
-            });
-        }
-
-        function prosesLogin() {
-            const u = document.getElementById('selectUser').value;
-            const p = document.getElementById('inputPin').value;
-            if(p === userPins[u]) { bukaApp(u); updatePresence(); } else alert("PIN SALAH!");
-        }
 
         function bukaApp(n) {
             currentUser = n; localStorage.setItem('jtm_user', n);
             document.getElementById('userDisplay').innerText = n;
             document.getElementById('pinOverlay').style.display = "none";
             document.getElementById('mainContent').style.display = "flex";
-            db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
+            db.ref('customers').on('value', s => { 
+                allData = s.val() || {}; 
+                render(); 
+                if(map) updateMapMarkers();
+            });
         }
 
-        function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
+        // --- MAP FUNCTIONS ---
+        function initMap() {
+            if (map) return;
+            // Titik tengah default Jatimakmur
+            map = L.map('map').setView([-6.2868, 106.9312], 14);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+            
+            // Re-render markers setelah peta siap
+            setTimeout(updateMapMarkers, 500);
+        }
 
-        function render() {
-            const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
-            const filter = document.getElementById('searchInput').value.toLowerCase();
-            let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
-            Object.keys(allData).reverse().forEach(id => {
-                const i = allData[id];
-                const match = `${i.name} ${i.phone} ${i.area}`.toLowerCase().includes(filter);
-                if(i.status !== 'done') activeCount++;
-                let waNum = (i.phone || "").replace(/\D/g, '');
-                if(waNum.startsWith('0')) waNum = '62' + waNum.slice(1);
-                const msg = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar, terimakasih ☺️`;
-                const card = `
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
-                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
-                                ${i.status !== 'done' ? `<button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>` : ''}
-                            </div>
+        function extractCoords(url) {
+            if (!url) return null;
+            const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+            const match = url.match(regex);
+            if (match) return [parseFloat(match[1]), parseFloat(match[2])];
+            return null;
+        }
+
+        function updateMapMarkers() {
+            if (!map) return;
+            // Bersihkan marker lama
+            mapMarkers.forEach(m => map.removeLayer(m));
+            mapMarkers = [];
+
+            Object.keys(allData).forEach(id => {
+                const item = allData[id];
+                const coords = extractCoords(item.maps);
+                
+                if (coords) {
+                    const isDone = item.status === 'done';
+                    const markerColor = isDone ? '#94a3b8' : '#e31837';
+                    
+                    const marker = L.circleMarker(coords, {
+                        radius: 8,
+                        fillColor: markerColor,
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    }).addTo(map);
+
+                    marker.bindPopup(`
+                        <div class="text-center font-sans">
+                            <p class="font-black text-blue-900 text-[10px] uppercase">${item.name}</p>
+                            <p class="text-[8px] font-bold text-red-600">${item.area}</p>
+                            <a href="${item.maps}" target="_blank" class="block mt-1 bg-blue-600 text-white text-[8px] px-2 py-1 rounded">Buka Maps</a>
                         </div>
-                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.maps ? `<div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p></div>` : ''}
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH')" class="flex-1 h-20 object-cover rounded-xl border">` : ''}
-                        </div>
-                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase">Buka Maps</a>
-                            <a href="https://wa.me/${waNum}?text=${encodeURIComponent(msg)}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase">Chat WA</a>
-                        </div>
-                    </div>`;
-                if(i.status === 'done') hist.innerHTML += card; 
-                else if(match) {
-                    list.innerHTML += card;
-                    if(i.maps) setTimeout(() => { if(!document.getElementById(`qrcode-${id}`).innerHTML) new QRCode(document.getElementById(`qrcode-${id}`), { text: i.maps, width: 60, height: 60, colorDark: "#006491" }); }, 50);
+                    `);
+                    mapMarkers.push(marker);
                 }
             });
-            document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
-        function editData(id) {
-            const i = allData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('custArea').value = i.area;
-            document.getElementById('custName').value = i.name;
-            document.getElementById('custPhone').value = i.phone;
-            document.getElementById('custMaps').value = i.maps;
-            if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); }
-            document.getElementById('formTitle').innerText = "Edit Antaran";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            showPage('add');
-        }
-
-        function secureDelete(id) { const p = prompt("PIN KONFIRMASI:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); else if(p) alert("PIN SALAH!"); }
-
-        function goOTW(id) { if(allData[id].status !== 'otw') { db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); pushDeliveryStatus(currentUser); } }
-
-        function saveData() {
-            const data = { area: document.getElementById('custArea').value.toUpperCase(), name: document.getElementById('custName').value, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
-            if(!data.area || !data.name) return alert("Isi Data!");
-            const editId = document.getElementById('editId').value;
-            const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
-            ref.then(() => resetForm());
-        }
-
-        function resetForm() {
-            document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = "";
-            document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = "";
-            photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('formTitle').innerText = "Tambah Antaran";
-            document.getElementById('cancelBtn').classList.add('hidden');
-            showPage('list');
-        }
-
-        function processImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image(); img.onload = () => {
-                        const canvas = document.createElement('canvas'); const scale = 600 / img.width;
-                        canvas.width = 600; canvas.height = img.height * scale;
-                        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        document.getElementById('imgPrev').src = photoBase64; document.getElementById('imgPrev').classList.remove('hidden');
-                    }; img.src = e.target.result;
-                }; reader.readAsDataURL(input.files[0]);
-            }
-        }
-
+        // --- CORE APP FUNCTIONS ---
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById('page-'+id).classList.add('active');
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById('nav-'+id)?.classList.add('active');
-            if(id !== 'chat') stopCamera();
+            
+            if(id === 'history') {
+                setTimeout(initMap, 100);
+            }
         }
 
-        function updateTimers() {
-            Object.keys(allData).forEach(id => {
-                if(allData[id].status === 'otw') {
-                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
-                    const rem = (20 * 60) - elapsed; const el = document.getElementById('timer-'+id);
-                    if(el) { el.innerText = `${Math.max(0, Math.floor(rem/60))}:${String(Math.max(0, rem%60)).padStart(2, '0')} MENIT`; }
+        function render() {
+            const list = document.getElementById('activeList');
+            const filter = document.getElementById('searchInput').value.toLowerCase();
+            let activeCount = 0; 
+            list.innerHTML = "";
+            
+            Object.keys(allData).reverse().forEach(id => {
+                const i = allData[id];
+                if(i.status === 'done') return; // History tidak muncul di list bawah lagi
+
+                const match = `${i.name} ${i.phone} ${i.area}`.toLowerCase().includes(filter);
+                activeCount++;
+                
+                if(match) {
+                    list.innerHTML += `
+                        <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 border-red-500">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
+                                    <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
+                                    <p class="text-[10px] font-bold text-gray-400 italic">READY</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="goDone('${id}')" class="bg-green-500 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
+                                    <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
+                                </div>
+                            </div>
+                            <div class="flex gap-2 mt-3">
+                                <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase">Navigasi</a>
+                                <button onclick="openWaLinkCustom('${i.phone}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase">Chat WA</button>
+                            </div>
+                        </div>`;
                 }
             });
+            document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
+        }
+
+        function goDone(id) {
+            if(confirm("Pesanan Selesai?")) {
+                db.ref('customers/'+id).update({ status: 'done', doneTime: Date.now() });
+            }
+        }
+
+        function secureDelete(id) {
+            const p = prompt("PIN KONFIRMASI:");
+            if(p === userPins[currentUser]) db.ref('customers/' + id).remove();
+        }
+
+        function saveData() {
+            const data = { 
+                area: document.getElementById('custArea').value.toUpperCase(), 
+                name: document.getElementById('custName').value, 
+                phone: document.getElementById('custPhone').value, 
+                maps: document.getElementById('custMaps').value, 
+                status: 'active', 
+                timestamp: Date.now() 
+            };
+            if(!data.area || !data.name || !data.maps) return alert("Wajib isi Area, Nama, dan Link Maps!");
+            db.ref('customers').push(data).then(() => {
+                document.getElementById('custArea').value = "";
+                document.getElementById('custName').value = "";
+                document.getElementById('custPhone').value = "";
+                document.getElementById('custMaps').value = "";
+                showPage('list');
+            });
+        }
+
+        function startDeliveryStatusListener() {
+            db.ref('delivery_activity').on('value', s => {
+                const bar = document.getElementById('deliveryStatusBar');
+                bar.innerHTML = "";
+                s.forEach(child => {
+                    const data = child.val();
+                    bar.innerHTML += `<div class="status-item flex items-center italic uppercase text-blue-900"><i class="fa fa-motorcycle mr-2 text-red-500"></i>${data.name} OTW...</div>`;
+                });
+            });
+        }
+
+        function openWaLinkCustom(num) {
+            let clean = num.replace(/\D/g, '');
+            if(clean.startsWith('0')) clean = '62' + clean.slice(1);
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's Pizza Jatimakmur...`;
+            window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+
+        function handleLogout() { localStorage.removeItem('jtm_user'); location.reload(); }
+        function prosesLogin() {
+            const u = document.getElementById('selectUser').value;
+            const p = document.getElementById('inputPin').value;
+            if(p === userPins[u]) bukaApp(u); else alert("PIN SALAH!");
         }
     </script>
 </body>
