@@ -25,7 +25,6 @@
         .page.active { display: flex; }
         
         .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
-        .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
         
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
@@ -149,20 +148,6 @@
                                 <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="accent-blue-900">
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Zoom:</span>
-                            <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
-                            <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
-                            <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Focus:</span>
-                            <select onchange="setFocusMode(this.value)" class="flex-1 p-1 rounded-lg text-[9px] font-bold border-2 border-blue-900 outline-none">
-                                <option value="continuous">Auto</option>
-                                <option value="manual">Manual</option>
-                            </select>
-                        </div>
-                        <div id="manualFocusCont" class="hidden mt-2"><input type="range" id="focusSlider" min="0" max="100" value="50" oninput="setManualFocus(this.value)" class="w-full accent-red-600"></div>
                     </div>
 
                     <div class="flex gap-2 mb-3">
@@ -202,9 +187,10 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let allData = {}; let photoBase64 = "";
-        let stream = null; let videoTrack = null;
-        let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
+        let allData = {}; 
+        let photoBase64 = "";
+        let stream = null;
+        let bwMode = 'off';
         let renderTimer;
 
         window.onload = () => {
@@ -212,48 +198,192 @@
             logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
-            setInterval(updateTimers, 1000);
-            updatePresence();
             startDeliveryStatusListener();
+            listenData();
         };
 
-        function debounceRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => { render(); }, 300); }
+        function prosesLogin() {
+            const user = document.getElementById('selectUser').value;
+            const pin = document.getElementById('inputPin').value;
+            if(userPins[user] === pin) {
+                currentUser = user;
+                localStorage.setItem('jtm_user', user);
+                bukaApp(user);
+            } else {
+                alert("PIN SALAH!");
+            }
+        }
 
-        function pushDeliveryStatus(nama) { db.ref('delivery_activity/' + nama).set({ name: nama, timestamp: Date.now() }); }
+        function bukaApp(user) {
+            document.getElementById('pinOverlay').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'flex';
+            document.getElementById('userDisplay').innerText = user;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('jtm_user');
+            location.reload();
+        }
+
+        function showPage(p) {
+            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(nv => nv.classList.remove('active'));
+            document.getElementById('page-'+p).classList.add('active');
+            document.getElementById('nav-'+p)?.classList.add('active');
+            if(p !== 'chat') stopCamera();
+        }
+
+        function listenData() {
+            db.ref('customers').on('value', s => {
+                allData = s.val() || {};
+                render();
+            });
+        }
+
+        function render() {
+            const list = document.getElementById('activeList');
+            const history = document.getElementById('historyList');
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            list.innerHTML = ""; history.innerHTML = "";
+            let count = 0;
+
+            Object.keys(allData).forEach(id => {
+                const d = allData[id];
+                const match = d.name.toLowerCase().includes(search) || d.area.toLowerCase().includes(search);
+                if(!match) return;
+
+                const card = `
+                    <div class="bg-white p-4 rounded-2xl shadow-sm border-l-4 ${d.status === 'active' ? 'border-blue-900' : 'border-gray-400'}">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="bg-yellow-400 px-2 py-1 rounded text-[10px] font-black">${d.area}</span>
+                                <h3 class="font-black text-blue-900 mt-1 uppercase">${d.name}</h3>
+                                <p class="text-[10px] text-gray-500 font-bold">${d.phone}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-[8px] font-black block">${new Date(d.timestamp).toLocaleTimeString()}</span>
+                                <span class="text-[8px] italic text-blue-600">by ${d.driver}</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="window.open('https://wa.me/62${d.phone.substring(1)}')" class="flex-1 bg-green-500 text-white py-2 rounded-lg text-[10px] font-black uppercase">Chat</button>
+                            ${d.status === 'active' ? `<button onclick="updateStatus('${id}', 'done')" class="flex-1 dominos-red text-white py-2 rounded-lg text-[10px] font-black uppercase">Selesai</button>` : ''}
+                        </div>
+                    </div>`;
+
+                if(d.status === 'active') { list.innerHTML += card; count++; }
+                else { history.innerHTML += card; }
+            });
+            document.getElementById('countActive').innerText = count + " AKTIF";
+        }
+
+        function updateStatus(id, stat) {
+            db.ref('customers/' + id).update({ status: stat });
+        }
+
+        function saveData() {
+            const area = document.getElementById('custArea').value;
+            const name = document.getElementById('custName').value;
+            const phone = document.getElementById('custPhone').value;
+            
+            if(!area || !name || !phone) return alert("Isi data!");
+
+            const id = Date.now();
+            db.ref('customers/' + id).set({
+                area, name, phone, 
+                driver: currentUser,
+                status: 'active',
+                timestamp: id
+            });
+            
+            alert("Data Tersimpan!");
+            showPage('list');
+            // Reset form
+            document.getElementById('custArea').value = "";
+            document.getElementById('custName').value = "";
+            document.getElementById('custPhone').value = "";
+        }
+
+        // --- KAMERA & SCANNER LOGIC ---
+        async function startCamera() {
+            try {
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                const v = document.getElementById('scannerVideo');
+                v.srcObject = stream;
+                document.getElementById('btnStartCam').classList.add('hidden');
+                document.getElementById('btnStopCam').classList.remove('hidden');
+                document.getElementById('camControls').classList.remove('hidden');
+                document.getElementById('scannerOverlay').style.display = 'block';
+            } catch (err) {
+                alert("Kamera error: " + err.message);
+            }
+        }
+
+        function stopCamera() {
+            if (stream) stream.getTracks().forEach(track => track.stop());
+            document.getElementById('scannerOverlay').style.display = 'none';
+            document.getElementById('btnStartCam').classList.remove('hidden');
+            document.getElementById('btnStopCam').classList.add('hidden');
+            document.getElementById('camControls').classList.add('hidden');
+        }
+
+        function setBWMode(mode) {
+            bwMode = mode;
+            document.querySelectorAll('.btn-mode').forEach(b => b.classList.toggle('active', b.id === 'bw-'+mode));
+            updateVisualFilters();
+        }
+
+        function updateVisualFilters() {
+            const v = document.getElementById('scannerVideo');
+            if(bwMode === 'auto' || bwMode === 'manual') v.style.filter = `grayscale(100%) contrast(150%)`;
+            else v.style.filter = `none`;
+        }
+
+        async function captureAndScan() {
+            const video = document.getElementById('scannerVideo');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.filter = video.style.filter;
+            ctx.drawImage(video, 0, 0);
+            
+            document.getElementById('ocrLoading').classList.remove('hidden');
+            try {
+                const result = await Tesseract.recognize(canvas.toDataURL(), 'eng');
+                const text = result.data.text;
+                const phones = text.match(/08\d{8,11}/g) || [];
+                const tableBody = document.getElementById('addressTableBody');
+                tableBody.innerHTML = "";
+                
+                if(phones.length > 0) {
+                    document.getElementById('scanResultArea').classList.remove('hidden');
+                    [...new Set(phones)].forEach(num => {
+                        tableBody.innerHTML += `<tr><td class="p-2">${num}</td><td class="p-2"><button onclick="window.open('https://wa.me/62${num.substring(1)}')" class="bg-green-500 text-white p-1 rounded">WA</button></td></tr>`;
+                    });
+                } else { alert("Tidak ada nomor terdeteksi"); }
+            } catch (e) { console.error(e); }
+            finally { document.getElementById('ocrLoading').classList.add('hidden'); }
+        }
+
+        function openWaDirect() {
+            const num = document.getElementById('waDirectNumber').value;
+            if(num) window.open(`https://wa.me/62${num.substring(1)}`);
+        }
 
         function startDeliveryStatusListener() {
             db.ref('delivery_activity').on('value', s => {
                 const bar = document.getElementById('deliveryStatusBar');
                 bar.innerHTML = "";
-                const now = Date.now();
-                let hasData = false;
                 s.forEach(child => {
                     const d = child.val();
-                    if (now - d.timestamp > 900000) db.ref('delivery_activity/' + child.key).remove();
-                    else { hasData = true; bar.innerHTML += `<div class="status-item flex items-center px-1"><i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i><span>(${d.name} SEDANG MENGANTAR)</span></div>`; }
+                    bar.innerHTML += `<div class="status-item px-1">(${d.name} SEDANG MENGANTAR)</div>`;
                 });
-                bar.style.display = hasData ? "block" : "none";
             });
         }
 
-        function clearAllHistory() { if (confirm("Kosongkan history?")) { Object.keys(allData).forEach(id => { if(allData[id].status === 'done') db.ref('customers/' + id).remove(); }); } }
-
-        function setBWMode(mode) {
-            bwMode = mode;
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.toggle('active', b.id === 'bw-'+mode));
-            document.getElementById('manualBWControls').classList.toggle('hidden', mode !== 'manual');
-            updateVisualFilters();
-        }
-
-        function updateVisualFilters() {
-            const v = document.getElementById('scannerVideo'); if(!v) return;
-            if(bwMode === 'manual') v.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
-            else if(bwMode === 'auto') v.style.filter = `grayscale(100%) contrast(150%)`;
-            else v.style.filter = `none`;
-        }
-
-        async function startCamera() {
-            try {
-                if (stream) stream.getTracks().forEach(t => t.stop());
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
-                const v = document.getElementById('sc
+        function debounceRender() { clearTimeout(renderTimer); renderTimer = setTimeout(render, 300); }
+    </script>
+</body>
+</html>
