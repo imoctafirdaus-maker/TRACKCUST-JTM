@@ -671,29 +671,49 @@
         }
 
         function secureDelete(id) { const p = prompt("PIN KONFIRMASI:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); else if(p !== null) alert("PIN SALAH!"); }
+            function processImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                
+                // --- BAGIAN OPTIMASI MEMORI ---
+                // Batasi lebar maksimal ke 400px (sudah cukup jelas untuk foto rumah di HP)
+                const MAX_WIDTH = 400; 
+                let width = img.width;
+                let height = img.height;
 
-        function processImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        const prev = document.getElementById('imgPrev');
-                        prev.src = photoBase64; prev.classList.remove('hidden');
-                        document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                
+                const ctx = canvas.getContext('2d');
+                // Gambar ulang dengan ukuran yang diperkecil
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Kompresi kualitas ke 0.5 (50%) untuk menghemat storage secara signifikan
+                // Format Jpeg jauh lebih ringan dibanding Png untuk foto
+                photoBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                // ------------------------------
+
+                const prev = document.getElementById('imgPrev');
+                prev.src = photoBase64; 
+                prev.classList.remove('hidden');
+                document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                document.getElementById('photoStatus').innerText = "FOTO TERKOMPRES!";
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
 
         function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; document.getElementById('housePhoto').value = ""; }
 
