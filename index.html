@@ -30,7 +30,6 @@
         
         #map { height: 100%; width: 100%; background: #f1f5f9; z-index: 1; }
 
-        /* Style Baru 100% Identik Foto */
         .wa-card { background: white; padding: 2rem 1.5rem; border-radius: 3rem; box-shadow: 0 10px 30px rgba(0,0,0,0.08); width: 100%; max-width: 360px; text-align: center; }
         .scanner-container { position: relative; width: 100%; aspect-ratio: 16/9; background: black; border-radius: 2rem; overflow: hidden; margin-bottom: 1.5rem; border: 5px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
@@ -50,6 +49,7 @@
         .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
         
         #deliveryStatusBar { max-height: 60px; overflow-y: auto; border-bottom: 1px solid #e2e8f0; scrollbar-width: none; }
+        .qr-container { background: white; padding: 5px; border-radius: 10px; border: 1px solid #f1f5f9; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
@@ -95,6 +95,14 @@
                 <div id="activeList" class="space-y-4 pb-32"></div>
             </div>
 
+            <div id="page-history" class="page p-4 overflow-y-auto">
+                 <div class="flex justify-between items-center mb-4 bg-gray-100 p-3 rounded-2xl">
+                    <h3 class="font-black text-blue-900 uppercase italic text-[11px]">Daftar Selesai</h3>
+                    <button onclick="TrackCust.clearHistory()" class="bg-red-600 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase">Kosongkan</button>
+                </div>
+                <div id="historyList" class="space-y-4 pb-32"></div>
+            </div>
+
             <div id="page-maps" class="page h-full relative">
                 <div id="map"></div>
                 <button onclick="TrackCust.resetMapView()" class="absolute bottom-24 right-4 z-[1000] bg-white w-12 h-12 rounded-full shadow-xl flex items-center justify-center text-blue-900">
@@ -133,9 +141,7 @@
                     <div class="scanner-container">
                         <video id="scannerVideo" autoplay playsinline></video>
                         <div id="scannerOverlay" class="scanner-box" style="display:none;">
-                            <div class="scanner-line">
-                                <div class="laser"></div>
-                            </div>
+                            <div class="scanner-line"><div class="laser"></div></div>
                         </div>
                     </div>
 
@@ -143,17 +149,15 @@
                         <div class="flex justify-between items-center">
                             <span class="control-label">Mode BW:</span>
                             <div class="flex gap-1 w-2/3">
-                                <button onclick="TrackCust.setBWMode('off')" id="bw-off" class="btn-mode active uppercase">Off</button>
-                                <button onclick="TrackCust.setBWMode('auto')" id="bw-auto" class="btn-mode uppercase">Auto</button>
-                                <button onclick="TrackCust.setBWMode('manual')" id="bw-manual" class="btn-mode uppercase">Manual</button>
+                                <button onclick="TrackCust.setBWMode('off')" id="bw-off" class="btn-mode active">OFF</button>
+                                <button onclick="TrackCust.setBWMode('auto')" id="bw-auto" class="btn-mode">AUTO</button>
+                                <button onclick="TrackCust.setBWMode('manual')" id="bw-manual" class="btn-mode">MAN</button>
                             </div>
                         </div>
-
                         <div id="manualBWControls" class="hidden space-y-2">
                              <input type="range" id="brSlider" min="50" max="200" value="100" oninput="TrackCust.updateVisualFilters()" class="w-full accent-blue-600">
                              <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="TrackCust.updateVisualFilters()" class="w-full accent-blue-600">
                         </div>
-
                         <div class="flex justify-between items-center">
                             <span class="control-label">Zoom:</span>
                             <div class="flex gap-2 w-2/3">
@@ -162,29 +166,16 @@
                                 <button onclick="TrackCust.setZoom(3)" id="z3" class="btn-zoom">3x</button>
                             </div>
                         </div>
-
-                        <div class="flex justify-between items-center">
-                            <span class="control-label">Fokus:</span>
-                            <div class="w-2/3">
-                                <select class="custom-select"><option>Otomatis</option></select>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="flex gap-3 mb-3">
-                        <button id="btnStartCam" onclick="TrackCust.startCamera()" class="flex-1 bg-slate-500 text-white py-4 rounded-2xl font-black uppercase text-[11px] shadow-md flex items-center justify-center gap-2">
-                            <i class="fa fa-video-slash"></i> Tutup
-                        </button>
-                        <button id="btnStopCam" onclick="TrackCust.stopCamera()" class="hidden flex-1 bg-slate-500 text-white py-4 rounded-2xl font-black uppercase text-[11px] shadow-md">Tutup</button>
-                        
-                        <button onclick="TrackCust.captureAndScan()" class="flex-1 dominos-red text-white py-4 rounded-2xl font-black uppercase text-[11px] shadow-md flex items-center justify-center gap-2">
-                            <i class="fa fa-expand"></i> Scan Nomor
-                        </button>
+                        <button id="btnStartCam" onclick="TrackCust.startCamera()" class="flex-1 bg-slate-500 text-white py-4 rounded-2xl font-black uppercase text-[11px] shadow-md"><i class="fa fa-video"></i> Buka</button>
+                        <button id="btnStopCam" onclick="TrackCust.stopCamera()" class="hidden flex-1 bg-slate-500 text-white py-4 rounded-2xl font-black uppercase text-[11px]">Tutup</button>
+                        <button onclick="TrackCust.captureAndScan()" class="flex-1 dominos-red text-white py-4 rounded-2xl font-black uppercase text-[11px]"><i class="fa fa-expand"></i> Scan</button>
                     </div>
 
                     <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-4 bg-gray-50 rounded-2xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
-                    
-                    <button onclick="TrackCust.openWaDirect()" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg tracking-widest">Chat Pelanggan</button>
+                    <button onclick="TrackCust.openWaDirect()" class="w-full bg-green-500 text-white py-4 rounded-2xl font-black uppercase text-xs shadow-lg">Chat Pelanggan</button>
 
                     <div id="scanResultArea" class="hidden mt-4 pt-4 border-t border-gray-100">
                         <table class="w-full text-[11px] bg-white rounded-xl overflow-hidden border">
@@ -197,9 +188,9 @@
 
         <div class="bottom-nav">
             <div onclick="TrackCust.showPage('list')" class="nav-item active" id="nav-list"><i class="fa fa-motorcycle mb-1 text-xl"></i><span>Antaran</span></div>
-            <div onclick="TrackCust.showPage('history')" class="nav-item"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
+            <div onclick="TrackCust.showPage('history')" class="nav-item" id="nav-history"><i class="fa fa-history mb-1 text-xl"></i><span>History</span></div>
             <div onclick="TrackCust.showPage('add')" class="nav-item nav-add" id="nav-add"><i class="fa fa-plus text-2xl"></i></div>
-            <div onclick="TrackCust.showPage('chat')" class="nav-item" id="nav-chat"><i class="fab fa-whatsapp mb-1 text-xl"></i><span>WA Direct</span></div>
+            <div onclick="TrackCust.showPage('maps')" class="nav-item" id="nav-maps"><i class="fa fa-map-marked-alt mb-1 text-xl"></i><span>Maps</span></div>
             <div onclick="TrackCust.handleLogout()" class="nav-item"><i class="fa fa-sign-out-alt mb-1 text-xl"></i><span>Out</span></div>
         </div>
     </div>
@@ -208,7 +199,8 @@
         const TrackCust = (() => {
             const userPins = { 
                 "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
-                "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Sadewa": "0976"
+                "Okta": "0972", "Dendy": "0960", "Arif": "0966", "Rian": "0971", "Sadewa": "0976",
+                "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968"
             };
             const firebaseConfig = { apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", projectId: "trackcust-jtm" };
             
@@ -216,24 +208,55 @@
             const db = firebase.database();
             
             let currentUser = localStorage.getItem('jtm_user') || "";
-            let allData = {};
-            let photoBase64 = "";
-            let stream = null;
-            let videoTrack = null;
-            let bwMode = 'off';
-            
-            let map, markers = {};
-            const jtmLocation = [-6.2848, 106.9284]; 
+            let allData = {}; let photoBase64 = "";
+            let stream = null; let videoTrack = null; let bwMode = 'off';
+            let map, markers = {}; const jtmLocation = [-6.2848, 106.9284];
+
+            function init() {
+                const logSel = document.getElementById('selectUser');
+                logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
+                Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
+                if(currentUser) bukaApp(currentUser);
+                setInterval(updateTimers, 1000);
+            }
+
+            function bukaApp(n) {
+                currentUser = n; localStorage.setItem('jtm_user', n);
+                document.getElementById('userDisplay').innerText = n;
+                document.getElementById('pinOverlay').style.display = "none";
+                document.getElementById('mainContent').style.display = "flex";
+                startDataListeners();
+            }
+
+            function startDataListeners() {
+                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
+                db.ref('presence/' + currentUser).set(true);
+                db.ref('presence/' + currentUser).onDisconnect().remove();
+                
+                db.ref('presence').on('value', s => {
+                    const el = document.getElementById('onlineBar');
+                    el.innerHTML = "";
+                    s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
+                });
+
+                db.ref('delivery_activity').on('value', s => {
+                    const bar = document.getElementById('deliveryStatusBar');
+                    bar.innerHTML = "";
+                    s.forEach(child => {
+                        const data = child.val();
+                        if (Date.now() - data.timestamp < 900000) {
+                            bar.innerHTML += `<div class="py-1 border-b border-gray-100 italic">(${data.name} SEDANG MENGANTAR)</div>`;
+                        } else { db.ref('delivery_activity/' + child.key).remove(); }
+                    });
+                });
+            }
 
             function initMap() {
                 if (map) return;
                 map = L.map('map', { zoomControl: false }).setView(jtmLocation, 15);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
                 L.marker(jtmLocation).addTo(map).bindPopup("<b>Domino's Jatimakmur</b>");
-                listenToTracking();
-            }
-
-            function listenToTracking() {
+                
                 db.ref('tracking').on('value', snapshot => {
                     Object.values(markers).forEach(m => map.removeLayer(m));
                     markers = {};
@@ -256,104 +279,69 @@
                 }, null, { enableHighAccuracy: true });
             }
 
-            function init() {
-                const logSel = document.getElementById('selectUser');
-                logSel.innerHTML = '<option value="">-- PILIH NAMA --</option>';
-                Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
-                if(currentUser) bukaApp(currentUser);
-                setInterval(updateTimers, 1000);
-            }
-
-            function bukaApp(n) {
-                currentUser = n; localStorage.setItem('jtm_user', n);
-                document.getElementById('userDisplay').innerText = n;
-                document.getElementById('pinOverlay').style.display = "none";
-                document.getElementById('mainContent').style.display = "flex";
-                startDataListeners();
-            }
-
-            function startDataListeners() {
-                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-                db.ref('presence/' + currentUser).set(true);
-                db.ref('presence/' + currentUser).onDisconnect().remove();
-                db.ref('presence').on('value', s => {
-                    const el = document.getElementById('onlineBar');
-                    el.innerHTML = "";
-                    s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
-                });
-                db.ref('delivery_activity').on('value', s => {
-                    const bar = document.getElementById('deliveryStatusBar');
-                    bar.innerHTML = "";
-                    s.forEach(child => {
-                        if (Date.now() - child.val().timestamp < 900000) {
-                            bar.innerHTML += `<div class="py-1 border-b border-gray-100 italic">(${child.val().name} SEDANG MENGANTAR)</div>`;
-                        }
-                    });
-                });
-            }
-
             function render() {
                 const list = document.getElementById('activeList');
+                const hist = document.getElementById('historyList');
                 const filter = document.getElementById('searchInput').value.toLowerCase();
-                let activeCount = 0; list.innerHTML = "";
+                let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
                 
                 Object.keys(allData).reverse().forEach(id => {
                     const i = allData[id];
-                    if(i.status === 'done') return;
-                    activeCount++;
                     const searchStr = `${i.name} ${i.phone} ${i.area}`.toLowerCase();
+                    if(i.status !== 'done') activeCount++;
                     if(!searchStr.includes(filter)) return;
 
                     let formattedPhone = (i.phone || "").replace(/\D/g, '');
                     if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
                     const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
                     
-                    list.innerHTML += `
-                        <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 border-red-500">
+                    const cardHtml = `
+                        <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="text-[8px] font-black text-red-500 uppercase">${i.area}</p>
                                     <h3 class="font-black text-blue-900 text-sm">${i.name}</h3>
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">READY</p>
+                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
                                     ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
                                 </div>
                                 <div class="flex gap-2">
-                                    <button onclick="TrackCust.setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                                    <button onclick="TrackCust.goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
+                                    ${i.status !== 'done' ? `
+                                        <button onclick="TrackCust.setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
+                                        <button onclick="TrackCust.goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
+                                    ` : `<button onclick="TrackCust.setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
                                 </div>
                             </div>
-                            <div class="flex gap-3 mt-3">
+                            <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
                                 ${i.maps ? `<div class="qr-container cursor-pointer" onclick="TrackCust.openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div></div>` : ''}
                                 ${i.photo ? `<img src="${i.photo}" onclick="TrackCust.openFullImg('${i.photo}', '${i.name}')" class="flex-1 h-20 object-cover rounded-xl border">` : ''}
                             </div>
-                            <div class="flex gap-2 mt-3">
+                            <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
                                 <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">MAPS</a>
                                 <a href="https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}" target="_blank" onclick="TrackCust.goOTW('${id}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1">CHAT WA</a>
                             </div>
                         </div>`;
                     
-                    if(i.maps) setTimeout(() => {
-                        const el = document.getElementById(`qrcode-${id}`);
-                        if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
-                    }, 50);
+                    if(i.status === 'done') hist.innerHTML += cardHtml;
+                    else {
+                        list.innerHTML += cardHtml;
+                        if(i.maps) setTimeout(() => {
+                            const el = document.getElementById(`qrcode-${id}`);
+                            if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
+                        }, 50);
+                    }
                 });
                 document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
             }
 
-            // --- SCANNER FUNCTIONS ---
             async function startCamera() {
                 const video = document.getElementById('scannerVideo');
-                const overlay = document.getElementById('scannerOverlay');
                 try {
-                    stream = await navigator.mediaDevices.getUserMedia({ 
-                        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
-                    });
-                    video.srcObject = stream;
-                    videoTrack = stream.getVideoTracks()[0];
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 } } });
+                    video.srcObject = stream; videoTrack = stream.getVideoTracks()[0];
                     document.getElementById('btnStartCam').classList.add('hidden');
                     document.getElementById('btnStopCam').classList.remove('hidden');
                     document.getElementById('camControls').classList.remove('hidden');
-                    overlay.style.display = 'block';
+                    document.getElementById('scannerOverlay').style.display = 'block';
                     updateVisualFilters();
                 } catch (err) { alert("Izin kamera ditolak"); }
             }
@@ -366,119 +354,37 @@
                 document.getElementById('scannerOverlay').style.display = 'none';
             }
 
-            function setBWMode(mode) {
-                bwMode = mode;
-                document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
-                document.getElementById('bw-' + mode).classList.add('active');
-                document.getElementById('manualBWControls').classList.toggle('hidden', mode !== 'manual');
-                updateVisualFilters();
-            }
-
             function updateVisualFilters() {
                 const video = document.getElementById('scannerVideo');
                 if(!video) return;
-                if(bwMode === 'manual') {
-                    video.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
-                } else if(bwMode === 'auto') video.style.filter = `grayscale(100%) contrast(160%)`;
+                if(bwMode === 'manual') video.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
+                else if(bwMode === 'auto') video.style.filter = `grayscale(100%) contrast(160%)`;
                 else video.style.filter = `none`;
-            }
-
-            function setZoom(level) {
-                if (!videoTrack) return;
-                const caps = videoTrack.getCapabilities();
-                if (caps.zoom) {
-                    videoTrack.applyConstraints({ advanced: [{ zoom: Math.min(level, caps.zoom.max) }] });
-                    document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
-                    document.getElementById('z'+level).classList.add('active');
-                }
             }
 
             async function captureAndScan() {
                 const video = document.getElementById('scannerVideo');
                 const canvas = document.createElement('canvas');
                 canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.filter = video.style.filter;
+                const ctx = canvas.getContext('2d'); ctx.filter = video.style.filter;
                 ctx.drawImage(video, 0, 0);
-                
                 try {
                     const result = await Tesseract.recognize(canvas.toDataURL(), 'eng');
                     const matches = result.data.text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
                     if (matches) {
-                        const clean = matches[0].replace(/\D/g, '');
-                        document.getElementById('waDirectNumber').value = clean;
+                        document.getElementById('waDirectNumber').value = matches[0].replace(/\D/g, '');
                         renderAddressTable(matches);
-                    } else alert("Nomor tidak terbaca, gunakan Auto Mode!");
+                    } else alert("Gagal baca, gunakan Zoom/BW!");
                 } catch(e) { console.error(e); }
             }
 
             function renderAddressTable(matches) {
-                const tableBody = document.getElementById('addressTableBody');
-                tableBody.innerHTML = '';
-                const unique = [...new Set(matches.map(m => m.replace(/\D/g, '')))];
-                unique.forEach(num => {
+                const tableBody = document.getElementById('addressTableBody'); tableBody.innerHTML = '';
+                [...new Set(matches.map(m => m.replace(/\D/g, '')))].forEach(num => {
                     tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 font-black">${num}</td><td class="p-3 text-center"><button onclick="TrackCust.openWaLinkCustom('${num}')" class="bg-green-500 text-white w-8 h-8 rounded-lg flex items-center justify-center mx-auto"><i class="fab fa-whatsapp"></i></button></td></tr>`;
                 });
                 document.getElementById('scanResultArea').classList.remove('hidden');
             }
-
-            function openWaLinkCustom(num) {
-                let clean = num.replace(/\D/g, '');
-                if(clean.startsWith('0')) clean = '62' + clean.slice(1);
-                else if(clean.startsWith('8')) clean = '62' + clean;
-                db.ref('delivery_activity/' + currentUser).set({ name: currentUser, timestamp: Date.now() });
-                const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
-                window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank');
-            }
-
-            // --- UTILITIES ---
-            function showPage(id) {
-                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-                document.getElementById('page-'+id).classList.add('active');
-                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-                document.getElementById('nav-'+id)?.classList.add('active');
-                if (id === 'maps') { initMap(); setTimeout(() => map.invalidateSize(), 300); }
-                if (id !== 'chat') stopCamera();
-            }
-
-            function saveData() {
-                const area = document.getElementById('custArea').value;
-                const name = document.getElementById('custName').value;
-                if(!area || !name) return alert("Isi Area & Nama!");
-                db.ref('customers').push({ area: area.toUpperCase(), name, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() });
-                document.getElementById('custArea').value = ""; document.getElementById('custName').value = ""; removePhoto(); showPage('list');
-            }
-
-            function goOTW(id) { 
-                if(allData[id].status !== 'otw') {
-                    db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser });
-                    db.ref('delivery_activity/' + currentUser).set({ name: currentUser, timestamp: Date.now() });
-                    activateTracking();
-                }
-            }
-
-            function processImage(input) {
-                if (input.files && input.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
-                            canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
-                            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                            photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                            document.getElementById('imgPrev').src = photoBase64;
-                            document.getElementById('imgPrev').classList.remove('hidden');
-                            document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                        };
-                        img.src = e.target.result;
-                    };
-                    reader.readAsDataURL(input.files[0]);
-                }
-            }
-
-            function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); }
 
             function updateTimers() {
                 Object.keys(allData).forEach(id => {
@@ -495,17 +401,66 @@
             }
 
             return {
-                init, showPage, render, saveData, processImage, removePhoto, goOTW, bukaApp,
-                startCamera, stopCamera, setBWMode, updateVisualFilters, setZoom, captureAndScan, openWaLinkCustom,
-                openWaDirect: () => openWaLinkCustom(document.getElementById('waDirectNumber').value),
-                resetMapView: () => map.setView(jtmLocation, 15),
+                init, 
+                showPage: (id) => {
+                    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                    document.getElementById('page-'+id).classList.add('active');
+                    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                    document.getElementById('nav-'+id)?.classList.add('active');
+                    if (id === 'maps') { initMap(); setTimeout(() => map.invalidateSize(), 300); }
+                    if (id !== 'chat') stopCamera();
+                },
+                bukaApp, render, 
+                saveData: () => {
+                    const area = document.getElementById('custArea').value;
+                    const name = document.getElementById('custName').value;
+                    if(!area || !name) return alert("Isi Area & Nama!");
+                    db.ref('customers').push({ area: area.toUpperCase(), name, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() });
+                    document.getElementById('custArea').value = ""; document.getElementById('custName').value = ""; TrackCust.removePhoto(); TrackCust.showPage('list');
+                },
+                processImage: (input) => {
+                    if (input.files && input.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = new Image();
+                            img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const scale = 600 / img.width;
+                                canvas.width = 600; canvas.height = img.height * scale;
+                                canvas.getContext('2d').drawImage(img, 0, 0, 600, canvas.height);
+                                photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                                document.getElementById('imgPrev').src = photoBase64;
+                                document.getElementById('imgPrev').classList.remove('hidden');
+                                document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                            };
+                            img.src = e.target.result;
+                        };
+                        reader.readAsDataURL(input.files[0]);
+                    }
+                },
+                removePhoto: () => { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); },
+                goOTW: (id) => {
+                    db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser });
+                    db.ref('delivery_activity/' + currentUser).set({ name: currentUser, timestamp: Date.now() });
+                    activateTracking();
+                },
                 setStatus: (id, s) => db.ref('customers/'+id).update({ status: s }),
+                clearHistory: () => { if(confirm("Hapus History?")) { Object.keys(allData).forEach(id => { if(allData[id].status==='done') db.ref('customers/'+id).remove(); }); }},
+                startCamera, stopCamera, captureAndScan, updateVisualFilters,
+                setBWMode: (m) => { bwMode = m; document.querySelectorAll('.btn-mode').forEach(b => b.classList.toggle('active', b.id==='bw-'+m)); document.getElementById('manualBWControls').classList.toggle('hidden', m!=='manual'); TrackCust.updateVisualFilters(); },
+                setZoom: (l) => { if(videoTrack) { videoTrack.applyConstraints({ advanced: [{ zoom: l }] }); document.querySelectorAll('.btn-zoom').forEach(b => b.classList.toggle('active', b.id==='z'+l)); }},
+                openWaLinkCustom: (num) => {
+                    let clean = num.replace(/\D/g, ''); if(clean.startsWith('0')) clean = '62'+clean.slice(1);
+                    db.ref('delivery_activity/'+currentUser).set({name:currentUser, timestamp: Date.now()});
+                    window.open(`https://wa.me/${clean}?text=${encodeURIComponent("Halo, saya "+currentUser+" dari Domino's...")}`, '_blank');
+                },
+                openWaDirect: () => TrackCust.openWaLinkCustom(document.getElementById('waDirectNumber').value),
+                resetMapView: () => map.setView(jtmLocation, 15),
                 handleLogout: () => { localStorage.removeItem('jtm_user'); location.reload(); },
-                openFullImg: (url, n) => { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = n; document.getElementById('imgModal').style.display = 'flex'; },
+                openFullImg: (url, n) => { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = n; document.getElementById('imgModal').style.display='flex'; },
                 openFullQR: (id, n) => {
-                    const temp = document.createElement('div');
-                    new QRCode(temp, { text: allData[id].maps, width: 400, height: 400 });
-                    setTimeout(() => { document.getElementById('fullImg').src = temp.querySelector('canvas').toDataURL(); document.getElementById('modalCaption').innerText = "LOKASI: " + n; document.getElementById('imgModal').style.display = 'flex'; }, 100);
+                    const temp = document.createElement('div'); new QRCode(temp, { text: allData[id].maps, width: 400, height: 400 });
+                    setTimeout(() => { document.getElementById('fullImg').src = temp.querySelector('canvas').toDataURL(); document.getElementById('modalCaption').innerText = "LOKASI: "+n; document.getElementById('imgModal').style.display='flex'; }, 100);
                 }
             };
         })();
@@ -514,7 +469,7 @@
         window.prosesLogin = () => {
             const u = document.getElementById('selectUser').value;
             const p = document.getElementById('inputPin').value;
-            if(u && p) { TrackCust.bukaApp(u); }
+            if(u && p) TrackCust.bukaApp(u);
         };
     </script>
 </body>
