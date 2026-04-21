@@ -348,7 +348,7 @@
 
         function openWaLinkCustom(n) {
             pushDeliveryStatus(currentUser);
-            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Terimakasih 😊`;
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu?,agar pengantaran lebih cepat,Terimakasih 😊`;
             window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
@@ -409,7 +409,7 @@
                 
                 let wa = (i.phone || "").replace(/\D/g, '');
                 if(wa.startsWith('0')) wa = '62' + wa.slice(1);
-                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar...`;
+                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar mohon untuk menunggu,dan tetap aktif WhatsApp ya pak/bu, Terimakasih 😊...`;
                 const waLink = `https://wa.me/${wa}?text=${encodeURIComponent(msgWa)}`;
 
                 const cardHtml = `
