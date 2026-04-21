@@ -671,7 +671,7 @@
         }
 
         function secureDelete(id) { const p = prompt("PIN KONFIRMASI:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); else if(p !== null) alert("PIN SALAH!"); }
-            function processImage(input) {
+        function processImage(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -718,20 +718,7 @@
     }
 }
 
-                // ------------------------------
-
-                const prev = document.getElementById('imgPrev');
-                prev.src = photoBase64; 
-                prev.classList.remove('hidden');
-                document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                document.getElementById('photoStatus').innerText = "FOTO TERKOMPRES!";
-            };
-            img.src = e.target.result;
-        };
-        reader.readAsDataURL(input.files[0]);
-    }
-}
-
+            
 
         function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; document.getElementById('housePhoto').value = ""; }
 
