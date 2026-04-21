@@ -679,9 +679,9 @@
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 
-                // --- BAGIAN OPTIMASI MEMORI ---
-                // Batasi lebar maksimal ke 400px (sudah cukup jelas untuk foto rumah di HP)
-                const MAX_WIDTH = 400; 
+                // --- STRATEGI KOMPRESI EKSTREM (10X LEBIH KECIL) ---
+                // 1. Perkecil resolusi ke 250px (sangat kecil tapi cukup untuk patokan rumah)
+                const MAX_WIDTH = 250; 
                 let width = img.width;
                 let height = img.height;
 
@@ -694,12 +694,30 @@
                 canvas.height = height;
                 
                 const ctx = canvas.getContext('2d');
-                // Gambar ulang dengan ukuran yang diperkecil
+                
+                // 2. Gunakan smoothing agar gambar tidak terlalu pecah saat diperkecil
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
                 ctx.drawImage(img, 0, 0, width, height);
                 
-                // Kompresi kualitas ke 0.5 (50%) untuk menghemat storage secara signifikan
-                // Format Jpeg jauh lebih ringan dibanding Png untuk foto
-                photoBase64 = canvas.toDataURL('image/jpeg', 0.5);
+                // 3. Kompresi Kualitas ke 0.1 (10% kualitas)
+                // Ini akan memangkas ukuran byte secara drastis
+                photoBase64 = canvas.toDataURL('image/jpeg', 0.1);
+                // --------------------------------------------------
+
+                const prev = document.getElementById('imgPrev');
+                prev.src = photoBase64; 
+                prev.classList.remove('hidden');
+                document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                document.getElementById('photoStatus').innerText = "ULTRA COMPRESSED (10X)";
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
                 // ------------------------------
 
                 const prev = document.getElementById('imgPrev');
