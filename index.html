@@ -35,6 +35,7 @@
         
         #fullImg.qr-large { padding: 20px; background: white; border-radius: 20px; }
 
+        /* Scanner Styles */
         .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
         #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
         .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
@@ -55,6 +56,7 @@
         .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
         .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
 
+        /* Style Baru Untuk Delivery Status */
         #deliveryStatusBar {
             max-height: 60px;
             overflow-y: auto;
@@ -62,7 +64,7 @@
             scrollbar-width: none;
         }
         .status-item {
-            padding: 4px 0;
+            padding: 2px 0;
             border-bottom: 1px dashed rgba(0,100,145,0.1);
         }
     </style>
@@ -265,6 +267,7 @@
         let videoTrack = null;
         let bwMode = 'off'; 
         let isScanning = false; 
+        let autoScanInterval = null;
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -273,346 +276,51 @@
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
             updatePresence();
-            startDeliveryStatusListener();
+            startDeliveryStatusListener(); // Jalankan listener status delivery
         };
 
+        // Fungsi Baru: Memperbarui Status Mengantar ke Firebase
         function pushDeliveryStatus(nama) {
             const now = Date.now();
-            db.ref('delivery_status/' + nama).set({
-                nama: nama,
+            db.ref('delivery_activity/' + nama).set({
+                name: nama,
                 timestamp: now
             });
         }
 
+        // Fungsi Baru: Mendengarkan Perubahan Status Mengantar
         function startDeliveryStatusListener() {
-            db.ref('delivery_status').on('value', (snapshot) => {
-                const statusData = snapshot.val();
-                const statusBar = document.getElementById('deliveryStatusBar');
-                statusBar.innerHTML = "";
-                
-                if (statusData) {
-                    const now = Date.now();
-                    Object.values(statusData).forEach(item => {
-                        const diffSec = Math.floor((now - item.timestamp) / 1000);
-                        if (diffSec < 1200) { 
-                            const m = Math.floor(diffSec / 60);
-                            const s = diffSec % 60;
-                            const timeStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
-                            
-                            const div = document.createElement('div');
-                            div.className = "status-item";
-                            div.innerHTML = `<span>${item.nama} SEDANG MENGANTAR (${timeStr} LALU)</span>`;
-                            statusBar.appendChild(div);
-                        } else {
-                            db.ref('delivery_status/' + item.nama).remove();
-                        }
-                    });
-                }
-            });
-        }
-
-        function prosesLogin() {
-            const u = document.getElementById('selectUser').value;
-            const p = document.getElementById('inputPin').value;
-            if (userPins[u] === p) {
-                bukaApp(u);
-            } else {
-                alert("PIN SALAH!");
-                document.getElementById('inputPin').value = "";
-            }
-        }
-
-        function bukaApp(u) {
-            currentUser = u;
-            localStorage.setItem('jtm_user', u);
-            document.getElementById('pinOverlay').style.display = 'none';
-            document.getElementById('mainContent').style.display = 'flex';
-            document.getElementById('userDisplay').innerText = u;
-            db.ref('track_data').on('value', (s) => { allData = s.val() || {}; render(); });
-        }
-
-        function handleLogout() {
-            localStorage.removeItem('jtm_user');
-            location.reload();
-        }
-
-        function updatePresence() {
-            if(!currentUser) return;
-            const presRef = db.ref('presence/' + currentUser);
-            presRef.set(true);
-            presRef.onDisconnect().remove();
-            
-            db.ref('presence').on('value', (s) => {
-                const bar = document.getElementById('onlineBar');
+            db.ref('delivery_activity').on('value', s => {
+                const bar = document.getElementById('deliveryStatusBar');
                 bar.innerHTML = "";
-                const users = s.val();
-                if(users) {
-                    Object.keys(users).forEach(u => {
-                        bar.innerHTML += `<span class="bg-blue-600 text-white px-2 py-0.5 rounded-full">● ${u}</span>`;
-                    });
-                }
+                const now = Date.now();
+                let hasData = false;
+
+                s.forEach(child => {
+                    const data = child.val();
+                    // Jika data sudah lebih dari 15 menit (900.000 ms), hapus dari database
+                    if (now - data.timestamp > 900000) {
+                        db.ref('delivery_activity/' + child.key).remove();
+                    } else {
+                        hasData = true;
+                        bar.innerHTML += `<div class="status-item py-1 border-b border-gray-100 flex items-center">
+                            <i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i>
+                            <span>(${data.name} SEDANG MENGANTAR)</span>
+                        </div>`;
+                    }
+                });
+
+                if(!hasData) bar.style.display = "none";
+                else bar.style.display = "block";
             });
-        }
-
-        function showPage(p) {
-            document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(nv => nv.classList.remove('active'));
-            document.getElementById('page-' + p).classList.add('active');
-            document.getElementById('nav-' + p).classList.add('active');
-            if(p !== 'chat') stopCamera();
-        }
-
-        function processImage(input) {
-            const file = input.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height;
-                    const max = 800;
-                    if(w > h) { if(w > max) { h *= max/w; w = max; } }
-                    else { if(h > max) { w *= max/h; h = max; } }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                    document.getElementById('imgPrev').src = photoBase64;
-                    document.getElementById('imgPrev').classList.remove('hidden');
-                    document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                    document.getElementById('photoStatus').innerText = "FOTO SIAP";
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function removePhoto() {
-            photoBase64 = "";
-            document.getElementById('housePhoto').value = "";
-            document.getElementById('imgPrev').classList.add('hidden');
-            document.getElementById('btnRemovePhoto').classList.add('hidden');
-            document.getElementById('photoStatus').innerText = "Foto Rumah";
-        }
-
-        function saveData() {
-            const area = document.getElementById('custArea').value.toUpperCase();
-            const name = document.getElementById('custName').value;
-            const phone = document.getElementById('custPhone').value;
-            const maps = document.getElementById('custMaps').value;
-            const editId = document.getElementById('editId').value;
-
-            if (!area || !name || !phone) return alert("Mohon isi Area, Nama, dan HP!");
-
-            const id = editId || Date.now();
-            const data = {
-                id, area, name, phone, maps, 
-                photo: photoBase64 || (editId && allData[editId] ? allData[editId].photo : ""),
-                status: "aktif",
-                driver: editId && allData[editId] ? allData[editId].driver : "",
-                timeAdd: editId && allData[editId] ? allData[editId].timeAdd : Date.now(),
-                timeStart: editId && allData[editId] ? (allData[editId].timeStart || null) : null,
-                userAdd: editId && allData[editId] ? allData[editId].userAdd : currentUser
-            };
-
-            db.ref('track_data/' + id).set(data).then(() => {
-                resetForm();
-                showPage('list');
-            });
-        }
-
-        function resetForm() {
-            document.getElementById('editId').value = "";
-            document.getElementById('custArea').value = "";
-            document.getElementById('custName').value = "";
-            document.getElementById('custPhone').value = "";
-            document.getElementById('custMaps').value = "";
-            removePhoto();
-            document.getElementById('formTitle').innerText = "Tambah Antaran";
-            document.getElementById('saveBtn').innerText = "Simpan";
-            document.getElementById('cancelBtn').classList.add('hidden');
-        }
-
-        function editData(id) {
-            const d = allData[id];
-            document.getElementById('editId').value = id;
-            document.getElementById('custArea').value = d.area;
-            document.getElementById('custName').value = d.name;
-            document.getElementById('custPhone').value = d.phone;
-            document.getElementById('custMaps').value = d.maps;
-            if(d.photo) {
-                document.getElementById('imgPrev').src = d.photo;
-                document.getElementById('imgPrev').classList.remove('hidden');
-                document.getElementById('btnRemovePhoto').classList.remove('hidden');
-            }
-            document.getElementById('formTitle').innerText = "Edit Data";
-            document.getElementById('saveBtn').innerText = "Update";
-            document.getElementById('cancelBtn').classList.remove('hidden');
-            showPage('add');
-        }
-
-        function cancelEdit() { resetForm(); showPage('list'); }
-
-        function updateStatus(id, stat) {
-            let update = { status: stat };
-            if(stat === 'jalan') {
-                update.timeStart = Date.now();
-                update.driver = currentUser;
-                pushDeliveryStatus(currentUser); 
-            }
-            if(stat === 'selesai') update.timeEnd = Date.now();
-            db.ref('track_data/' + id).update(update);
-        }
-
-        function deleteData(id) {
-            if(confirm("Hapus data ini?")) db.ref('track_data/' + id).remove();
         }
 
         function clearAllHistory() {
-            if(confirm("Hapus semua history?")) {
-                Object.keys(allData).forEach(id => {
-                    if(allData[id].status === 'selesai') db.ref('track_data/' + id).remove();
-                });
-            }
-        }
-
-        function render() {
-            const activeList = document.getElementById('activeList');
-            const historyList = document.getElementById('historyList');
-            const search = document.getElementById('searchInput').value.toLowerCase();
-            
-            activeList.innerHTML = ""; historyList.innerHTML = "";
-            let count = 0;
-
-            const sorted = Object.values(allData).sort((a,b) => b.timeAdd - a.timeAdd);
-
-            sorted.forEach(d => {
-                const match = d.name.toLowerCase().includes(search) || d.phone.includes(search) || d.area.toLowerCase().includes(search) || (d.driver && d.driver.toLowerCase().includes(search));
-                if(!match) return;
-
-                const card = `
-                    <div class="bg-white rounded-3xl shadow-lg border-l-8 ${d.status === 'aktif' ? 'border-red-500' : 'border-blue-500'} p-4 relative overflow-hidden">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <span class="bg-yellow-400 text-blue-900 px-3 py-1 rounded-lg text-[10px] font-black italic uppercase">${d.area}</span>
-                                <h3 class="font-black text-blue-900 uppercase italic mt-2 text-sm">${d.name}</h3>
-                                <p class="text-[10px] font-bold text-gray-400">${d.phone}</p>
-                            </div>
-                            <div class="text-right">
-                                <span class="block text-[8px] font-black text-gray-400 uppercase italic">Ditambah oleh: ${d.userAdd}</span>
-                                <span class="block text-[8px] font-black text-blue-600 uppercase italic">${new Date(d.timeAdd).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                                ${d.driver ? `<span class="driver-badge mt-1 inline-block uppercase italic">DRV: ${d.driver}</span>` : ''}
-                            </div>
-                        </div>
-
-                        <div class="flex gap-2 mb-4">
-                            <a href="tel:${d.phone}" class="flex-1 bg-green-50 text-green-600 p-2 rounded-xl text-center"><i class="fa fa-phone"></i></a>
-                            <button onclick="openWa('${d.phone}', '${d.name}', '${d.area}')" class="flex-1 bg-green-500 text-white p-2 rounded-xl"><i class="fab fa-whatsapp"></i></button>
-                            ${d.maps ? `<a href="${d.maps}" target="_blank" class="flex-1 bg-blue-50 text-blue-600 p-2 rounded-xl text-center"><i class="fa fa-map-marker-alt"></i></a>` : ''}
-                            ${d.photo ? `<button onclick="zoomImg('${d.photo}', '${d.name}')" class="flex-1 bg-gray-100 text-gray-600 p-2 rounded-xl"><i class="fa fa-home"></i></button>` : ''}
-                            <div class="qr-container" onclick="zoomQR('${d.phone}', '${d.name}')">
-                                <div id="qr-${d.id}" class="hidden"></div>
-                                <i class="fa fa-qrcode text-blue-900 text-xs"></i>
-                            </div>
-                        </div>
-
-                        <div class="flex gap-2">
-                            ${d.status === 'aktif' ? `
-                                <button onclick="updateStatus('${d.id}', 'jalan')" class="flex-[2] dominos-blue text-white py-3 rounded-xl font-black uppercase italic text-[10px] shadow-md">OTW ANTAR</button>
-                                <button onclick="editData('${d.id}')" class="flex-1 bg-gray-100 text-gray-400 py-3 rounded-xl font-black text-[10px]"><i class="fa fa-edit"></i></button>
-                                <button onclick="deleteData('${d.id}')" class="flex-1 bg-gray-100 text-red-300 py-3 rounded-xl font-black text-[10px]"><i class="fa fa-trash"></i></button>
-                            ` : d.status === 'jalan' ? `
-                                <button onclick="updateStatus('${d.id}', 'selesai')" class="flex-[3] dominos-red text-white py-3 rounded-xl font-black uppercase italic text-[10px] shadow-md">SELESAI</button>
-                                <div class="flex-1 text-center bg-blue-50 rounded-xl flex flex-col justify-center">
-                                    <span class="text-[7px] font-black text-blue-900 uppercase">Durasi</span>
-                                    <span id="timer-${d.id}" class="text-[10px] font-black text-blue-600">00:00</span>
-                                </div>
-                            ` : `
-                                <div class="w-full bg-gray-50 p-2 rounded-xl text-center">
-                                    <span class="text-[8px] font-black text-gray-400 uppercase italic">Selesai dalam: ${calcDuration(d.timeStart, d.timeEnd)}</span>
-                                </div>
-                            `}
-                        </div>
-                    </div>
-                `;
-
-                if(d.status !== 'selesai') {
-                    activeList.innerHTML += card;
-                    count++;
-                } else {
-                    historyList.innerHTML += card;
-                }
-                
-                setTimeout(() => {
-                    const qrd = document.getElementById('qr-' + d.id);
-                    if(qrd && qrd.innerHTML === "") new QRCode(qrd, { text: d.phone, width: 128, height: 128 });
-                }, 100);
-            });
-            document.getElementById('countActive').innerText = count + " AKTIF";
-        }
-
-        function updateTimers() {
-            Object.values(allData).forEach(d => {
-                if(d.status === 'jalan' && d.timeStart) {
-                    const el = document.getElementById('timer-' + d.id);
-                    if(el) el.innerText = calcDuration(d.timeStart, Date.now());
-                }
-            });
-        }
-
-        function calcDuration(start, end) {
-            if(!start || !end) return "00:00";
-            const diff = Math.floor((end - start) / 1000);
-            const m = Math.floor(diff / 60).toString().padStart(2, '0');
-            const s = (diff % 60).toString().padStart(2, '0');
-            return `${m}:${s}`;
-        }
-
-        function openWa(num, name, area) {
-            const txt = encodeURIComponent(`Halo Kak ${name} (${area}), Saya Kurir Domino's Pizza Jati Makmur. Saya sedang dalam perjalanan mengantar pesanan Kakak. Mohon ditunggu ya, terima kasih.`);
-            window.open(`https://wa.me/62${num.startsWith('0') ? num.slice(1) : num}?text=${txt}`);
-        }
-
-        function zoomImg(src, cap) {
-            document.getElementById('fullImg').src = src;
-            document.getElementById('fullImg').classList.remove('qr-large');
-            document.getElementById('modalCaption').innerText = "FOTO RUMAH: " + cap;
-            document.getElementById('imgModal').style.display = 'flex';
-        }
-
-        function zoomQR(num, name) {
-            const mc = document.getElementById('modalContent');
-            mc.innerHTML = '<div id="qrLarge" class="qr-large"></div><p class="text-white mt-4 font-black italic uppercase tracking-widest">QR NOMOR: '+name+'</p>';
-            new QRCode(document.getElementById('qrLarge'), { text: num, width: 256, height: 256 });
-            document.getElementById('imgModal').style.display = 'flex';
-        }
-
-        async function startCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment', focusMode: 'continuous', zoom: 1 } 
-                });
-                const video = document.getElementById('scannerVideo');
-                video.srcObject = stream;
-                videoTrack = stream.getVideoTracks()[0];
-                
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('camControls').classList.remove('hidden');
-                document.getElementById('scannerOverlay').style.display = 'block';
-            } catch (err) {
-                alert("Gagal buka kamera: " + err);
-            }
-        }
-
-        function stopCamera() {
-            if(stream) {
-                stream.getTracks().forEach(t => t.stop());
-                document.getElementById('scannerVideo').srcObject = null;
-                document.getElementById('btnStartCam').classList.remove('hidden');
-                document.getElementById('btnStopCam').classList.add('hidden');
-                document.getElementById('camControls').classList.add('hidden');
-                document.getElementById('scannerOverlay').style.display = 'none';
+            if (confirm("Apakah yakin anda ingin menghapus SEMUA data history yang sudah selesai?")) {
+                const doneItems = Object.keys(allData).filter(id => allData[id].status === 'done');
+                if (doneItems.length === 0) return alert("Tidak ada data history untuk dihapus.");
+                doneItems.forEach(id => { db.ref('customers/' + id).remove(); });
+                alert("History berhasil dikosongkan.");
             }
         }
 
@@ -620,99 +328,438 @@
             bwMode = mode;
             document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
             document.getElementById('bw-' + mode).classList.add('active');
-            document.getElementById('manualBWControls').style.display = mode === 'manual' ? 'grid' : 'none';
+            const manualBox = document.getElementById('manualBWControls');
+            if(mode === 'manual') manualBox.classList.remove('hidden');
+            else manualBox.classList.add('hidden');
             updateVisualFilters();
         }
 
         function updateVisualFilters() {
             const video = document.getElementById('scannerVideo');
-            let filter = "";
-            if(bwMode === 'auto') filter = "grayscale(100%) contrast(150%) brightness(120%)";
-            else if(bwMode === 'manual') {
+            if(!video) return;
+            if(bwMode === 'manual') {
                 const br = document.getElementById('brSlider').value;
                 const ct = document.getElementById('ctSlider').value;
-                filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
-            }
-            video.style.filter = filter;
+                video.style.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
+            } else if(bwMode === 'auto') {
+                video.style.filter = `grayscale(100%) contrast(150%)`;
+            } else { video.style.filter = `none`; }
         }
 
-        async function setZoom(val) {
-            if(!videoTrack) return;
+        async function startCamera() {
+            const video = document.getElementById('scannerVideo');
+            const overlay = document.getElementById('scannerOverlay');
             try {
-                const caps = videoTrack.getCapabilities();
-                if(caps.zoom) {
-                    await videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
-                    document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
-                    document.getElementById('z' + val).classList.add('active');
-                }
-            } catch(e) { console.error(e); }
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
+                video.srcObject = stream;
+                videoTrack = stream.getVideoTracks()[0];
+                document.getElementById('btnStartCam').classList.add('hidden');
+                document.getElementById('btnStopCam').classList.remove('hidden');
+                document.getElementById('camControls').classList.remove('hidden');
+                overlay.style.display = 'block';
+                document.getElementById('brSlider').value = 100;
+                document.getElementById('ctSlider').value = 100;
+                updateVisualFilters();
+                startAutoScan();
+            } catch (err) { alert("Izin kamera ditolak."); }
+        }
+
+        function stopCamera() {
+            const overlay = document.getElementById('scannerOverlay');
+            if (stream) {
+                stream.getTracks().forEach(t => t.stop());
+                stream = null;
+                videoTrack = null;
+                document.getElementById('scannerVideo').srcObject = null;
+                document.getElementById('btnStartCam').classList.remove('hidden');
+                document.getElementById('btnStopCam').classList.add('hidden');
+                document.getElementById('camControls').classList.add('hidden');
+                if(overlay) overlay.style.display = 'none';
+                clearInterval(autoScanInterval);
+                autoScanInterval = null;
+            }
+        }
+
+        function setZoom(level) {
+            if (!videoTrack) return;
+            const capabilities = videoTrack.getCapabilities();
+            if (capabilities.zoom) {
+                const max = capabilities.zoom.max || 1;
+                let val = Math.min(level, max);
+                videoTrack.applyConstraints({ advanced: [{ zoom: val }] });
+                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
+                document.getElementById('z'+level).classList.add('active');
+            } else { alert("Zoom tidak didukung di perangkat ini."); }
         }
 
         function setFocusMode(mode) {
-            if(!videoTrack) return;
-            const isManual = mode === 'manual';
-            document.getElementById('manualFocusCont').style.display = isManual ? 'flex' : 'none';
-            videoTrack.applyConstraints({ advanced: [{ focusMode: mode }] });
+            if (!videoTrack) return;
+            const manualCont = document.getElementById('manualFocusCont');
+            if (mode === 'manual') {
+                manualCont.classList.remove('hidden');
+                videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: 50 }] });
+            } else {
+                manualCont.classList.add('hidden');
+                videoTrack.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+            }
         }
 
-        async function setManualFocus(val) {
-            if(!videoTrack) return;
-            try {
-                const caps = videoTrack.getCapabilities();
-                if(caps.focusDistance) {
-                    const min = caps.focusDistance.min;
-                    const max = caps.focusDistance.max;
-                    const dist = min + (val/100) * (max - min);
-                    await videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: dist }] });
-                }
-            } catch(e) { console.error(e); }
+        function setManualFocus(val) {
+            if (!videoTrack) return;
+            const capabilities = videoTrack.getCapabilities();
+            if (capabilities.focusDistance) {
+                const min = capabilities.focusDistance.min || 0;
+                const max = capabilities.focusDistance.max || 100;
+                const distance = min + (val / 100) * (max - min);
+                videoTrack.applyConstraints({ advanced: [{ focusMode: 'manual', focusDistance: distance }] });
+            }
+        }
+
+        async function startAutoScan() {
+            if (autoScanInterval) return;
+            autoScanInterval = setInterval(async () => {
+                if (isScanning || !stream) return;
+                isScanning = true;
+                const video = document.getElementById('scannerVideo');
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.filter = video.style.filter;
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                try {
+                    const result = await Tesseract.recognize(dataUrl, 'eng');
+                    const text = result.data.text;
+                    const phoneMatches = text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
+                    if (phoneMatches && phoneMatches.length > 0) {
+                        let cleanNumber = phoneMatches[0].replace(/\D/g, '');
+
+                        // LOGIKA AUTO-REDIRECT CEK DATA AKTIF
+                        const searchNum = cleanNumber.startsWith('0') ? cleanNumber.slice(1) : (cleanNumber.startsWith('62') ? cleanNumber.slice(2) : cleanNumber);
+                        const activeId = Object.keys(allData).find(id => {
+                            const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
+                            return allData[id].status !== 'done' && cleanDataNum.includes(searchNum);
+                        });
+
+                        if (activeId) {
+                            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                            document.getElementById('searchInput').value = allData[activeId].phone;
+                            render();
+                            showPage('list');
+                            stopCamera();
+                            isScanning = false;
+                            return;
+                        }
+
+                        if (cleanNumber.length >= 10 && document.getElementById('waDirectNumber').value !== cleanNumber) {
+                            document.getElementById('waDirectNumber').value = cleanNumber;
+                            document.querySelector('.scanner-box').style.borderColor = '#22c55e';
+                            setTimeout(() => { document.querySelector('.scanner-box').style.borderColor = '#e31837'; }, 500);
+                            renderAddressTable(phoneMatches);
+                        }
+                    }
+                } catch (err) { console.error("AutoScan Error:", err); } finally { isScanning = false; }
+            }, 2000);
+        }
+
+        function renderAddressTable(matches) {
+            const tableBody = document.getElementById('addressTableBody');
+            const resultArea = document.getElementById('scanResultArea');
+            tableBody.innerHTML = '';
+            const uniqueNumbers = [...new Set(matches.map(m => m.replace(/\D/g, '')))];
+            uniqueNumbers.forEach(num => {
+                if (num.length < 10) return;
+                let cleanNum = num;
+                if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
+                else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
+                tableBody.innerHTML += `
+                    <tr>
+                        <td class="p-3 text-center text-blue-900 text-sm font-black">${num}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                        </td>
+                    </tr>`;
+            });
+            resultArea.classList.remove('hidden');
         }
 
         async function captureAndScan() {
             const video = document.getElementById('scannerVideo');
+            if (!video.srcObject) return alert("Buka kamera dulu!");
+            const loading = document.getElementById('ocrLoading');
+            const tableBody = document.getElementById('addressTableBody');
+            const directInput = document.getElementById('waDirectNumber');
+            const tableArea = document.getElementById('scanResultArea');
+            loading.classList.remove('hidden');
+            directInput.value = "Processing...";
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
-            
-            if(bwMode !== 'off') ctx.filter = video.style.filter;
+            if(bwMode === 'auto') {
+                ctx.drawImage(video, 0, 0);
+                const rawData = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                let brightness = 0;
+                for (let i = 0; i < rawData.length; i += 4) brightness += (0.299 * rawData[i] + 0.587 * rawData[i+1] + 0.114 * rawData[i+2]);
+                const avgBrightness = brightness / (canvas.width * canvas.height);
+                let finalContrast = 400; let finalBrightness = 110; 
+                if (avgBrightness > 160) { finalBrightness = 65; finalContrast = 700; }
+                ctx.filter = `grayscale(100%) contrast(${finalContrast}%) brightness(${finalBrightness}%)`;
+            } else if(bwMode === 'manual') {
+                const br = document.getElementById('brSlider').value;
+                const ct = document.getElementById('ctSlider').value;
+                ctx.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
+            } else ctx.filter = 'none';
             ctx.drawImage(video, 0, 0);
-            
-            document.getElementById('ocrLoading').classList.remove('hidden');
-            
+            const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
             try {
-                const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                const numbers = text.match(/(08|628)\d{8,12}/g);
-                
-                if(numbers) {
-                    const unique = [...new Set(numbers)];
-                    const tbody = document.getElementById('addressTableBody');
-                    tbody.innerHTML = "";
-                    unique.forEach(num => {
-                        const cleanNum = num.startsWith('62') ? num : '62' + num.slice(1);
-                        tbody.innerHTML += `
-                            <tr>
-                                <td class="p-2">${num}</td>
-                                <td class="p-2"><button onclick="window.open('https://wa.me/${cleanNum}')" class="bg-green-500 text-white px-3 py-1 rounded-lg">CHAT</button></td>
-                            </tr>
-                        `;
+                const result = await Tesseract.recognize(dataUrl, 'eng', { tessedit_char_whitelist: '0123456789()- ', tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT });
+                const rawText = result.data.text;
+                const phoneRegex = /(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g;
+                const matches = rawText.match(phoneRegex);
+                tableBody.innerHTML = "";
+                if (matches && matches.length > 0) {
+                    const uniqueMatches = [...new Set(matches)];
+                    uniqueMatches.forEach((match, idx) => {
+                        let cleanNum = match.replace(/\D/g, ''); 
+                        if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
+                        else if (cleanNum.startsWith('8')) cleanNum = '62' + cleanNum;
+                        if(idx === 0) directInput.value = cleanNum;
+                        tableBody.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${match}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${cleanNum}')" class="bg-green-500 text-white w-8 h-8 rounded-lg shadow-md"><i class="fab fa-whatsapp"></i></button></td></tr>`;
                     });
-                    document.getElementById('scanResultArea').classList.remove('hidden');
-                } else {
-                    alert("Nomor HP tidak ditemukan.");
-                }
-            } catch (err) {
-                alert("OCR Error: " + err);
-            } finally {
-                document.getElementById('ocrLoading').classList.add('hidden');
-            }
+                    tableArea.classList.remove('hidden');
+                    if (navigator.vibrate) navigator.vibrate(100);
+                } else { alert("Gagal membaca. Gunakan Zoom atau Manual BW Mode!"); directInput.value = ""; }
+            } catch (err) { console.error(err); } finally { loading.classList.add('hidden'); }
+        }
+
+        function openWaLinkCustom(num) {
+            pushDeliveryStatus(currentUser); // Trigger status "Sedang Mengantar"
+            const msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu? Agar pengantaran lebih cepat, terimakasih 😊`;
+            window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
         function openWaDirect() {
-            const num = document.getElementById('waDirectNumber').value;
-            if(!num) return alert("Isi nomor!");
-            const clean = num.startsWith('0') ? '62' + num.slice(1) : num.startsWith('62') ? num : '62' + num;
-            window.open(`https://wa.me/${clean}`);
+            let num = document.getElementById('waDirectNumber').value;
+            if(!num || num === "Processing...") return alert("Nomor Kosong!");
+            let waNum = num.replace(/\D/g, '');
+
+            // LOGIKA AUTO-REDIRECT KE ANTARAN AKTIF
+            const searchNum = waNum.startsWith('0') ? waNum.slice(1) : (waNum.startsWith('62') ? waNum.slice(2) : waNum);
+            const activeId = Object.keys(allData).find(id => {
+                const cleanDataNum = (allData[id].phone || "").replace(/\D/g, '');
+                return allData[id].status !== 'done' && cleanDataNum.includes(searchNum);
+            });
+
+            if (activeId) {
+                document.getElementById('searchInput').value = allData[activeId].phone;
+                render();
+                showPage('list');
+                stopCamera();
+                return;
+            }
+
+            let waLinkNum = waNum;
+            if(waLinkNum.startsWith('0')) waLinkNum = '62' + waLinkNum.slice(1);
+            if(waLinkNum.startsWith('8')) waLinkNum = '62' + waLinkNum;
+            openWaLinkCustom(waLinkNum);
+        }
+
+        function updatePresence() {
+            if(!currentUser) return;
+            const ref = db.ref('presence/' + currentUser);
+            ref.set(true); ref.onDisconnect().remove();
+            db.ref('presence').on('value', s => {
+                const el = document.getElementById('onlineBar');
+                el.innerHTML = "";
+                s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
+            });
+        }
+
+        function prosesLogin() {
+            const u = document.getElementById('selectUser').value;
+            const p = document.getElementById('inputPin').value;
+            if(p === userPins[u]) { bukaApp(u); updatePresence(); } else alert("PIN SALAH!");
+        }
+
+        function bukaApp(n) {
+            currentUser = n; localStorage.setItem('jtm_user', n);
+            document.getElementById('userDisplay').innerText = n;
+            document.getElementById('pinOverlay').style.display = "none";
+            document.getElementById('mainContent').style.display = "flex";
+            startDataListeners();
+        }
+
+        function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
+
+        function startDataListeners() { db.ref('customers').on('value', s => { allData = s.val() || {}; render(); }); }
+
+        function render() {
+            const list = document.getElementById('activeList'); const hist = document.getElementById('historyList');
+            const filter = document.getElementById('searchInput').value.toLowerCase();
+            let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
+            Object.keys(allData).reverse().forEach(id => {
+                const i = allData[id];
+                const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
+                const match = searchStr.includes(filter);
+                if(i.status !== 'done') activeCount++;
+                let formattedPhone = (i.phone || "").replace(/\D/g, '');
+                if(formattedPhone.startsWith('0')) formattedPhone = '62' + formattedPhone.slice(1);
+                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar , mohon untuk tetap aktif WhatsApp ya, Terimakasih ☺️`;
+                const waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msgWa)}`;
+                const cardHtml = `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
+                                <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
+                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                ${i.status !== 'done' ? `
+                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
+                                    <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
+                                    <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
+                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
+                                ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
+                            </div>
+                        </div>
+                        <div class="flex gap-3 mt-3 ${i.status==='done'?'hidden':''}">
+                            ${i.maps ? `<div class="qr-container cursor-pointer" onclick="openFullQR('${id}', '${i.name}')"><div id="qrcode-${id}"></div><p class="text-[7px] font-black mt-1 text-blue-900 uppercase">SCAN MAPS</p></div>` : ''}
+                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="flex-1 h-20 object-cover rounded-xl border cursor-pointer">` : ''}
+                        </div>
+                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
+                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
+                            <a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
+                        </div>
+                    </div>`;
+                if(i.status === 'done') hist.innerHTML += cardHtml; 
+                else if(match) {
+                    list.innerHTML += cardHtml;
+                    if(i.maps) setTimeout(() => { const el = document.getElementById(`qrcode-${id}`); if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491", correctLevel : QRCode.CorrectLevel.H }); }, 50);
+                }
+            });
+            document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
+        }
+
+        function openFullQR(id, custName) {
+            const tempDiv = document.createElement('div');
+            new QRCode(tempDiv, { text: allData[id].maps, width: 1000, height: 1000, colorDark: "#000000", correctLevel : QRCode.CorrectLevel.H });
+            setTimeout(() => {
+                const largeQr = tempDiv.querySelector('canvas').toDataURL();
+                const img = document.getElementById('fullImg');
+                img.src = largeQr; img.className = "max-w-full max-h-[70vh] rounded-lg shadow-2xl object-contain qr-large";
+                document.getElementById('modalCaption').innerText = "SCAN LOKASI: " + custName.toUpperCase();
+                document.getElementById('imgModal').style.display = 'flex';
+            }, 100);
+        }
+
+        function openFullImg(url, caption = "") { 
+            const img = document.getElementById('fullImg');
+            img.src = url; img.className = "max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain";
+            document.getElementById('modalCaption').innerText = caption;
+            document.getElementById('imgModal').style.display = 'flex'; 
+        }
+
+        function secureDelete(id) { const p = prompt("PIN KONFIRMASI:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); else if(p !== null) alert("PIN SALAH!"); }
+
+        function processImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        const prev = document.getElementById('imgPrev');
+                        prev.src = photoBase64; prev.classList.remove('hidden');
+                        document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                        document.getElementById('photoStatus').innerText = "FOTO SIAP!";
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; document.getElementById('housePhoto').value = ""; }
+
+        function saveData() {
+            const area = document.getElementById('custArea').value;
+            const name = document.getElementById('custName').value;
+            const phone = document.getElementById('custPhone').value;
+            const editId = document.getElementById('editId').value;
+            if(!area || !name) return alert("Isi Area & Nama!");
+            const data = { area: area.toUpperCase(), name, phone, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
+            const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
+            ref.then(() => resetForm());
+        }
+
+        function editData(id) {
+            const i = allData[id];
+            document.getElementById('editId').value = id;
+            document.getElementById('custArea').value = i.area;
+            document.getElementById('custName').value = i.name;
+            document.getElementById('custPhone').value = i.phone;
+            document.getElementById('custMaps').value = i.maps;
+            if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); document.getElementById('btnRemovePhoto').classList.remove('hidden'); }
+            document.getElementById('formTitle').innerText = "Edit Antaran";
+            document.getElementById('cancelBtn').classList.remove('hidden');
+            showPage('add');
+        }
+
+        function resetForm() {
+            document.getElementById('editId').value = ""; document.getElementById('custArea').value = ""; document.getElementById('custName').value = "";
+            document.getElementById('custPhone').value = ""; document.getElementById('custMaps').value = "";
+            removePhoto(); document.getElementById('formTitle').innerText = "Tambah Antaran";
+            document.getElementById('cancelBtn').classList.add('hidden');
+            showPage('list');
+        }
+
+        function cancelEdit() { resetForm(); }
+        function goOTW(id) { 
+            if(allData[id].status !== 'otw') {
+                db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser });
+                pushDeliveryStatus(currentUser); // Trigger status ke bar atas
+            }
+        }
+        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
+
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-'+id).classList.add('active');
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById('nav-'+id)?.classList.add('active');
+            if(id !== 'chat') stopCamera();
+        }
+
+        function updateTimers() {
+            Object.keys(allData).forEach(id => {
+                if(allData[id].status === 'otw') {
+                    const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
+                    const remaining = (20 * 60) - elapsed;
+                    const el = document.getElementById('timer-'+id);
+                    if(el) {
+                        const m = Math.max(0, Math.floor(remaining / 60));
+                        const s = Math.max(0, remaining % 60);
+                        el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
+                        if(remaining < 0) el.classList.replace('text-gray-400', 'text-red-600');
+                    }
+                }
+            });
         }
     </script>
 </body>
