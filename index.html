@@ -282,17 +282,23 @@
 
             /* ================= FIREBASE LISTENERS ================= */
             function startDataListeners() {
-                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
+                db.ref('customers').on('value', s => { 
+                    allData = s.val() || {}; 
+                    render(); 
+                });
             }
 
             function updatePresence() {
                 if(!currentUser) return;
                 const ref = db.ref('presence/' + currentUser);
-                ref.set(true); ref.onDisconnect().remove();
+                ref.set(true); 
+                ref.onDisconnect().remove();
                 db.ref('presence').on('value', s => {
                     const el = document.getElementById('onlineBar');
                     el.innerHTML = "";
-                    s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
+                    s.forEach(u => {
+                        el.innerHTML += `<span class="flex items-center gap-1 whitespace-nowrap"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`;
+                    });
                 });
             }
 
@@ -304,12 +310,14 @@
                     let hasData = false;
                     s.forEach(child => {
                         const data = child.val();
-                        if (now - data.timestamp > 900000) db.ref('delivery_activity/' + child.key).remove();
-                        else {
+                        // Hapus status jika lebih dari 15 menit
+                        if (now - data.timestamp > 900000) {
+                            db.ref('delivery_activity/' + child.key).remove();
+                        } else {
                             hasData = true;
-                            bar.innerHTML += `<div class="status-item py-1 border-b border-gray-100 flex items-center">
+                            bar.innerHTML += `<div class="status-item py-1 flex items-center">
                                 <i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i>
-                                <span>(${data.name} SEDANG MENGANTAR)</span>
+                                <span>(${data.name.toUpperCase()} SEDANG MENGANTAR)</span>
                             </div>`;
                         }
                     });
@@ -326,12 +334,15 @@
                 const list = document.getElementById('activeList');
                 const hist = document.getElementById('historyList');
                 const filter = document.getElementById('searchInput').value.toLowerCase();
-                let activeCount = 0; list.innerHTML = ""; hist.innerHTML = "";
+                let activeCount = 0; 
+                list.innerHTML = ""; 
+                hist.innerHTML = "";
                 
                 Object.keys(allData).reverse().forEach(id => {
                     const i = allData[id];
                     const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                     const match = searchStr.includes(filter);
+                    
                     if(i.status !== 'done') activeCount++;
                     
                     let formattedPhone = (i.phone || "").replace(/\D/g, '');
@@ -344,9 +355,9 @@
                             <div class="flex justify-between items-start">
                                 <div class="flex-1">
                                     <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                    <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
+                                    <h3 class="font-black text-blue-900 text-sm leading-tight uppercase">${i.name}</h3>
                                     <div class="flex items-center gap-2 mt-1">
-                                        <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
+                                        <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI': (i.status === 'otw' ? '0:00' : 'READY')}</p>
                                         ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
                                     </div>
                                 </div>
@@ -369,13 +380,18 @@
                             </div>
                         </div>`;
                     
-                    if(i.status === 'done') hist.innerHTML += cardHtml; 
-                    else if(match) {
+                    if(i.status === 'done') {
+                        hist.innerHTML += cardHtml;
+                    } else if(match) {
                         list.innerHTML += cardHtml;
-                        if(i.maps) setTimeout(() => {
-                            const el = document.getElementById(`qrcode-${id}`);
-                            if(el && el.innerHTML === "") new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
-                        }, 50);
+                        if(i.maps) {
+                            setTimeout(() => {
+                                const el = document.getElementById(`qrcode-${id}`);
+                                if(el && el.innerHTML === "") {
+                                    new QRCode(el, { text: i.maps, width: 60, height: 60, colorDark: "#006491" });
+                                }
+                            }, 50);
+                        }
                     }
                 });
                 document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
@@ -386,15 +402,24 @@
                 const area = document.getElementById('custArea').value;
                 const name = document.getElementById('custName').value;
                 const editId = document.getElementById('editId').value;
+                
                 if(!area || !name) return alert("Isi Area & Nama!");
+                
                 const data = { 
-                    area: area.toUpperCase(), name, 
+                    area: area.toUpperCase(), 
+                    name: name, 
                     phone: document.getElementById('custPhone').value, 
                     maps: document.getElementById('custMaps').value, 
-                    photo: photoBase64, status: 'active', timestamp: Date.now() 
+                    photo: photoBase64, 
+                    status: editId ? (allData[editId].status || 'active') : 'active',
+                    timestamp: editId ? allData[editId].timestamp : Date.now()
                 };
+
                 const ref = editId ? db.ref('customers/'+editId).update(data) : db.ref('customers').push(data);
-                ref.then(() => resetForm());
+                ref.then(() => {
+                    resetForm();
+                    showPage('list');
+                });
             }
 
             function editData(id) {
@@ -416,27 +441,38 @@
             }
 
             function resetForm() {
-                document.getElementById('editId').value = ""; document.getElementById('custArea').value = "";
-                document.getElementById('custName').value = ""; document.getElementById('custPhone').value = "";
-                document.getElementById('custMaps').value = ""; removePhoto();
+                document.getElementById('editId').value = ""; 
+                document.getElementById('custArea').value = "";
+                document.getElementById('custName').value = ""; 
+                document.getElementById('custPhone').value = "";
+                document.getElementById('custMaps').value = ""; 
+                removePhoto();
                 document.getElementById('formTitle').innerText = "Tambah Antaran";
                 document.getElementById('cancelBtn').classList.add('hidden');
-                showPage('list');
             }
 
-            function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
+            function setStatus(id, stat) { 
+                db.ref('customers/'+id).update({ status: stat }); 
+            }
             
             function goOTW(id) { 
                 if(allData[id].status !== 'otw') {
-                    db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser });
+                    db.ref('customers/'+id).update({ 
+                        status: 'otw', 
+                        startTime: Date.now(), 
+                        driverBy: currentUser 
+                    });
                     pushDeliveryStatus(currentUser);
                 }
             }
 
             function secureDelete(id) {
                 const p = prompt("PIN KONFIRMASI:");
-                if(p === userPins[currentUser]) db.ref('customers/' + id).remove();
-                else if(p !== null) alert("PIN SALAH!");
+                if(p === userPins[currentUser]) {
+                    db.ref('customers/' + id).remove();
+                } else if(p !== null) {
+                    alert("PIN SALAH!");
+                }
             }
 
             function clearHistory() {
@@ -454,8 +490,10 @@
                         const img = new Image();
                         img.onload = () => {
                             const canvas = document.createElement('canvas');
-                            const MAX_WIDTH = 600; const scale = MAX_WIDTH / img.width;
-                            canvas.width = MAX_WIDTH; canvas.height = img.height * scale;
+                            const MAX_WIDTH = 600; 
+                            const scale = MAX_WIDTH / img.width;
+                            canvas.width = MAX_WIDTH; 
+                            canvas.height = img.height * scale;
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                             photoBase64 = canvas.toDataURL('image/jpeg', 0.7);
@@ -475,11 +513,13 @@
                 document.getElementById('imgPrev').classList.add('hidden'); 
                 document.getElementById('btnRemovePhoto').classList.add('hidden'); 
                 document.getElementById('photoStatus').innerText = "Foto Rumah";
+                document.getElementById('housePhoto').value = "";
             }
 
             function openFullImg(url, caption = "") { 
                 const img = document.getElementById('fullImg');
-                img.src = url; img.className = "max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain";
+                img.src = url; 
+                img.className = "max-w-full max-h-[85vh] rounded-lg shadow-2xl object-contain";
                 document.getElementById('modalCaption').innerText = caption;
                 document.getElementById('imgModal').style.display = 'flex'; 
             }
@@ -490,7 +530,8 @@
                 setTimeout(() => {
                     const largeQr = tempDiv.querySelector('canvas').toDataURL();
                     const img = document.getElementById('fullImg');
-                    img.src = largeQr; img.className = "max-w-full max-h-[70vh] rounded-lg qr-large";
+                    img.src = largeQr; 
+                    img.className = "max-w-full max-h-[70vh] rounded-lg qr-large";
                     document.getElementById('modalCaption').innerText = "SCAN LOKASI: " + custName.toUpperCase();
                     document.getElementById('imgModal').style.display = 'flex';
                 }, 100);
@@ -511,10 +552,15 @@
                         const remaining = (20 * 60) - elapsed;
                         const el = document.getElementById('timer-'+id);
                         if(el) {
-                            const m = Math.max(0, Math.floor(remaining / 60));
-                            const s = Math.max(0, remaining % 60);
-                            el.innerText = `${m}:${s < 10 ? '0'+s : s} MENIT`;
-                            if(remaining < 0) el.classList.replace('text-gray-400', 'text-red-600');
+                            const m = Math.max(0, Math.floor(Math.abs(remaining) / 60));
+                            const s = Math.max(0, Math.abs(remaining) % 60);
+                            const prefix = remaining < 0 ? '-' : '';
+                            el.innerText = `${prefix}${m}:${s < 10 ? '0'+s : s} MENIT`;
+                            if(remaining < 0) {
+                                el.className = "text-[10px] font-black text-red-600 italic";
+                            } else {
+                                el.className = "text-[10px] font-bold text-blue-500 italic";
+                            }
                         }
                     }
                 });
@@ -533,8 +579,9 @@
                     document.getElementById('btnStopCam').classList.remove('hidden');
                     document.getElementById('camControls').classList.remove('hidden');
                     document.getElementById('scannerOverlay').style.display = 'block';
-                    startAutoScan();
-                } catch (err) { alert("Izin kamera ditolak."); }
+                } catch (err) { 
+                    alert("Izin kamera ditolak."); 
+                }
             }
 
             function stopCamera() {
@@ -546,7 +593,8 @@
                     document.getElementById('btnStopCam').classList.add('hidden');
                     document.getElementById('camControls').classList.add('hidden');
                     document.getElementById('scannerOverlay').style.display = 'none';
-                    clearInterval(autoScanInterval); autoScanInterval = null;
+                    clearInterval(autoScanInterval); 
+                    autoScanInterval = null;
                 }
             }
 
@@ -556,7 +604,8 @@
                 document.getElementById('ocrLoading').classList.remove('hidden');
                 
                 const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+                canvas.width = video.videoWidth; 
+                canvas.height = video.videoHeight;
                 const ctx = canvas.getContext('2d');
                 ctx.filter = video.style.filter;
                 ctx.drawImage(video, 0, 0);
@@ -567,8 +616,14 @@
                     if (matches) {
                         renderAddressTable(matches);
                         document.getElementById('waDirectNumber').value = matches[0];
+                    } else {
+                        alert("Tidak ditemukan nomor HP.");
                     }
-                } catch (err) { console.error(err); } finally { document.getElementById('ocrLoading').classList.add('hidden'); }
+                } catch (err) { 
+                    console.error(err); 
+                } finally { 
+                    document.getElementById('ocrLoading').classList.add('hidden'); 
+                }
             }
 
             function renderAddressTable(matches) {
@@ -577,7 +632,15 @@
                 [...new Set(matches)].forEach(num => {
                     let cleanNum = num.replace(/\D/g, '');
                     if (cleanNum.startsWith('0')) cleanNum = '62' + cleanNum.slice(1);
-                    tableBody.innerHTML += `<tr><td class="p-3 text-blue-900 font-black">${num}</td><td class="p-3"><button onclick="TrackCust.openWA('${cleanNum}')" class="bg-green-500 text-white p-2 rounded">Chat</button></td></tr>`;
+                    tableBody.innerHTML += `
+                        <tr class="divide-x divide-gray-100">
+                            <td class="p-3 text-blue-900 font-black">${num}</td>
+                            <td class="p-3 text-center">
+                                <button onclick="TrackCust.openWA('${cleanNum}')" class="bg-green-500 text-white p-2 rounded-lg shadow-sm">
+                                    <i class="fab fa-whatsapp"></i>
+                                </button>
+                            </td>
+                        </tr>`;
                 });
                 document.getElementById('scanResultArea').classList.remove('hidden');
             }
@@ -586,15 +649,6 @@
                 pushDeliveryStatus(currentUser);
                 const msg = `Halo, saya ${currentUser} dari Domino's Pizza Jatimakmur...`;
                 window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
-            }
-
-            function startAutoScan() {
-                autoScanInterval = setInterval(async () => {
-                    if (isScanning) return;
-                    isScanning = true;
-                    // Logika autoscan singkat...
-                    isScanning = false;
-                }, 3000);
             }
 
             function setBWMode(mode) {
@@ -607,12 +661,16 @@
 
             function updateVisualFilters() {
                 const v = document.getElementById('scannerVideo');
-                if(bwMode === 'manual') v.style.filter = `grayscale(100%) brightness(${brSlider.value}%) contrast(${ctSlider.value}%)`;
+                const br = document.getElementById('brSlider').value;
+                const ct = document.getElementById('ctSlider').value;
+                if(bwMode === 'manual') v.style.filter = `grayscale(100%) brightness(${br}%) contrast(${ct}%)`;
                 else v.style.filter = bwMode === 'auto' ? 'grayscale(100%) contrast(150%)' : 'none';
             }
 
             function setZoom(lvl) {
-                if (videoTrack?.getCapabilities().zoom) videoTrack.applyConstraints({ advanced: [{ zoom: lvl }] });
+                if (videoTrack?.getCapabilities().zoom) {
+                    videoTrack.applyConstraints({ advanced: [{ zoom: lvl }] });
+                }
                 document.querySelectorAll('.btn-zoom').forEach(b => b.classList.remove('active'));
                 document.getElementById('z'+lvl).classList.add('active');
             }
@@ -621,7 +679,8 @@
                 init, login, handleLogout: logout, showPage, render, 
                 saveData, editData, resetForm, secureDelete, setStatus, goOTW,
                 processImage, removePhoto, openFullImg, openFullQR,
-                startCamera, stopCamera, captureAndScan, openWA, openWaDirect: () => openWA(waDirectNumber.value),
+                startCamera, stopCamera, captureAndScan, openWA, 
+                openWaDirect: () => openWA(document.getElementById('waDirectNumber').value),
                 setBWMode, updateVisualFilters, setZoom, pushDeliveryStatus, clearHistory
             };
         })();
