@@ -62,7 +62,7 @@
             scrollbar-width: none;
         }
         .status-item {
-            padding: 2px 0;
+            padding: 4px 0;
             border-bottom: 1px dashed rgba(0,100,145,0.1);
         }
     </style>
@@ -265,7 +265,6 @@
         let videoTrack = null;
         let bwMode = 'off'; 
         let isScanning = false; 
-        let autoScanInterval = null;
 
         window.onload = () => {
             const logSel = document.getElementById('selectUser');
@@ -408,16 +407,15 @@
             const id = editId || Date.now();
             const data = {
                 id, area, name, phone, maps, 
-                photo: photoBase64 || (editId ? allData[editId].photo : ""),
+                photo: photoBase64 || (editId && allData[editId] ? allData[editId].photo : ""),
                 status: "aktif",
-                driver: editId ? allData[editId].driver : "",
-                timeAdd: editId ? allData[editId].timeAdd : Date.now(),
-                timeStart: editId ? (allData[editId].timeStart || null) : null,
-                userAdd: editId ? allData[editId].userAdd : currentUser
+                driver: editId && allData[editId] ? allData[editId].driver : "",
+                timeAdd: editId && allData[editId] ? allData[editId].timeAdd : Date.now(),
+                timeStart: editId && allData[editId] ? (allData[editId].timeStart || null) : null,
+                userAdd: editId && allData[editId] ? allData[editId].userAdd : currentUser
             };
 
             db.ref('track_data/' + id).set(data).then(() => {
-                alert("Berhasil!");
                 resetForm();
                 showPage('list');
             });
@@ -615,7 +613,6 @@
                 document.getElementById('btnStopCam').classList.add('hidden');
                 document.getElementById('camControls').classList.add('hidden');
                 document.getElementById('scannerOverlay').style.display = 'none';
-                stopAutoScan();
             }
         }
 
@@ -702,7 +699,7 @@
                     });
                     document.getElementById('scanResultArea').classList.remove('hidden');
                 } else {
-                    alert("Nomor HP tidak ditemukan. Coba atur zoom/fokus/BW.");
+                    alert("Nomor HP tidak ditemukan.");
                 }
             } catch (err) {
                 alert("OCR Error: " + err);
