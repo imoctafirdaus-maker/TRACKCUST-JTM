@@ -202,6 +202,7 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
+        let sessionID = Math.random().toString(36).substring(2, 15); // ID unik untuk perangkat ini
         let allData = {}; let photoBase64 = "";
         let stream = null; let videoTrack = null;
         let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
@@ -213,7 +214,6 @@
             Object.keys(userPins).forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
-            updatePresence();
             startDeliveryStatusListener();
         };
 
@@ -372,8 +372,14 @@
 
         function updatePresence() {
             if(!currentUser) return;
-            db.ref('presence/' + currentUser).set(true);
-            db.ref('presence/' + currentUser).onDisconnect().remove();
+            const userStatusRef = db.ref('presence/' + currentUser);
+            userStatusRef.set({
+                online: true,
+                session: sessionID,
+                lastActive: Date.now()
+            });
+            userStatusRef.onDisconnect().remove();
+            
             db.ref('presence').on('value', s => {
                 const el = document.getElementById('onlineBar'); el.innerHTML = "";
                 s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
@@ -383,18 +389,47 @@
         function prosesLogin() {
             const u = document.getElementById('selectUser').value;
             const p = document.getElementById('inputPin').value;
-            if(p === userPins[u]) { bukaApp(u); updatePresence(); } else alert("PIN SALAH!");
+            if(p === userPins[u]) { bukaApp(u); } else alert("PIN SALAH!");
         }
 
         function bukaApp(n) {
-            currentUser = n; localStorage.setItem('jtm_user', n);
-            document.getElementById('userDisplay').innerText = n;
-            document.getElementById('pinOverlay').style.display = "none";
-            document.getElementById('mainContent').style.display = "flex";
-            db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
+            // Cek Tabrakan Akun
+            db.ref('presence/' + n).once('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.session !== sessionID) {
+                    alert("⚠️ AKUN SEDANG DIGUNAKAN! Memasukkan PIN akan mengeluarkan perangkat lain.");
+                }
+
+                currentUser = n; localStorage.setItem('jtm_user', n);
+                document.getElementById('userDisplay').innerText = n;
+                document.getElementById('pinOverlay').style.display = "none";
+                document.getElementById('mainContent').style.display = "flex";
+                
+                // Sinkronisasi data utama
+                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
+                
+                // Update Presence & Session
+                updatePresence();
+
+                // Listener jika ditabrak di tengah jalan
+                db.ref('presence/' + n + '/session').on('value', (snap) => {
+                    if (snap.exists() && snap.val() !== sessionID) {
+                        alert("⚠️ Seseorang telah masuk ke akun Anda. Anda akan dikeluarkan.");
+                        handleLogout(false);
+                    }
+                });
+            });
         }
 
-        function handleLogout() { if(confirm("Keluar?")) { db.ref('presence/'+currentUser).remove(); localStorage.removeItem('jtm_user'); location.reload(); } }
+        function handleLogout(withConfirm = true) { 
+            if(withConfirm && !confirm("Keluar?")) return;
+            if(currentUser) {
+                db.ref('presence/' + currentUser).off();
+                db.ref('presence/'+currentUser).remove();
+            }
+            localStorage.removeItem('jtm_user'); 
+            location.reload(); 
+        }
 
         function render() {
             const list = document.getElementById('activeList');
@@ -483,11 +518,10 @@
             
             if(!a || !n) return alert("Lengkapi data!");
 
-            // VALIDASI NOMOR DUPLIKAT PADA ANTARAN AKTIF
             if (ph) {
                 const cleanInputPhone = ph.replace(/\D/g, '');
                 const isDuplicate = Object.keys(allData).some(id => {
-                    if (id === eid) return false; // Abaikan jika sedang edit data yang sama
+                    if (id === eid) return false; 
                     const item = allData[id];
                     const cleanExistPhone = (item.phone || "").replace(/\D/g, '');
                     return item.status !== 'done' && cleanExistPhone === cleanInputPhone && cleanInputPhone !== "";
@@ -495,7 +529,7 @@
 
                 if (isDuplicate) {
                     alert("⚠️ NOMOR HP INI SUDAH ADA DI DAFTAR ANTARAN AKTIF!");
-                    return; // Stop proses simpan
+                    return; 
                 }
             }
 
