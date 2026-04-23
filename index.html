@@ -409,7 +409,7 @@
                 
                 let wa = (i.phone || "").replace(/\D/g, '');
                 if(wa.startsWith('0')) wa = '62' + wa.slice(1);
-                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar,mohon ditunggu untuk beberapa saat,dan dimohon untuk tetap aktif WhatsApp, Terimakasih 😊.`;
+                const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar,mohon ditunggu untuk beberapa saat,dan dimohon untuk tetap aktif WhatsApp ya, Terimakasih 😊.`;
                 const waLink = `https://wa.me/${wa}?text=${encodeURIComponent(msgWa)}`;
 
                 const cardHtml = `
