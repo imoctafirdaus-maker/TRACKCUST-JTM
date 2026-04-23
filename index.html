@@ -476,9 +476,30 @@
         function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; }
 
         function saveData() {
-            const a = document.getElementById('custArea').value; const n = document.getElementById('custName').value; const eid = document.getElementById('editId').value;
+            const a = document.getElementById('custArea').value; 
+            const n = document.getElementById('custName').value; 
+            const ph = document.getElementById('custPhone').value;
+            const eid = document.getElementById('editId').value;
+            
             if(!a || !n) return alert("Lengkapi data!");
-            const d = { area: a.toUpperCase(), name: n, phone: document.getElementById('custPhone').value, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
+
+            // VALIDASI NOMOR DUPLIKAT PADA ANTARAN AKTIF
+            if (ph) {
+                const cleanInputPhone = ph.replace(/\D/g, '');
+                const isDuplicate = Object.keys(allData).some(id => {
+                    if (id === eid) return false; // Abaikan jika sedang edit data yang sama
+                    const item = allData[id];
+                    const cleanExistPhone = (item.phone || "").replace(/\D/g, '');
+                    return item.status !== 'done' && cleanExistPhone === cleanInputPhone && cleanInputPhone !== "";
+                });
+
+                if (isDuplicate) {
+                    alert("⚠️ NOMOR HP INI SUDAH ADA DI DAFTAR ANTARAN AKTIF!");
+                    return; // Stop proses simpan
+                }
+            }
+
+            const d = { area: a.toUpperCase(), name: n, phone: ph, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
             const ref = eid ? db.ref('customers/'+eid).update(d) : db.ref('customers').push(d);
             ref.then(() => resetForm());
         }
