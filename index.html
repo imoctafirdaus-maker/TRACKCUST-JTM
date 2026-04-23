@@ -202,7 +202,7 @@
         const db = firebase.database();
         
         let currentUser = localStorage.getItem('jtm_user') || "";
-        let sessionID = Math.random().toString(36).substring(2, 15); // ID unik untuk perangkat ini
+        let sessionID = Math.random().toString(36).substring(2, 15);
         let allData = {}; let photoBase64 = "";
         let stream = null; let videoTrack = null;
         let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
@@ -356,14 +356,11 @@
             let n = document.getElementById('waDirectNumber').value.replace(/\D/g, '');
             if(!n) return alert("Nomor kosong!");
             let wa = n.startsWith('0') ? '62' + n.slice(1) : (n.startsWith('8') ? '62' + n : n);
-            
-            // LOGIKA AUTO-REDIRECT KE ANTARAN AKTIF (Screning Tambahan)
             const searchN = n.startsWith('0') ? n.slice(1) : (n.startsWith('62') ? n.slice(2) : n);
             const activeId = Object.keys(allData).find(id => {
                 const dataN = (allData[id].phone || "").replace(/\D/g, '');
                 return allData[id].status !== 'done' && dataN.includes(searchN);
             });
-
             if (activeId) {
                 document.getElementById('searchInput').value = allData[activeId].phone;
                 render(); showPage('list'); stopCamera();
@@ -373,13 +370,8 @@
         function updatePresence() {
             if(!currentUser) return;
             const userStatusRef = db.ref('presence/' + currentUser);
-            userStatusRef.set({
-                online: true,
-                session: sessionID,
-                lastActive: Date.now()
-            });
+            userStatusRef.set({ online: true, session: sessionID, lastActive: Date.now() });
             userStatusRef.onDisconnect().remove();
-            
             db.ref('presence').on('value', s => {
                 const el = document.getElementById('onlineBar'); el.innerHTML = "";
                 s.forEach(u => el.innerHTML += `<span class="flex items-center gap-1"><i class="fa fa-circle text-[5px] text-green-500"></i> ${u.key}</span>`);
@@ -393,31 +385,26 @@
         }
 
         function bukaApp(n) {
-            // Cek Tabrakan Akun
+            const isOkta = (n === "Okta");
             db.ref('presence/' + n).once('value', (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.session !== sessionID) {
-                    alert("⚠️ AKUN SEDANG DIGUNAKAN! Memasukkan PIN akan mengeluarkan perangkat lain.");
+                const existingData = snapshot.val();
+                if (!isOkta && existingData && existingData.session !== sessionID) {
+                    const konfirmasi = confirm(`⚠️ Nama "${n}" sedang digunakan di perangkat lain. Masuk sekarang akan mengeluarkan perangkat lama. Lanjutkan?`);
+                    if (!konfirmasi) return;
                 }
-
-                currentUser = n; localStorage.setItem('jtm_user', n);
+                currentUser = n; 
+                localStorage.setItem('jtm_user', n);
                 document.getElementById('userDisplay').innerText = n;
                 document.getElementById('pinOverlay').style.display = "none";
                 document.getElementById('mainContent').style.display = "flex";
-                
-                // Sinkronisasi data utama
-                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
-                
-                // Update Presence & Session
                 updatePresence();
-
-                // Listener jika ditabrak di tengah jalan
                 db.ref('presence/' + n + '/session').on('value', (snap) => {
-                    if (snap.exists() && snap.val() !== sessionID) {
-                        alert("⚠️ Seseorang telah masuk ke akun Anda. Anda akan dikeluarkan.");
+                    if (!isOkta && snap.exists() && snap.val() !== sessionID) {
+                        alert("⚠️ Seseorang telah masuk menggunakan nama Anda di perangkat lain. Anda akan dikeluarkan secara otomatis.");
                         handleLogout(false);
                     }
                 });
+                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
             });
         }
 
@@ -436,46 +423,15 @@
             const hist = document.getElementById('historyList');
             const filter = document.getElementById('searchInput').value.toLowerCase();
             let activeCount = 0; let listHTML = ""; let histHTML = "";
-
             Object.keys(allData).reverse().forEach(id => {
                 const i = allData[id];
                 const searchStr = `${i.name} ${i.phone} ${i.driverBy || ''} ${i.area}`.toLowerCase();
                 if(i.status !== 'done') activeCount++;
-                
                 let wa = (i.phone || "").replace(/\D/g, '');
                 if(wa.startsWith('0')) wa = '62' + wa.slice(1);
                 const msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar,mohon ditunggu untuk beberapa saat,dan dimohon untuk tetap aktif WhatsApp ya, Terimakasih 😊.`;
                 const waLink = `https://wa.me/${wa}?text=${encodeURIComponent(msgWa)}`;
-
-                const cardHtml = `
-                    <div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
-                                <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
-                                    ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
-                                </div>
-                            </div>
-                            <div class="flex gap-2">
-                                ${i.status !== 'done' ? `
-                                    <button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
-                                    <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
-                                    <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                                    <button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
-                                ` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
-                            </div>
-                        </div>
-                        <div class="mt-3 ${i.status==='done'?'hidden':''}">
-                            ${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="w-full h-24 object-cover rounded-xl border">` : ''}
-                        </div>
-                        <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
-                            <a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>
-                            <a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
-                        </div>
-                    </div>`;
-
+                const cardHtml = `<div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}"><div class="flex justify-between items-start"><div class="flex-1"><p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p><h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3><div class="flex items-center gap-2 mt-1"><p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}</div></div><div class="flex gap-2">${i.status !== 'done' ? `<button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button><button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button><button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button><button onclick="goOTW('${id}')" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw'?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>` : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}</div></div><div class="mt-3 ${i.status==='done'?'hidden':''}">${i.photo ? `<img src="${i.photo}" onclick="openFullImg('${i.photo}', 'FOTO RUMAH - ${i.name}')" class="w-full h-24 object-cover rounded-xl border">` : ''}</div><div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}"><a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a><a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a></div></div>`;
                 if(i.status === 'done') histHTML += cardHtml; 
                 else if(searchStr.includes(filter)) listHTML += cardHtml;
             });
@@ -484,7 +440,6 @@
         }
 
         function openFullImg(url, caption = "") { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = caption; document.getElementById('imgModal').style.display = 'flex'; }
-
         function secureDelete(id) { const p = prompt("PIN:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); }
 
         function processImage(input) {
@@ -515,9 +470,7 @@
             const n = document.getElementById('custName').value; 
             const ph = document.getElementById('custPhone').value;
             const eid = document.getElementById('editId').value;
-            
             if(!a || !n) return alert("Lengkapi data!");
-
             if (ph) {
                 const cleanInputPhone = ph.replace(/\D/g, '');
                 const isDuplicate = Object.keys(allData).some(id => {
@@ -526,13 +479,8 @@
                     const cleanExistPhone = (item.phone || "").replace(/\D/g, '');
                     return item.status !== 'done' && cleanExistPhone === cleanInputPhone && cleanInputPhone !== "";
                 });
-
-                if (isDuplicate) {
-                    alert("⚠️ NOMOR HP INI SUDAH ADA DI DAFTAR ANTARAN AKTIF!");
-                    return; 
-                }
+                if (isDuplicate) { alert("⚠️ NOMOR HP INI SUDAH ADA DI DAFTAR ANTARAN AKTIF!"); return; }
             }
-
             const d = { area: a.toUpperCase(), name: n, phone: ph, maps: document.getElementById('custMaps').value, photo: photoBase64, status: 'active', timestamp: Date.now() };
             const ref = eid ? db.ref('customers/'+eid).update(d) : db.ref('customers').push(d);
             ref.then(() => resetForm());
