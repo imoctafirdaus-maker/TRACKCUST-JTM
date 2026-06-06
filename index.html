@@ -9,7 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <script src='https://unpkg.com/tesseract.js@v4.0.1/dist/tesseract.min.js'></script>
     
     <style>
         .dominos-blue { background-color: #006491; }
@@ -26,22 +25,6 @@
         
         .wa-card { background: white; padding: 1.5rem; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 100%; max-width: 350px; text-align: center; }
         .driver-badge { background: #ebf5ff; color: #006491; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 900; border: 1px solid #006491; }
-        
-        .scanner-container { position: relative; width: 100%; height: 200px; background: black; border-radius: 1.5rem; overflow: hidden; margin-bottom: 1rem; border: 4px solid #006491; }
-        #scannerVideo { width: 100%; height: 100%; object-fit: cover; }
-        .scanner-overlay { position: absolute; inset: 0; border: 30px solid rgba(0,0,0,0.5); pointer-events: none; display: none; }
-        .scanner-box { width: 100%; height: 100%; border: 2px solid #e31837; position: relative; }
-        .laser { position: absolute; width: 100%; height: 2px; background: #e31837; shadow: 0 0 10px #e31837; top: 50%; animation: scanAnim 2s infinite; }
-        @keyframes scanAnim { 0% { top: 0%; } 100% { top: 100%; } }
-
-        .cam-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; background: #f8fafc; padding: 10px; border-radius: 15px; border: 1px solid #e2e8f0; }
-        .btn-mode { padding: 4px 8px; border-radius: 6px; font-size: 8px; font-weight: 900; border: 1px solid #cbd5e1; background: white; color: #64748b; }
-        .btn-mode.active { background: #e31837; color: white; border-color: #e31837; }
-        .btn-zoom { flex: 1; padding: 6px; background: white; border: 2px solid #006491; color: #006491; border-radius: 8px; font-size: 10px; font-weight: 900; }
-        .btn-zoom.active { background: #006491; color: white; }
-
-        .loader-ocr { border: 3px solid #f3f3f3; border-top: 3px solid #006491; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .status-item { padding: 2px 0; border-bottom: 1px dashed rgba(0,100,145,0.1); }
         .animate-blink { animation: blink 1s infinite; }
@@ -192,65 +175,17 @@
             <div id="page-chat" class="page h-full items-center p-4 bg-gray-100 overflow-y-auto">
                 <div class="wa-card mb-20 mx-auto">
                     <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg"><i class="fab fa-whatsapp text-white text-2xl"></i></div>
-                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Scanner & Manual Input</h2>
-                    <div class="scanner-container">
-                        <video id="scannerVideo" autoplay playsinline></video>
-                        <div id="scannerOverlay" class="scanner-overlay"><div class="scanner-box"><div class="laser"></div></div></div>
+                    <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Manual Input Chat</h2>
+                    
+                    <div class="space-y-3 mb-4">
+                        <input type="text" id="waDirectCustName" placeholder="Nama Customer (Wajib)" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-bold text-center text-blue-900 text-sm">
+                        <div class="flex gap-2">
+                            <input type="text" id="waDirectCustId" maxlength="3" placeholder="ID (3 No)" inputmode="numeric" class="w-1/3 p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm">
+                            <input type="tel" id="waDirectNumber" placeholder="Input Nomor HP Manual" class="w-2/3 p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm">
+                        </div>
                     </div>
                     
-                    <div id="camControls" class="hidden cam-controls text-left p-3">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Mode BW:</span>
-                            <div class="flex gap-1">
-                                <button onclick="setBWMode('off')" id="bw-off" class="btn-mode active">OFF</button>
-                                <button onclick="setBWMode('auto')" id="bw-auto" class="btn-mode">AUTO</button>
-                                <button onclick="setBWMode('manual')" id="bw-manual" class="btn-mode">MANUAL</button>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Focus:</span>
-                            <div class="flex gap-1">
-                                <button onclick="setFocusMode('continuous')" id="f-auto" class="btn-mode active">AUTO</button>
-                                <button onclick="setFocusMode('manual')" id="f-manual" class="btn-mode">MANUAL</button>
-                            </div>
-                        </div>
-                        <div id="manualFocusSlider" class="hidden mb-2 p-2 bg-white rounded-xl border">
-                            <span class="text-[8px] font-black text-blue-900 uppercase italic">Jarak Fokus:</span>
-                            <input type="range" id="focusRange" min="0" max="100" value="0" oninput="applyManualFocus(this.value)" class="w-full accent-red-600">
-                        </div>
-                        <div id="manualBWControls" class="hidden grid grid-cols-2 gap-2 mb-2 p-2 bg-white rounded-xl border">
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase italic">BRIGHT:</span>
-                                <input type="range" id="brSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="accent-blue-900">
-                            </div>
-                            <div class="flex flex-col">
-                                <span class="text-[8px] font-black text-blue-900 uppercase italic">CONTRAST:</span>
-                                <input type="range" id="ctSlider" min="50" max="200" value="100" oninput="updateVisualFilters()" class="accent-blue-900">
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="text-[9px] font-black text-blue-900 uppercase">Zoom:</span>
-                            <button onclick="setZoom(1)" id="z1" class="btn-zoom active">1x</button>
-                            <button onclick="setZoom(2)" id="z2" class="btn-zoom">2x</button>
-                            <button onclick="setZoom(3)" id="z3" class="btn-zoom">3x</button>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2 mb-3">
-                        <button id="btnStartCam" onclick="startCamera()" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Buka Kamera</button>
-                        <button id="btnStopCam" onclick="stopCamera()" class="hidden flex-1 bg-gray-500 text-white py-3 rounded-xl font-black uppercase text-[10px]">Tutup</button>
-                        <button onclick="captureAndScan()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase text-[10px]">Scan Nomor</button>
-                    </div>
-                    <div id="ocrLoading" class="hidden mb-3 text-[9px] font-bold text-blue-900 uppercase italic"><div class="loader-ocr"></div> Menganalisa...</div>
-                    <input type="tel" id="waDirectNumber" placeholder="Input Nomor Manual" class="w-full p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm mb-3">
                     <button onclick="openWaDirect()" class="w-full bg-green-500 text-white py-3 rounded-xl font-black uppercase text-xs shadow-md mb-4">Chat Pelanggan</button>
-                    
-                    <div id="scanResultArea" class="hidden text-left border-t-2 border-gray-100 pt-4">
-                        <table class="w-full text-[10px] bg-white rounded-lg border divide-y">
-                            <thead class="bg-blue-900 text-white italic uppercase"><tr><th class="p-2">Hasil Scan</th><th class="p-2">Chat</th></tr></thead>
-                            <tbody id="addressTableBody" class="font-bold divide-y"></tbody>
-                        </table>
-                    </div>
                 </div>
             </div>
         </main>
@@ -286,8 +221,6 @@
         let currentUser = localStorage.getItem('jtm_user') || "";
         let sessionID = Math.random().toString(36).substring(2, 15);
         let allData = {}; let photoBase64 = "";
-        let stream = null; let videoTrack = null;
-        let bwMode = 'off'; let isScanning = false; let autoScanInterval = null;
         let renderTimer;
         let editCrewId = null;
 
@@ -385,114 +318,6 @@
             document.getElementById('btnCancelCrew').classList.add('hidden');
         }
 
-        // --- CAMERA & OCR LOGIC ---
-        async function startCamera() {
-            try {
-                if (stream) stream.getTracks().forEach(t => t.stop());
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } } });
-                const v = document.getElementById('scannerVideo'); v.srcObject = stream;
-                videoTrack = stream.getVideoTracks()[0];
-                document.getElementById('btnStartCam').classList.add('hidden');
-                document.getElementById('btnStopCam').classList.remove('hidden');
-                document.getElementById('camControls').classList.remove('hidden');
-                document.getElementById('scannerOverlay').style.display = 'block';
-                startAutoScan();
-            } catch (err) { alert("Kamera Error. Pastikan izin kamera diaktifkan."); }
-        }
-
-        function stopCamera() {
-            if (stream) stream.getTracks().forEach(t => t.stop());
-            stream = null; 
-            document.getElementById('scannerVideo').srcObject = null;
-            document.getElementById('btnStartCam').classList.remove('hidden');
-            document.getElementById('btnStopCam').classList.add('hidden');
-            document.getElementById('camControls').classList.add('hidden');
-            document.getElementById('scannerOverlay').style.display = 'none';
-            clearInterval(autoScanInterval);
-        }
-
-        async function setFocusMode(mode) {
-            if (!videoTrack) return;
-            const caps = videoTrack.getCapabilities();
-            document.getElementById('f-auto').classList.toggle('active', mode === 'continuous');
-            document.getElementById('f-manual').classList.toggle('active', mode === 'manual');
-            document.getElementById('manualFocusSlider').classList.toggle('hidden', mode !== 'manual');
-            try {
-                if (mode === 'continuous') { if (caps.focusMode && caps.focusMode.includes('continuous')) await videoTrack.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } 
-                else { if (caps.focusMode && caps.focusMode.includes('manual')) await videoTrack.applyConstraints({ advanced: [{ focusMode: "manual" }] }); else alert("Fokus manual tidak didukung."); }
-            } catch (e) { console.error(e); }
-        }
-
-        async function applyManualFocus(val) {
-            if (!videoTrack) return;
-            const caps = videoTrack.getCapabilities();
-            if (caps.focusDistance) {
-                const min = caps.focusDistance.min; const max = caps.focusDistance.max;
-                const targetFocus = min + (val / 100) * (max - min);
-                try { await videoTrack.applyConstraints({ advanced: [{ focusMode: "manual", focusDistance: targetFocus }] }); } catch (e) { console.error(e); }
-            }
-        }
-
-        function setZoom(l) {
-            if (!videoTrack) return;
-            const caps = videoTrack.getCapabilities();
-            if (caps.zoom) {
-                videoTrack.applyConstraints({ advanced: [{ zoom: Math.min(l, caps.zoom.max) }] });
-                document.querySelectorAll('.btn-zoom').forEach(b => b.classList.toggle('active', b.id === 'z'+l));
-            }
-        }
-
-        function setBWMode(mode) {
-            bwMode = mode;
-            document.querySelectorAll('.btn-mode').forEach(b => b.classList.toggle('active', b.id === 'bw-'+mode));
-            document.getElementById('manualBWControls').classList.toggle('hidden', mode !== 'manual');
-            updateVisualFilters();
-        }
-
-        function updateVisualFilters() {
-            const v = document.getElementById('scannerVideo'); if(!v) return;
-            if(bwMode === 'manual') v.style.filter = `grayscale(100%) brightness(${document.getElementById('brSlider').value}%) contrast(${document.getElementById('ctSlider').value}%)`;
-            else if(bwMode === 'auto') v.style.filter = `grayscale(100%) contrast(150%)`;
-            else v.style.filter = `none`;
-        }
-
-        async function startAutoScan() {
-            autoScanInterval = setInterval(async () => {
-                if (isScanning || !stream) return;
-                isScanning = true;
-                const v = document.getElementById('scannerVideo');
-                const c = document.createElement('canvas');
-                c.width = v.videoWidth; c.height = v.videoHeight;
-                c.getContext('2d').drawImage(v, 0, 0);
-                try {
-                    const res = await Tesseract.recognize(c.toDataURL(), 'eng');
-                    const matches = res.data.text.match(/(?:\+62|62|08)[0-9\-\(\)\s]{8,15}/g);
-                    if (matches) {
-                        let n = matches[0].replace(/\D/g, '');
-                        if (n.length >= 10 && document.getElementById('waDirectNumber').value !== n) {
-                            document.getElementById('waDirectNumber').value = n;
-                            renderAddressTable(matches);
-                        }
-                    }
-                } catch (e) {} finally { isScanning = false; }
-            }, 3000);
-        }
-
-        async function captureAndScan() {
-            const l = document.getElementById('ocrLoading'); l.classList.remove('hidden');
-            const v = document.getElementById('scannerVideo');
-            const c = document.createElement('canvas');
-            c.width = v.videoWidth; c.height = v.videoHeight;
-            const ctx = c.getContext('2d'); 
-            ctx.filter = v.style.filter; 
-            ctx.drawImage(v, 0, 0);
-            try {
-                const res = await Tesseract.recognize(c.toDataURL(), 'eng');
-                const matches = res.data.text.match(/(\+?62|08|021|\(\d{3,4}\))[\s-]?\d{3,4}[\s-]?\d{3,5}/g);
-                if (matches) renderAddressTable(matches); else alert("Nomor tidak terdeteksi.");
-            } catch (e) {} finally { l.classList.add('hidden'); }
-        }
-
         // --- USER & AUTH LOGIC ---
         function changeProfilePhoto(input) {
             if (input.files && input.files[0]) {
@@ -561,9 +386,9 @@
         // --- CORE FUNCTIONALITY ---
         function debounceRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => { render(); }, 300); }
         
-        function pushDeliveryStatus(nama) { 
+        function pushDeliveryStatus(nama, idCust = "") { 
             if(mgtAndCashiers.includes(nama)) return; 
-            db.ref('delivery_activity/' + nama).set({ name: nama, timestamp: Date.now() }); 
+            db.ref('delivery_activity/' + nama).set({ name: nama, timestamp: Date.now(), idCust: idCust }); 
         }
 
         function startDeliveryStatusListener() {
@@ -573,7 +398,11 @@
                 s.forEach(child => {
                     const d = child.val();
                     if (now - d.timestamp > 900000) db.ref('delivery_activity/' + child.key).remove();
-                    else { hasData = true; bar.innerHTML += `<div class="status-item flex items-center px-1 animate-blink"><i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i><span>(${d.name} SEDANG MENGANTAR)</span></div>`; }
+                    else { 
+                        hasData = true; 
+                        const textStatus = d.idCust ? `${d.name} SEDANG MENGANTAR ID ${d.idCust}` : `${d.name} SEDANG MENGANTAR`;
+                        bar.innerHTML += `<div class="status-item flex items-center px-1 animate-blink"><i class="fa fa-motorcycle mr-2 text-[7px] text-red-500"></i><span>(${textStatus})</span></div>`; 
+                    }
                 });
                 bar.style.display = hasData ? "block" : "none";
             });
@@ -594,11 +423,30 @@
                 if (cashiersOnly.includes(currentUser)) {
                     msgWa = `Halo bapak/ibu perkenalkan saya ${currentUser} dari kasir Domino's jatimakmur, mau konfirmasi pesanan atas nama/atau nomer tlpn (${i.name}) saya ingin mengkonfirmasi .....`;
                 } else {
-                    msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar,mohon ditunggu,dan tetap akti WhatsApp ya, Terimakasih 😊.`;
+                    msgWa = `Halo Bapak/Ibu ${i.name}, saya ${currentUser} dari Domino's Pizza Jatimakmur. Pesanan Anda sedang saya antar,mohon ditunggu,dan tetap aktif WhatsApp ya, Terimakasih 😊.`;
                 }
                 
                 const waLink = `https://wa.me/${wa}?text=${encodeURIComponent(msgWa)}`;
                 const isBlockedUser = mgtAndCashiers.includes(currentUser);
+
+                // Pesan teks WhatsApp khusus kartu ucapan minta maaf telat antaran
+                const msgLate = `Halo bapak/ibu ${i.name}, mohon maaf yang sebesar-besarnya atas keterlambatan pengantaran pesanannya. Saat ini antrean pengiriman sedang sangat padat, namun tidak perlu khawatir karena pizza Bapak/ibu ${i.name},sedang dalam perjalanan dan akan tetap diantarkan. Mohon bersedia menunggu sebentar ya, Pak/Bu. Terima kasih banyak atas pengertiannya ☺️🙏`;
+                const waLateLink = `https://wa.me/${wa}?text=${encodeURIComponent(msgLate)}`;
+
+                // Format info waktu selesai untuk menu History
+                let infoSelesai = 'SELESAI';
+                if (i.status === 'done' && i.doneTime) {
+                    const tgl = new Date(i.doneTime);
+                    const jam = String(tgl.getHours()).padStart(2, '0');
+                    const min = String(tgl.getMinutes()).padStart(2, '0');
+                    const hariArr = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                    const hari = hariArr[tgl.getDay()];
+                    const tglNum = tgl.getDate();
+                    const blnNum = tgl.getMonth() + 1;
+                    const thnNum = String(tgl.getFullYear()).slice(-2);
+                    const driver = i.doneBy || i.driverBy || currentUser;
+                    infoSelesai = `DIANTAR DAN SELESAI PADA ${jam}.${min} WIB, ${hari.toLowerCase()} ${tglNum}.${blnNum}.${thnNum} OLEH ${driver}`;
+                }
 
                 const cardHtml = `<div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                     <div class="flex justify-between items-start">
@@ -606,9 +454,10 @@
                             <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
                             <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
                             <div class="flex items-center gap-2 mt-1">
-                                <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?'SELESAI':'READY'}</p>
+                                <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?infoSelesai:'READY'}</p>
                                 ${i.driverBy ? `<span class="driver-badge">${i.driverBy}</span>` : ''}
                             </div>
+                            ${i.status==='done' && i.phone ? `<p class="text-[10px] text-gray-500 mt-1 font-bold"><i class="fab fa-whatsapp text-green-500 mr-1"></i>${i.phone}</p>` : ''}
                         </div>
                         <div class="flex gap-2">
                             ${i.status !== 'done' ? 
@@ -616,7 +465,10 @@
                              <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
                              <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
                              <button onclick="${isBlockedUser ? "alert('Management/Kasir tidak diizinkan antar')" : `goOTW('${id}')`}" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw' || isBlockedUser ?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>` 
-                            : `<button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo"></i></button>`}
+                            : `<div class="flex gap-1 items-center">
+                                 <button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo text-[10px]"></i></button>
+                                 <a href="${waLateLink}" target="_blank" class="bg-red-100 text-red-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm" title="Kirim Pesan Maaf Keterlambatan"><i class="fa fa-envelope-open-text text-[10px]"></i></a>
+                               </div>`}
                         </div>
                     </div>
                     <div class="mt-3 ${i.status==='done'?'hidden':''}">
@@ -696,12 +548,18 @@
             } 
         }
 
-        function setStatus(id, stat) { db.ref('customers/'+id).update({ status: stat }); }
+        function setStatus(id, stat) { 
+            if (stat === 'done') {
+                db.ref('customers/'+id).update({ status: stat, doneTime: Date.now(), doneBy: currentUser });
+            } else {
+                db.ref('customers/'+id).update({ status: stat });
+            }
+        }
 
+        // Updated showPage wrapper to bypass camera controls completely
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-'+id));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.id === 'nav-'+id));
-            if(id !== 'chat') stopCamera();
             if(id === 'home') closeCrewManager();
         }
 
@@ -710,6 +568,13 @@
                 if(allData[id].status === 'otw') {
                     const elapsed = Math.floor((Date.now() - allData[id].startTime) / 1000);
                     const rem = (20 * 60) - elapsed;
+                    
+                    // Otomatis pindah ke history/done setelah 20 menit (1200 detik)
+                    if(elapsed >= 1200) {
+                        db.ref('customers/' + id).update({ status: 'done', doneTime: Date.now(), doneBy: allData[id].driverBy || "System" });
+                        return;
+                    }
+
                     const el = document.getElementById('timer-'+id);
                     if(el) {
                         const m = Math.max(0, Math.floor(rem / 60)); const s = Math.max(0, rem % 60);
@@ -761,40 +626,59 @@
             } else { alert("PIN Salah!"); }
         }
 
-        function renderAddressTable(matches) {
-            const b = document.getElementById('addressTableBody'); b.innerHTML = '';
-            [...new Set(matches.map(m => m.replace(/\D/g, '')))].forEach(n => {
-                if (n.length < 10) return;
-                let wa = n.startsWith('0') ? '62' + n.slice(1) : (n.startsWith('8') ? '62' + n : n);
-                b.innerHTML += `<tr><td class="p-3 text-center text-blue-900 text-sm font-black">${n}</td><td class="p-3 text-center"><button onclick="openWaLinkCustom('${wa}', '${n}')" class="bg-green-500 text-white w-8 h-8 rounded-lg"><i class="fab fa-whatsapp"></i></button></td></tr>`;
-            });
-            document.getElementById('scanResultArea').classList.remove('hidden');
-        }
-
-        function openWaLinkCustom(n, originalNum = "") {
-            pushDeliveryStatus(currentUser);
-            let msg = "";
-            if (cashiersOnly.includes(currentUser)) {
-                msg = `Halo bapak/ibu perkenalkan saya ${currentUser} dari kasir Domino's jatimakmur, mau konfirmasi pesanan atas nama/atau nomer tlpn (${originalNum || n}) saya ingin mengkonfirmasi .....`;
-            } else {
-                msg = `Halo Bapak/Ibu, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu?,agar pengantaran menjadi lebih cepat,Terimakasih 😊`;
-            }
-            window.open(`https://wa.me/${n}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
+        // --- UPDATED WA DIRECT LOGIC (MANUAL ONLY WITH MANDATORY NAME & ID) ---
         function openWaDirect() {
+            let custName = document.getElementById('waDirectCustName').value.trim();
+            let custId = document.getElementById('waDirectCustId').value.trim().replace(/\D/g, '');
             let n = document.getElementById('waDirectNumber').value.replace(/\D/g, '');
-            if(!n) return alert("Nomor kosong!");
+            
+            if(!custName) return alert("Nama Customer wajib diisi!");
+            if(!custId || custId.length !== 3) return alert("ID Pelanggan wajib 3 digit angka!");
+            if(!n) return alert("Nomor HP kosong atau tidak valid!");
+            
             let wa = n.startsWith('0') ? '62' + n.slice(1) : (n.startsWith('8') ? '62' + n : n);
             const searchN = n.startsWith('0') ? n.slice(1) : (n.startsWith('62') ? n.slice(2) : n);
+            
+            // Check for duplicate in active delivery list
             const activeId = Object.keys(allData).find(id => {
                 const dataN = (allData[id].phone || "").replace(/\D/g, '');
                 return allData[id].status !== 'done' && dataN.includes(searchN);
             });
+            
             if (activeId) {
                 document.getElementById('searchInput').value = allData[activeId].phone;
-                render(); showPage('list'); stopCamera();
-            } else { openWaLinkCustom(wa, n); }
+                render(); 
+                showPage('list');
+            } else { 
+                pushDeliveryStatus(currentUser, custId);
+                
+                // Masukkan data ke antaran aktif dengan status 'otw' secara otomatis agar setelah 20 menit masuk kolom history
+                const autoData = {
+                    area: "ID " + custId,
+                    name: custName,
+                    phone: n,
+                    maps: "",
+                    photo: "",
+                    status: 'otw',
+                    startTime: Date.now(),
+                    timestamp: Date.now(),
+                    driverBy: currentUser
+                };
+                db.ref('customers').push(autoData);
+
+                let msg = "";
+                if (cashiersOnly.includes(currentUser)) {
+                    msg = `Halo bapak/ibu perkenalkan saya ${currentUser} dari kasir Domino's jatimakmur, mau konfirmasi pesanan atas nama/atau nomer tlpn (${custName}) saya ingin mengkonfirmasi .....`;
+                } else {
+                    msg = `Halo Bapak/Ibu ${custName}, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu?,agar pengantaran menjadi lebih cepat,Terimakasih 😊`;
+                }
+                window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
+                
+                // Clear input form WA direct setelah kirim
+                document.getElementById('waDirectCustName').value = "";
+                document.getElementById('waDirectCustId').value = "";
+                document.getElementById('waDirectNumber').value = "";
+            }
         }
     </script>
 </body>
