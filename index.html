@@ -689,7 +689,7 @@
                 if (cashiersOnly.includes(currentUser)) {
                     msg = `Halo bapak/ibu perkenalkan saya ${currentUser} dari kasir Domino's jatimakmur, mau konfirmasi pesanan atas nama/atau nomer tlpn (${custName}) saya ingin mengkonfirmasi .....`;
                 } else {
-                    msg = `Halo Bapak/Ibu ${custName}, saya ${currentUser} dari Domino's pizza jatimakmur, ingin mengantarkan pesanan, boleh minta share lokasinya Pak/Bu?,agar pengantaran menjadi lebih cepat,Terimakasih 😊`;
+                    msg = `Halo Bapak/Ibu ${custName},\n\nSaya ${currentUser} dari Domino's Pizza Jatimakmur. Saat ini saya akan mengantarkan pesanan Bapak/Ibu.\n\nBoleh minta bantuan untuk share lokasinya, Pak/Bu? Agar pesanan bisa sampai lebih cepat dan tepat.\n\nTerima kasih 😊`;
                 }
                 window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
                 
