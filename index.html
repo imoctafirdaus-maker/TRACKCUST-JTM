@@ -248,7 +248,7 @@
             { name: "DUREN SAWIT", lat: -6.2343, lng: 106.9194 },
             { name: "MAKASAR", lat: -6.2735, lng: 106.8841 },
             { name: "CIRACAS", lat: -6.3262, lng: 106.8797 },
-            { name: "CENGARENG", lat: -6.1553, lng: 106.7265 }
+            { name: "CENGKARENG", lat: -6.1553, lng: 106.7265 }
         ];
 
         window.onload = () => {
@@ -518,12 +518,12 @@
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
-        // LOGIKA BARU: Fungsi Haversine untuk menghitung jarak lurus titik koordinat HP ke pusat kecamatan terdekat
+        // Fungsi Haversine untuk menghitung jarak lurus titik koordinat HP ke pusat kecamatan terdekat
         function dapatkanKecamatanTerdekat(lat, lng) {
             let kecamatanTerpilih = "JATIMAKMUR";
             let jarakTerkecil = Infinity;
 
-            KECAMATAN_POLYGONS.forEach(kec -> {
+            KECAMATAN_POLYGONS.forEach(kec => {
                 const R = 6371; // Radius bumi dalam Kilometer
                 const dLat = (kec.lat - lat) * Math.PI / 180;
                 const dLng = (kec.lng - lng) * Math.PI / 180;
@@ -553,7 +553,7 @@
                 (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
-                    const generatedMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+                    const generatedMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
 
                     // Deteksi kode area kecamatan terdekat secara otomatis
                     const kecamatanOtomatis = dapatkanKecamatanTerdekat(lat, lng);
