@@ -39,7 +39,6 @@
         .antaran-photo { cursor: pointer; transition: transform 0.2s; }
         .antaran-photo:active { transform: scale(0.92); }
 
-        /* Custom style untuk checkbox payment cash */
         .checkbox-custom { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid #22c55e; border-radius: 4px; background-color: white; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; relative; }
         .checkbox-custom:checked::after { content: "\f00c"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #22c55e; font-size: 12px; }
     </style>
@@ -239,6 +238,18 @@
         let allData = {}; let photoBase64 = "";
         let renderTimer;
         let editCrewId = null;
+
+        // DATA DICTIONARY KOORDINAT KECAMATAN SEKITAR JATIMAKMUR
+        const KECAMATAN_POLYGONS = [
+            { name: "PONDOK GEDE", lat: -6.2842, lng: 106.9242 },
+            { name: "JATIASIH", lat: -6.3046, lng: 106.9615 },
+            { name: "PONDOK MELATI", lat: -6.3117, lng: 106.9267 },
+            { name: "BEKASI BARAT", lat: -6.2394, lng: 106.9744 },
+            { name: "DUREN SAWIT", lat: -6.2343, lng: 106.9194 },
+            { name: "MAKASAR", lat: -6.2735, lng: 106.8841 },
+            { name: "CIRACAS", lat: -6.3262, lng: 106.8797 },
+            { name: "CENGARENG", lat: -6.1553, lng: 106.7265 }
+        ];
 
         window.onload = () => {
             db.ref('crew_settings').on('value', snap => {
@@ -459,9 +470,8 @@
                     infoSelesai = `DIANTAR DAN SELESAI PADA ${jam}.${min} WIB, ${hari.toLowerCase()} ${tglNum}.${blnNum}.${thnNum} OLEH ${driver}`;
                 }
 
-                // Pengkondisian pembuatan tombol koordinat berbasis GPS Real-time
                 const nameEscaped = (i.name || "").replace(/['"\\]/g, '\\$&');
-                const coordBtnHtml = `<button onclick="ambilDanSimpanKoordinat('${id}', '${nameEscaped}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Simpan"><i class="fa fa-map-marker-alt text-[11px]"></i></button>`;
+                const coordBtnHtml = `<button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>`;
 
                 const cardHtml = `<div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                     <div class="flex justify-between items-start">
@@ -508,47 +518,60 @@
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
         }
 
-        // FUNGSI BARU: Mendeteksi GPS Handphone Driver secara Real-time dan Menyimpannya ke Database
-        function ambilDanSimpanKoordinat(id, name) {
+        // LOGIKA BARU: Fungsi Haversine untuk menghitung jarak lurus titik koordinat HP ke pusat kecamatan terdekat
+        function dapatkanKecamatanTerdekat(lat, lng) {
+            let kecamatanTerpilih = "JATIMAKMUR";
+            let jarakTerkecil = Infinity;
+
+            KECAMATAN_POLYGONS.forEach(kec -> {
+                const R = 6371; // Radius bumi dalam Kilometer
+                const dLat = (kec.lat - lat) * Math.PI / 180;
+                const dLng = (kec.lng - lng) * Math.PI / 180;
+                const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                          Math.cos(lat * Math.PI / 180) * Math.cos(kec.lat * Math.PI / 180) * Math.sin(dLng/2) * Math.sin(dLng/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                const jarak = R * c;
+
+                if (jarak < jarakTerkecil) {
+                    jarakTerkecil = jarak;
+                    kecamatanTerpilih = kec.name;
+                }
+            });
+            return kecamatanTerpilih;
+        }
+
+        function ambilDanSimpanKoordinatStatus(id, name) {
             const yakin = confirm(`Apakah anda yakin ingin menyimpan titik koordinat untuk ${name}?`);
             if (!yakin) return;
 
             if (!navigator.geolocation) {
-                alert("Gagal: HP atau Browser Anda tidak mendukung fitur pelacakan lokasi/GPS.");
+                alert("Gagal: HP tidak mendukung fitur GPS.");
                 return;
             }
 
-            // Memulai proses scan satelit GPS internal HP
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
-                    // Format link Google Maps standar internasional koordinat presisi
-                    const generatedMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
+                    const generatedMapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
 
-                    // Update database Firebase secara instant
-                    db.ref('customers/' + id).update({ maps: generatedMapsUrl })
-                        .then(() => {
-                            alert(`Berhasil! Koordinat lokasi GPS Anda saat ini telah dikunci dan disimpan untuk rumah ${name}.`);
-                        })
-                        .catch((err) => {
-                            alert("Gagal memperbarui database: " + err.message);
-                        });
+                    // Deteksi kode area kecamatan terdekat secara otomatis
+                    const kecamatanOtomatis = dapatkanKecamatanTerdekat(lat, lng);
+
+                    // Update data Lokasi sekaligus mengganti ID / Kode Area secara real-time
+                    db.ref('customers/' + id).update({ 
+                        maps: generatedMapsUrl,
+                        area: kecamatanOtomatis
+                    })
+                    .then(() => {
+                        alert(`Berhasil!\nKoordinat disimpan dan kode area ${name} otomatis diganti menjadi: KEC. ${kecamatanOtomatis}`);
+                    })
+                    .catch((err) => {
+                        alert("Gagal menyimpan ke database: " + err.message);
+                    });
                 },
                 (error) => {
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            alert("Gagal: Izin GPS ditolak oleh pengguna. Silakan aktifkan izin lokasi di setelan browser HP Anda.");
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            alert("Gagal: Informasi lokasi tidak tersedia. Pastikan GPS HP Anda sudah dinyalakan.");
-                            break;
-                        case error.TIMEOUT:
-                            alert("Gagal: Waktu pencarian lokasi habis (Sinyal GPS lemah). Coba lagi di tempat terbuka.");
-                            break;
-                        default:
-                            alert("Terjadi kesalahan GPS: " + error.message);
-                    }
+                    alert("Gagal mendeteksi GPS. Pastikan izin lokasi HP aktif.");
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
@@ -733,7 +756,7 @@
 
                 let msg = "";
                 if (cashiersOnly.includes(currentUser)) {
-                    msg = `Halo bapak/ibu perkenalkan saya ${currentUser} from kasir Domino's jatimakmur, mau konfirmasi pesanan atas nama/atau nomer tlpn (${custName}) saya ingin mengkonfirmasi .....`;
+                    msg = `Halo bapak/ibu perkenalkan saya ${currentUser} dari kasir Domino's jatimakmur, mau konfirmasi pesanan atas nama/atau nomer tlpn (${custName}) saya ingin mengkonfirmasi .....`;
                 } else {
                     msg = `Halo Bapak/Ibu ${custName},\n\nSaya ${currentUser} dari Domino's Pizza Jatimakmur. Saat ini saya akan mengantarkan pesanan Bapak/Ibu.\n\nBoleh minta bantuan untuk share lokasinya, Pak/Bu? Agar pesanan bisa sampai lebih cepat dan tepat.\n\nTerima kasih 😊`;
                 }
