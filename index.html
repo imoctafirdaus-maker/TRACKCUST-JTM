@@ -177,8 +177,20 @@
             </div>
 
             <div id="page-chat" class="page h-full items-center p-4 bg-gray-100 overflow-y-auto">
-                <div class="wa-card mb-20 mx-auto">
-                    <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 shadow-lg"><i class="fab fa-whatsapp text-white text-2xl"></i></div>
+                <div class="wa-card mb-20 mx-auto relative">
+                    <div class="flex justify-between items-start mb-4 px-2">
+                        <div class="w-16"></div>
+                        
+                        <div class="flex flex-col items-center">
+                            <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto shadow-lg"><i class="fab fa-whatsapp text-white text-2xl"></i></div>
+                        </div>
+                        
+                        <div class="border-2 border-green-500 rounded-xl p-1.5 flex flex-col items-center justify-center min-w-[75px] bg-white">
+                            <span class="text-green-500 font-black uppercase text-[8px] tracking-tight leading-none mb-1.5">Payment Cash</span>
+                            <input type="checkbox" id="waDirectCashPayment" class="checkbox-custom">
+                        </div>
+                    </div>
+
                     <h2 class="font-black text-blue-900 uppercase italic text-[12px] mb-3">Manual Input Chat</h2>
                     
                     <div class="space-y-3 mb-4">
@@ -186,11 +198,6 @@
                         <div class="flex gap-2">
                             <input type="text" id="waDirectCustId" maxlength="3" placeholder="ID (3 No)" inputmode="numeric" class="w-1/3 p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm">
                             <input type="tel" id="waDirectNumber" placeholder="Input Nomor HP Manual" class="w-2/3 p-3 bg-gray-50 rounded-xl border-2 border-gray-100 outline-none font-black text-center text-blue-900 text-sm">
-                        </div>
-                        
-                        <div class="bg-green-50 border-2 border-green-200 rounded-xl p-3 flex flex-col items-center justify-center gap-2">
-                            <span class="text-green-700 font-black uppercase tracking-wider text-[11px] italic">Payment Cash</span>
-                            <input type="checkbox" id="waDirectCashPayment" class="checkbox-custom">
                         </div>
                     </div>
                     
@@ -475,7 +482,7 @@
                              <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
                              <button onclick="${isBlockedUser ? "alert('Management/Kasir tidak diizinkan antar')" : `goOTW('${id}')`}" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw' || isBlockedUser ?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>` 
                             : `<div class="flex gap-1 items-center">
-                                 ${i.paymentMode === 'cash' ? '<i class="fa fa-dollar-sign text-green-500 mr-2 text-sm" title="Paid Cash (COD)"></i>' : ''}
+                                 ${i.paymentMode === 'cash' ? '<span class="text-green-500 font-black text-lg mr-2" title="Paid Cash (COD)">$</span>' : ''}
                                  <button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo text-[10px]"></i></button>
                                  <a href="${waLateLink}" target="_blank" class="bg-red-100 text-red-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm" title="Kirim Pesan Maaf Keterlambatan"><i class="fa fa-envelope-open-text text-[10px]"></i></a>
                                </div>`}
