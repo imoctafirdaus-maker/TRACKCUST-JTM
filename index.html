@@ -464,6 +464,11 @@
                     infoSelesai = `DIANTAR DAN SELESAI PADA ${jam}.${min} WIB, ${hari.toLowerCase()} ${tglNum}.${blnNum}.${thnNum} OLEH ${driver}`;
                 }
 
+                // Pengkondisian pembuatan tombol koordinat map
+                const mapsUrlEscaped = (i.maps || "").replace(/['"\\]/g, '\\$&');
+                const nameEscaped = (i.name || "").replace(/['"\\]/g, '\\$&');
+                const coordBtnHtml = `<button onclick="copyCoordinates('${mapsUrlEscaped}', '${nameEscaped}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Salin Koordinat Rumah"><i class="fa fa-map-marker-alt text-[11px]"></i></button>`;
+
                 const cardHtml = `<div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
@@ -480,10 +485,16 @@
                             `<button onclick="editData('${id}')" class="text-blue-500 bg-blue-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-edit text-[10px]"></i></button>
                              <button onclick="secureDelete('${id}')" class="text-red-500 bg-red-50 w-7 h-7 rounded-lg flex items-center justify-center"><i class="fa fa-trash text-[10px]"></i></button>
                              <button onclick="setStatus('${id}','done')" class="bg-yellow-400 text-white w-9 h-9 rounded-xl flex items-center justify-center shadow-md"><i class="fa fa-check"></i></button>
-                             <button onclick="${isBlockedUser ? "alert('Management/Kasir tidak diizinkan antar')" : `goOTW('${id}')`}" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw' || isBlockedUser ?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>` 
+                             <div class="flex flex-col items-center">
+                                 <button onclick="${isBlockedUser ? "alert('Management/Kasir tidak diizinkan antar')" : `goOTW('${id}')`}" class="w-9 h-9 rounded-xl flex items-center justify-center ${i.status==='otw' || isBlockedUser ?'bg-gray-100 text-gray-400':'bg-blue-500 text-white shadow-md'}"><i class="fa fa-motorcycle"></i></button>
+                                 ${!i.maps ? coordBtnHtml : ''}
+                             </div>` 
                             : `<div class="flex gap-1 items-center">
                                  ${i.paymentMode === 'cash' ? '<span class="text-green-500 font-black text-lg mr-2" title="Paid Cash (COD)">$</span>' : ''}
-                                 <button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo text-[10px]"></i></button>
+                                 <div class="flex flex-col items-center gap-1">
+                                     <button onclick="setStatus('${id}','active')" class="bg-gray-100 text-gray-400 w-8 h-8 rounded-lg flex items-center justify-center"><i class="fa fa-undo text-[10px]"></i></button>
+                                     ${coordBtnHtml}
+                                 </div>
                                  <a href="${waLateLink}" target="_blank" class="bg-red-100 text-red-600 w-8 h-8 rounded-lg flex items-center justify-center shadow-sm" title="Kirim Pesan Maaf Keterlambatan"><i class="fa fa-envelope-open-text text-[10px]"></i></a>
                                </div>`}
                         </div>
@@ -501,6 +512,25 @@
             });
             list.innerHTML = listHTML; hist.innerHTML = histHTML;
             document.getElementById('countActive').innerText = `${activeCount} AKTIF`;
+        }
+
+        function copyCoordinates(mapsUrl, name) {
+            if (!mapsUrl) {
+                alert("Koordinat/Link Maps kosong untuk customer " + name);
+                return;
+            }
+            navigator.clipboard.writeText(mapsUrl).then(() => {
+                alert("Koordinat rumah " + name + " berhasil disalin!");
+            }).catch(err => {
+                // Fallback method jika navigator.clipboard tidak didukung browser tertentu
+                const el = document.createElement('textarea');
+                el.value = mapsUrl;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                alert("Koordinat rumah " + name + " berhasil disalin!");
+            });
         }
 
         function openFullImg(url, caption = "") { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = caption; document.getElementById('imgModal').style.display = 'flex'; }
