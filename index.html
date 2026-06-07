@@ -264,6 +264,7 @@
             if(currentUser) bukaApp(currentUser);
             setInterval(updateTimers, 1000);
             startDeliveryStatusListener();
+            checkAndResetIdsAtMidnight();
         };
 
         function refreshUserDropdown() {
@@ -606,15 +607,19 @@
                             area: areaFormatBaru
                         };
 
-                        // Ekstraksi ID dari kode area terdaftar ("ID XXX") jika dipicu di menu history
-                        if (isHistory && allData[id]) {
-                            let currentArea = allData[id].area || "";
-                            let extractedId = "";
-                            if (currentArea.startsWith("ID ")) {
-                                extractedId = currentArea.split(" ")[1] || "";
-                            }
-                            if (extractedId) {
-                                updateData.historyDisplayId = extractedId;
+                        // Pertahankan atau perbarui ID agar tidak pernah hilang saat icon GPS diklik di history
+                        if (allData[id]) {
+                            if (allData[id].historyDisplayId) {
+                                updateData.historyDisplayId = allData[id].historyDisplayId;
+                            } else {
+                                let currentArea = allData[id].area || "";
+                                let extractedId = "";
+                                if (currentArea.startsWith("ID ")) {
+                                    extractedId = currentArea.split(" ")[1] || "";
+                                }
+                                if (extractedId) {
+                                    updateData.historyDisplayId = extractedId;
+                                }
                             }
                         }
 
@@ -630,14 +635,18 @@
                             area: kecamatanOtomatis
                         };
 
-                        if (isHistory && allData[id]) {
-                            let currentArea = allData[id].area || "";
-                            let extractedId = "";
-                            if (currentArea.startsWith("ID ")) {
-                                extractedId = currentArea.split(" ")[1] || "";
-                            }
-                            if (extractedId) {
-                                fallbackData.historyDisplayId = extractedId;
+                        if (allData[id]) {
+                            if (allData[id].historyDisplayId) {
+                                fallbackData.historyDisplayId = allData[id].historyDisplayId;
+                            } else {
+                                let currentArea = allData[id].area || "";
+                                let extractedId = "";
+                                if (currentArea.startsWith("ID ")) {
+                                    extractedId = currentArea.split(" ")[1] || "";
+                                }
+                                if (extractedId) {
+                                    fallbackData.historyDisplayId = extractedId;
+                                }
                             }
                         }
 
@@ -849,6 +858,28 @@
                 document.getElementById('waDirectNumber').value = "";
                 document.getElementById('waDirectCashPayment').checked = false;
             }
+        }
+
+        // Fungsi Penghapusan Otomatis 3 Digit ID tepat Pukul 00:00 WIB tanpa menghapus data riwayat
+        function checkAndResetIdsAtMidnight() {
+            setInterval(() => {
+                const now = new Date();
+                const options = { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+                const currentTimeWIB = new Intl.DateTimeFormat('id-ID', options).format(now);
+
+                if (currentTimeWIB === "00:00:00") {
+                    db.ref('customers').once('value', snapshot => {
+                        if (snapshot.exists()) {
+                            snapshot.forEach(childSnapshot => {
+                                const item = childSnapshot.val();
+                                if (item.status === 'done' && item.historyDisplayId) {
+                                    db.ref('customers/' + childSnapshot.key).update({ historyDisplayId: null });
+                                }
+                            });
+                        }
+                    });
+                }
+            }, 1000);
         }
     </script>
 </body>
