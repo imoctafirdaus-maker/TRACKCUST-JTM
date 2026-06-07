@@ -247,7 +247,7 @@
             { name: "BEKASI BARAT", lat: -6.2394, lng: 106.9744 },
             { name: "DUREN SAWIT", lat: -6.2343, lng: 106.9194 },
             { name: "MAKASAR", lat: -6.2735, lng: 106.8841 },
-            { name: "CIRACAS", lat: -6.3262, lng: 106.8797 }
+            { name: "CIRACAS", lat: -6.3262, rounded_corners: true, lat: -6.3262, lng: 106.8797 }
         ];
 
         window.onload = () => {
@@ -470,29 +470,38 @@
                 }
 
                 const nameEscaped = (i.name || "").replace(/['"\\]/g, '\\$&');
-                const coordBtnHtml = `<button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>`;
+                const coordBtnHtml = `<button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}', false)" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>`;
 
                 // Generate conditional buttons for history view based on coordinate availability
                 let historyGpsControlsHtml = "";
                 if (i.maps) {
                     historyGpsControlsHtml = `
                         <div class="flex flex-col items-center gap-1">
-                            <button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}')" class="text-gray-400 bg-gray-100 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>
+                            <button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}', true)" class="text-gray-400 bg-gray-100 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>
                             <a href="${i.maps}" target="_blank" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center" title="Navigasi Google Maps"><i class="fa fa-compass text-[11px]"></i></a>
                         </div>
                     `;
                 } else {
                     historyGpsControlsHtml = `
                         <div class="flex flex-col items-center gap-1">
-                            <button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}')" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>
+                            <button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}', true)" class="text-blue-500 bg-blue-50 w-8 h-8 rounded-lg flex items-center justify-center mt-1" title="Ambil GPS Rumah & Ganti Area"><i class="fa fa-map-marker-alt text-[11px]"></i></button>
                         </div>
+                    `;
+                }
+
+                // Pengkondisian penampilan kode area beserta ID khusus untuk menu history jika ada
+                let areaDisplayHtml = `<p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>`;
+                if (i.status === 'done' && i.historyDisplayId) {
+                    areaDisplayHtml = `
+                        <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
+                        <p class="text-[9px] font-black text-blue-700 uppercase italic mt-0.5">ID: ${i.historyDisplayId}</p>
                     `;
                 }
 
                 const cardHtml = `<div class="bg-white rounded-2xl p-4 shadow-sm border-l-8 ${i.status==='done'?'border-gray-300':'border-red-500'}">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>
+                            ${areaDisplayHtml}
                             <h3 class="font-black text-blue-900 text-sm leading-tight">${i.name}</h3>
                             <div class="flex items-center gap-2 mt-1">
                                 <p id="timer-${id}" class="text-[10px] font-bold text-gray-400 italic">${i.status==='done'?infoSelesai:'READY'}</p>
@@ -555,7 +564,7 @@
             return kecamatanTerpilih;
         }
 
-        function ambilDanSimpanKoordinatStatus(id, name) {
+        function ambilDanSimpanKoordinatStatus(id, name, isHistory = false) {
             const yakin = confirm(`Apakah anda yakin ingin menyimpan titik koordinat untuk ${name}?`);
             if (!yakin) return;
 
@@ -592,20 +601,47 @@
                             areaFormatBaru = `${kecamatanOtomatis} (${detailArray.join(', ')})`;
                         }
 
-                        return db.ref('customers/' + id).update({ 
+                        let updateData = { 
                             maps: generatedMapsUrl,
                             area: areaFormatBaru
-                        }).then(() => areaFormatBaru);
+                        };
+
+                        // Ekstraksi ID dari kode area terdaftar ("ID XXX") jika dipicu di menu history
+                        if (isHistory && allData[id]) {
+                            let currentArea = allData[id].area || "";
+                            let extractedId = "";
+                            if (currentArea.startsWith("ID ")) {
+                                extractedId = currentArea.split(" ")[1] || "";
+                            }
+                            if (extractedId) {
+                                updateData.historyDisplayId = extractedId;
+                            }
+                        }
+
+                        return db.ref('customers/' + id).update(updateData).then(() => areaFormatBaru);
                     })
                     .then((areaFinal) => {
                         alert("Berhasil!\nKoordinat disimpan dan kode area " + name + " otomatis diganti menjadi:\n" + areaFinal);
                     })
                     .catch((err) => {
                         // Fallback aman jika koneksi API luar bermasalah
-                        db.ref('customers/' + id).update({ 
+                        let fallbackData = { 
                             maps: generatedMapsUrl,
                             area: kecamatanOtomatis
-                        })
+                        };
+
+                        if (isHistory && allData[id]) {
+                            let currentArea = allData[id].area || "";
+                            let extractedId = "";
+                            if (currentArea.startsWith("ID ")) {
+                                extractedId = currentArea.split(" ")[1] || "";
+                            }
+                            if (extractedId) {
+                                fallbackData.historyDisplayId = extractedId;
+                            }
+                        }
+
+                        db.ref('customers/' + id).update(fallbackData)
                         .then(() => {
                             alert("Berhasil dengan batasan!\nKoordinat disimpan namun gagal memuat nama jalan. Area diatur ke kecamatan: " + kecamatanOtomatis);
                         })
@@ -683,11 +719,13 @@
             } 
         }
 
+        // Modifikasi setStatus untuk memastikan properti display ID dibersihkan saat di-undo ke antaran aktif
         function setStatus(id, stat) { 
             if (stat === 'done') {
                 db.ref('customers/'+id).update({ status: stat, doneTime: Date.now(), doneBy: currentUser });
             } else {
-                db.ref('customers/'+id).update({ status: stat });
+                // Saat status diubah menjadi active kembali (Undo), historyDisplayId dibuang dari data
+                db.ref('customers/'+id).update({ status: stat, historyDisplayId: null });
             }
         }
 
