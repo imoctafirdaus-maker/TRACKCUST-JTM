@@ -238,7 +238,6 @@
         let allData = {}; let photoBase64 = "";
         let renderTimer;
         let editCrewId = null;
-        let dataLamaNotif = null;
 
         // DATA DICTIONARY KOORDINAT KECAMATAN SEKITAR JATIMAKMUR
         const KECAMATAN_POLYGONS = [
@@ -383,27 +382,6 @@
             if(p === userPins[u]) bukaApp(u); else alert("PIN SALAH!");
         }
 
-        function kirimNotifikasiSistem(judul, pesan) {
-            // Bunyi Beep / Ringtone bawaan browser
-            try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioCtx.createOscillator();
-                const gainNode = audioCtx.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioCtx.destination);
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nada D5 ("Ting!")
-                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.15);
-            } catch (e) { console.log("Audio context diblokir oleh interaksi browser."); }
-
-            // Push Notifikasi Desktop / HP jika diizinkan
-            if (Notification.permission === "granted") {
-                new Notification(judul, { body: pesan, icon: 'https://ui-avatars.com/api/?name=Domino&background=006491&color=fff' });
-            }
-        }
-
         function bukaApp(n) {
             const isOkta = (n === "Okta");
             db.ref('presence/' + n).once('value', snapshot => {
@@ -416,33 +394,10 @@
                 document.getElementById('pinOverlay').style.display = "none";
                 document.getElementById('mainContent').style.display = "flex";
                 updatePresence(); updateProfileUI();
-                
-                if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-                    Notification.requestPermission();
-                }
-
                 db.ref('presence/' + n + '/session').on('value', snap => {
                     if (!isOkta && snap.exists() && snap.val() !== sessionID) { alert("⚠️ Sesi Anda berakhir."); handleLogout(false); }
                 });
-                
-                db.ref('customers').on('value', s => { 
-                    const dataBaru = s.val() || {};
-                    
-                    if (dataLamaNotif !== null) {
-                        Object.keys(dataBaru).forEach(id => {
-                            if (!dataLamaNotif[id]) {
-                                kirimNotifikasiSistem("🍕 ANTARAN BARU!", `Pesanan atas nama ${dataBaru[id].name} (${dataBaru[id].area}) ditambahkan.`);
-                            } else if (dataLamaNotif[id].status !== 'otw' && dataBaru[id].status === 'otw') {
-                                const driverNama = dataBaru[id].driverBy || "Driver";
-                                kirimNotifikasiSistem("🏍️ DRIVER OTW!", `${driverNama} sedang mengantar pesanan ${dataBaru[id].name} (${dataBaru[id].area}).`);
-                            }
-                        });
-                    }
-                    
-                    dataLamaNotif = dataBaru;
-                    allData = dataBaru; 
-                    render(); 
-                });
+                db.ref('customers').on('value', s => { allData = s.val() || {}; render(); });
             });
         }
 
@@ -579,7 +534,7 @@
                     </div>
                     <div class="flex gap-2 mt-3 ${i.status==='done'?'hidden':''}">
                         ${i.maps ? `<a href="${i.maps}" target="_blank" class="dominos-blue text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fa fa-map-marker-alt mr-1"></i> Buka Maps</a>` : ''}
-                        <a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}', '${i.area.startsWith('ID ') ? i.area.split(' ')[1] : ''}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
+                        <a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
                     </div>
                 </div>`;
                 if(i.status === 'done') histHTML += cardHtml; 
@@ -711,20 +666,6 @@
             );
         }
 
-        // Modifikasi fungsi bawaan pemicu OTW manual agar terdeteksi ke bilah status jika memiliki ID
-        function goOTW(id) { 
-            if(mgtAndCashiers.includes(currentUser)) return alert("Management/Kasir tidak diizinkan mengantar!");
-            if(allData[id].status !== 'otw') { 
-                let extractedId = "";
-                let currentArea = allData[id].area || "";
-                if (currentArea.startsWith("ID ")) {
-                    extractedId = currentArea.split(" ")[1] || "";
-                }
-                db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); 
-                pushDeliveryStatus(currentUser, extractedId); 
-            } 
-        }
-
         function openFullImg(url, caption = "") { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = caption; document.getElementById('imgModal').style.display = 'flex'; }
         function secureDelete(id) { const p = prompt("PIN:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); }
         
@@ -779,10 +720,20 @@
             document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('cancelBtn').classList.remove('hidden'); showPage('add');
         }
 
+        function goOTW(id) { 
+            if(mgtAndCashiers.includes(currentUser)) return alert("Management/Kasir tidak diizinkan mengantar!");
+            if(allData[id].status !== 'otw') { 
+                db.ref('customers/'+id).update({ status: 'otw', startTime: Date.now(), driverBy: currentUser }); 
+                pushDeliveryStatus(currentUser); 
+            } 
+        }
+
+        // Modifikasi setStatus untuk memastikan properti display ID dibersihkan saat di-undo ke antaran aktif
         function setStatus(id, stat) { 
             if (stat === 'done') {
                 db.ref('customers/'+id).update({ status: stat, doneTime: Date.now(), doneBy: currentUser });
             } else {
+                // Saat status diubah menjadi active kembali (Undo), historyDisplayId dibuang dari data
                 db.ref('customers/'+id).update({ status: stat, historyDisplayId: null });
             }
         }
@@ -909,6 +860,7 @@
             }
         }
 
+        // Fungsi Penghapusan Otomatis 3 Digit ID tepat Pukul 00:00 WIB tanpa menghapus data riwayat
         function checkAndResetIdsAtMidnight() {
             setInterval(() => {
                 const now = new Date();
