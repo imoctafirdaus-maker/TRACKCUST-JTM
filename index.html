@@ -401,12 +401,6 @@
             });
         }
 
-        function handleLogout(withConfirm = true) { 
-            if(withConfirm && !confirm("Keluar?")) return;
-            if(currentUser) { db.ref('presence/' + currentUser).off(); db.ref('presence/'+currentUser).remove(); }
-            localStorage.removeItem('jtm_user'); location.reload(); 
-        }
-
         // --- CORE FUNCTIONALITY ---
         function debounceRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => { render(); }, 300); }
         
@@ -607,7 +601,6 @@
                             area: areaFormatBaru
                         };
 
-                        // Pertahankan atau perbarui ID agar tidak pernah hilang saat icon GPS diklik di history
                         if (allData[id]) {
                             if (allData[id].historyDisplayId) {
                                 updateData.historyDisplayId = allData[id].historyDisplayId;
@@ -629,7 +622,6 @@
                         alert("Berhasil!\nKoordinat disimpan dan kode area " + name + " otomatis diganti menjadi:\n" + areaFinal);
                     })
                     .catch((err) => {
-                        // Fallback aman jika koneksi API luar bermasalah
                         let fallbackData = { 
                             maps: generatedMapsUrl,
                             area: kecamatanOtomatis
@@ -669,6 +661,7 @@
         function openFullImg(url, caption = "") { document.getElementById('fullImg').src = url; document.getElementById('modalCaption').innerText = caption; document.getElementById('imgModal').style.display = 'flex'; }
         function secureDelete(id) { const p = prompt("PIN:"); if(p === userPins[currentUser]) db.ref('customers/' + id).remove(); }
         
+        // --- PROSES KOMPRESI BARU: RESOLUSI HD OPTIMAL & BISA DI-ZOOM ---
         function processImage(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -676,18 +669,42 @@
                     const img = new Image();
                     img.onload = () => {
                         const c = document.createElement('canvas'); 
-                        const THUMB_W = 150; 
-                        c.width = THUMB_W; 
-                        c.height = img.height * (THUMB_W / img.width);
                         const ctx = c.getContext('2d');
+                        
+                        // Set batas resolusi ideal untuk layar HP (1024px)
+                        const MAX_WIDTH = 1024;  
+                        const MAX_HEIGHT = 1024; 
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Penyesuaian aspek rasio agar gambar tidak gepeng
+                        if (width > height) {
+                            if (width > MAX_WIDTH) {
+                                height *= MAX_WIDTH / width;
+                                width = MAX_WIDTH;
+                            }
+                        } else {
+                            if (height > MAX_HEIGHT) {
+                                width *= MAX_HEIGHT / height;
+                                height = MAX_HEIGHT;
+                            }
+                        }
+
+                        c.width = width; 
+                        c.height = height;
+
+                        // Pengaturan interpolasi tingkat tinggi agar objek detail tidak pecah
                         ctx.imageSmoothingEnabled = true;
                         ctx.imageSmoothingQuality = 'high';
                         ctx.drawImage(img, 0, 0, c.width, c.height);
-                        photoBase64 = c.toDataURL('image/jpeg', 0.5);
+                        
+                        // Kualitas kompresi ditingkatkan menjadi 0.65 agar tulisan/detail rumah terbaca saat di-zoom
+                        photoBase64 = c.toDataURL('image/jpeg', 0.65);
+                        
                         document.getElementById('imgPrev').src = photoBase64;
                         document.getElementById('imgPrev').classList.remove('hidden');
                         document.getElementById('btnRemovePhoto').classList.remove('hidden');
-                        document.getElementById('photoStatus').innerText = "FOTO TERKOMPRES!";
+                        document.getElementById('photoStatus').innerText = "FOTO HD TERKOMPRES!";
                     };
                     img.src = e.target.result;
                 };
@@ -728,12 +745,10 @@
             } 
         }
 
-        // Modifikasi setStatus untuk memastikan properti display ID dibersihkan saat di-undo ke antaran aktif
         function setStatus(id, stat) { 
             if (stat === 'done') {
                 db.ref('customers/'+id).update({ status: stat, doneTime: Date.now(), doneBy: currentUser });
             } else {
-                // Saat status diubah menjadi active kembali (Undo), historyDisplayId dibuang dari data
                 db.ref('customers/'+id).update({ status: stat, historyDisplayId: null });
             }
         }
@@ -782,6 +797,12 @@
                     </span>`;
                 });
             });
+        }
+
+        function handleLogout(withConfirm = true) { 
+            if(withConfirm && !confirm("Keluar?")) return;
+            if(currentUser) { db.ref('presence/' + currentUser).off(); db.ref('presence/'+currentUser).remove(); }
+            localStorage.removeItem('jtm_user'); location.reload(); 
         }
 
         function resetForm() {
@@ -860,7 +881,6 @@
             }
         }
 
-        // Fungsi Penghapusan Otomatis 3 Digit ID tepat Pukul 00:00 WIB tanpa menghapus data riwayat
         function checkAndResetIdsAtMidnight() {
             setInterval(() => {
                 const now = new Date();
