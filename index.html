@@ -2,14 +2,13 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-color=1.0, user-scalable=no">
     <title>TrackCust JTM - Official</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-    <!-- Library Hammer.js untuk menangani gestur pinch zoom 2 jari -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     
     <style>
@@ -41,7 +40,6 @@
         .antaran-photo { cursor: pointer; transition: transform 0.2s; }
         .antaran-photo:active { transform: scale(0.92); }
 
-        /* Pengaturan luapan transform zoom modal gambar */
         #modalContent { overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
         #fullImg { transition: transform 0.05s ease-out; touch-action: none; pointer-events: auto; }
 
@@ -50,6 +48,8 @@
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
+
+    <input type="file" id="cameraCaptureHidden" accept="image/*" capture="environment" class="hidden">
 
     <div id="imgModal" class="fixed inset-0 bg-black/95 z-[10001] hidden flex-col items-center justify-center p-4">
         <button onclick="closeFullImgModal()" class="absolute top-6 right-6 w-12 h-12 bg-red-600 text-white rounded-full flex items-center justify-center z-[10002]"><i class="fa fa-times text-2xl"></i></button>
@@ -116,6 +116,15 @@
                                 <i class="fa fa-chevron-right text-blue-300 text-[10px]"></i>
                             </div>
                         </div>
+                    </div>
+
+                    <div onclick="aksesPortalFEM()" class="profile-bubble border-green-200 bg-green-50/20">
+                        <div class="profile-icon bg-emerald-600 text-white"><i class="fa fa-layer-group"></i></div>
+                        <div class="flex flex-col flex-1">
+                            <span class="font-black text-emerald-800 uppercase italic text-[11px]">Login Portal FEM (DPI)</span>
+                            <span class="text-[8px] font-bold text-gray-400 uppercase">Auto-Copy Username & Sandi</span>
+                        </div>
+                        <i class="fa fa-external-link-alt text-emerald-500 text-[10px]"></i>
                     </div>
 
                     <div onclick="handleLogout()" class="profile-bubble">
@@ -221,7 +230,7 @@
     </div>
 
     <script>
-        // Configuration & Database Users
+        // Kredensial Pengguna & Otoritas Sistem
         let userPins = { 
             "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
             "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "1410", 
@@ -231,6 +240,7 @@
         const mgtAndCashiers = ["Pak KUR (Mgt)", "Pak Agus (Mgt)", "Pak Ageng (Mgt)", "Sintiya (Cashier)", "Ridha (Cashier)"];
         const cashiersOnly = ["Sintiya (Cashier)", "Ridha (Cashier)"];
 
+        // Konfigurasi Database Utama Firebase
         const firebaseConfig = { 
             apiKey: "AIzaSyAZ7twf8SbcK-HqniDmVqT6k8IM3ehFtgc", 
             databaseURL: "https://trackcust-jtm-default-rtdb.asia-southeast1.firebasedatabase.app", 
@@ -245,7 +255,7 @@
         let renderTimer;
         let editCrewId = null;
 
-        // DATA DICTIONARY KOORDINAT KECAMATAN SEKITAR JATIMAKMUR
+        // Titik Koordinat Deteksi Jarak Wilayah Terdekat
         const KECAMATAN_POLYGONS = [
             { name: "PONDOK GEDE", lat: -6.2842, lng: 106.9242 },
             { name: "JATIASIH", lat: -6.3046, lng: 106.9615 },
@@ -273,6 +283,20 @@
             checkAndResetIdsAtMidnight();
         };
 
+        // SKRIP JEMBATAN OTOMATIS PORTAL FEM
+        function aksesPortalFEM() {
+            navigator.clipboard.writeText("pdc9_pic").then(() => {
+                alert("📋 USERNAME BERHASIL DISALIN!\n\nUsername: pdc9_pic\nSandi: pdc9_pic@123\n\nKlik OK untuk menyalin Sandi dan menuju halaman Login.");
+                
+                navigator.clipboard.writeText("pdc9_pic@123").then(() => {
+                    window.open('https://www.femdpi.com/dashboard/', '_blank');
+                });
+            }).catch(err => {
+                alert("Kredensial Login:\nUsername: pdc9_pic\nSandi: pdc9_pic@123");
+                window.open('https://www.femdpi.com/dashboard/', '_blank');
+            });
+        }
+
         function refreshUserDropdown() {
             const logSel = document.getElementById('selectUser');
             if(!logSel) return;
@@ -280,7 +304,6 @@
             Object.keys(userPins).sort().forEach(n => logSel.innerHTML += `<option value="${n}">${n}</option>`);
         }
 
-        // --- CREW MANAGEMENT LOGIC (ADMIN ONLY) ---
         function showCrewManager() {
             document.getElementById('profileOptions').classList.add('hidden');
             document.getElementById('crewManagerView').classList.remove('hidden');
@@ -349,7 +372,6 @@
             document.getElementById('btnCancelCrew').classList.add('hidden');
         }
 
-        // --- USER & AUTH LOGIC ---
         function changeProfilePhoto(input) {
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
@@ -413,7 +435,6 @@
             localStorage.removeItem('jtm_user'); location.reload(); 
         }
 
-        // --- CORE FUNCTIONALITY ---
         function debounceRender() { clearTimeout(renderTimer); renderTimer = setTimeout(() => { render(); }, 300); }
         
         function pushDeliveryStatus(nama, idCust = "") { 
@@ -478,7 +499,6 @@
 
                 const nameEscaped = (i.name || "").replace(/['"\\]/g, '\\$&');
 
-                // Generate conditional buttons for history view based on coordinate availability
                 let historyGpsControlsHtml = "";
                 if (i.maps) {
                     historyGpsControlsHtml = `
@@ -495,7 +515,6 @@
                     `;
                 }
 
-                // Pengkondisian penampilan kode area beserta ID khusus untuk menu history jika ada
                 let areaDisplayHtml = `<p class="text-[8px] font-black text-red-500 uppercase italic">${i.area}</p>`;
                 if (i.status === 'done' && i.historyDisplayId) {
                     areaDisplayHtml = `
@@ -539,13 +558,12 @@
                         <a href="${waLink}" target="_blank" onclick="pushDeliveryStatus('${currentUser}')" class="bg-green-500 text-white py-2 rounded-lg text-center font-bold text-[9px] flex-1 italic uppercase"><i class="fab fa-whatsapp mr-1"></i> Chat WA</a>
                     </div>
                     
-                    <!-- BACKGROUND MERAH DAN HANYA ICON WARNING YANG BERKEDIP -->
                     ${i.status !== 'done' && !i.maps ? `
                     <div class="flex items-center justify-between gap-2 mt-3 bg-red-600 p-2 rounded-xl border border-red-700 w-full shadow-inner">
                         <span class="text-[9px] font-black text-white uppercase leading-tight">
                             <span class="animate-blink inline-block mr-1">⚠️</span> Tekan icon maps di sebelah kanan jika telah sampai dirumah customer
                         </span>
-                        <button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}', false)" class="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-md active:scale-95" title="Ambil GPS Rumah"><i class="fa fa-map-marker-alt text-[11px]"></i></button>
+                        <button onclick="ambilDanSimpanKoordinatStatus('${id}', '${nameEscaped}', false)" class="bg-blue-600 text-white w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-md active:scale-95" title="Ambil GPS Rumah & Foto"><i class="fa fa-map-marker-alt text-[11px]"></i></button>
                     </div>` : ''}
                 </div>`;
                 if(i.status === 'done') histHTML += cardHtml; 
@@ -577,7 +595,7 @@
         }
 
         function ambilDanSimpanKoordinatStatus(id, name, isHistory = false) {
-            const yakin = confirm(`Apakah anda yakin ingin menyimpan titik koordinat untuk ${name}?`);
+            const yakin = confirm(`Apakah anda yakin ingin menyimpan titik koordinat & ambil foto rumah untuk ${name}?`);
             if (!yakin) return;
 
             if (!navigator.geolocation) {
@@ -590,88 +608,101 @@
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     const generatedMapsUrl = "https://maps.google.com/?q=" + lat + "," + lng;
-
                     const kecamatanOtomatis = dapatkanKecamatanTerdekat(lat, lng);
 
-                    // Memanggil OpenStreetMap Nominatim API untuk reverse geocoding real-time
-                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
-                        headers: { 'Accept-Language': 'id' }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        const addr = data.address || {};
-                        const kelurahan = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || "";
-                        const jalan = addr.road || "";
-                        
-                        let areaFormatBaru = kecamatanOtomatis;
-                        
-                        if (kelurahan || jalan) {
-                            const detailArray = [];
-                            if (kelurahan) detailArray.push(kelurahan.toUpperCase());
-                            if (jalan) detailArray.push(jalan.toUpperCase());
-                            
-                            areaFormatBaru = `${kecamatanOtomatis} (${detailArray.join(', ')})`;
+                    const camInput = document.getElementById('cameraCaptureHidden');
+                    camInput.value = ""; 
+
+                    camInput.onchange = (event) => {
+                        if (event.target.files && event.target.files[0]) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                                const img = new Image();
+                                img.onload = () => {
+                                    const canvas = document.createElement('canvas');
+                                    const TARGET_WIDTH = 400; 
+                                    canvas.width = TARGET_WIDTH;
+                                    canvas.height = img.height * (TARGET_WIDTH / img.width);
+                                    
+                                    const ctx = canvas.getContext('2d');
+                                    ctx.imageSmoothingEnabled = true;
+                                    ctx.imageSmoothingQuality = 'high';
+                                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                    
+                                    const compressedPhotoBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+                                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                                        headers: { 'Accept-Language': 'id' }
+                                    })
+                                    .then(response => response.json())
+                                    .then(data => {
+                                        const addr = data.address || {};
+                                        const kelurahan = addr.village || addr.suburb || addr.neighbourhood || addr.quarter || "";
+                                        const jalan = addr.road || "";
+                                        
+                                        let areaFormatBaru = kecamatanOtomatis;
+                                        if (kelurahan || jalan) {
+                                            const detailArray = [];
+                                            if (kelurahan) detailArray.push(kelurahan.toUpperCase());
+                                            if (jalan) detailArray.push(jalan.toUpperCase());
+                                            areaFormatBaru = `${kecamatanOtomatis} (${detailArray.join(', ')})`;
+                                        }
+
+                                        let updateData = { 
+                                            maps: generatedMapsUrl,
+                                            area: areaFormatBaru,
+                                            photo: compressedPhotoBase64, 
+                                            status: isHistory ? 'done' : (allData[id].status || 'active')
+                                        };
+
+                                        if (allData[id]) {
+                                            if (allData[id].historyDisplayId) {
+                                                updateData.historyDisplayId = allData[id].historyDisplayId;
+                                            } else {
+                                                let currentArea = allData[id].area || "";
+                                                let extractedId = "";
+                                                if (currentArea.startsWith("ID ")) extractedId = currentArea.split(" ")[1] || "";
+                                                if (extractedId) updateData.historyDisplayId = extractedId;
+                                            }
+                                        }
+
+                                        return db.ref('customers/' + id).update(updateData).then(() => areaFormatBaru);
+                                    })
+                                    .then((areaFinal) => {
+                                        alert("Berhasil!\nKoordinat & Foto berhasil disimpan ke database.\n\nArea: " + areaFinal);
+                                    })
+                                    .catch((err) => {
+                                        let fallbackData = { 
+                                            maps: generatedMapsUrl,
+                                            area: kecamatanOtomatis,
+                                            photo: compressedPhotoBase64,
+                                            status: isHistory ? 'done' : (allData[id].status || 'active')
+                                        };
+
+                                        if (allData[id]) {
+                                            if (allData[id].historyDisplayId) {
+                                                fallbackData.historyDisplayId = allData[id].historyDisplayId;
+                                            } else {
+                                                let currentArea = allData[id].area || "";
+                                                let extractedId = "";
+                                                if (currentArea.startsWith("ID ")) extractedId = currentArea.split(" ")[1] || "";
+                                                if (extractedId) fallbackData.historyDisplayId = extractedId;
+                                            }
+                                        }
+
+                                        db.ref('customers/' + id).update(fallbackData)
+                                        .then(() => {
+                                            alert("Berhasil dengan batasan!\nKoordinat & Foto tersimpan, tetapi gagal memuat nama jalan. Area diset ke: " + kecamatanOtomatis);
+                                        });
+                                    });
+                                };
+                                img.src = e.target.result;
+                            };
+                            reader.readAsDataURL(event.target.files[0]);
                         }
+                    };
 
-                        // Mengunci status agar tetap sesuai asalnya (jika dari history tetap done)
-                        let updateData = { 
-                            maps: generatedMapsUrl,
-                            area: areaFormatBaru,
-                            status: isHistory ? 'done' : (allData[id].status || 'active')
-                        };
-
-                        // Pertahankan atau perbarui ID agar tidak pernah hilang saat icon GPS diklik di history
-                        if (allData[id]) {
-                            if (allData[id].historyDisplayId) {
-                                updateData.historyDisplayId = allData[id].historyDisplayId;
-                            } else {
-                                let currentArea = allData[id].area || "";
-                                let extractedId = "";
-                                if (currentArea.startsWith("ID ")) {
-                                    extractedId = currentArea.split(" ")[1] || "";
-                                }
-                                if (extractedId) {
-                                    updateData.historyDisplayId = extractedId;
-                                }
-                            }
-                        }
-
-                        return db.ref('customers/' + id).update(updateData).then(() => areaFormatBaru);
-                    })
-                    .then((areaFinal) => {
-                        alert("Berhasil!\nKoordinat disimpan dan kode area " + name + " otomatis diganti menjadi:\n" + areaFinal);
-                    })
-                    .catch((err) => {
-                        // Fallback aman jika koneksi API luar bermasalah
-                        let fallbackData = { 
-                            maps: generatedMapsUrl,
-                            area: kecamatanOtomatis,
-                            status: isHistory ? 'done' : (allData[id].status || 'active')
-                        };
-
-                        if (allData[id]) {
-                            if (allData[id].historyDisplayId) {
-                                fallbackData.historyDisplayId = allData[id].historyDisplayId;
-                            } else {
-                                let currentArea = allData[id].area || "";
-                                let extractedId = "";
-                                if (currentArea.startsWith("ID ")) {
-                                    extractedId = currentArea.split(" ")[1] || "";
-                                }
-                                if (extractedId) {
-                                    fallbackData.historyDisplayId = extractedId;
-                                }
-                            }
-                        }
-
-                        db.ref('customers/' + id).update(fallbackData)
-                        .then(() => {
-                            alert("Berhasil dengan batasan!\nKoordinat disimpan namun gagal memuat nama jalan. Area diatur ke kecamatan: " + kecamatanOtomatis);
-                        })
-                        .catch((dbErr) => {
-                            alert("Gagal menyimpan ke database: " + dbErr.message);
-                        });
-                    });
+                    camInput.click();
                 },
                 (error) => {
                     alert("Gagal mendeteksi GPS. Pastikan izin lokasi HP aktif.");
@@ -680,7 +711,6 @@
             );
         }
 
-        // --- SISA KODE UTILITY TETAP SAMA ---
         function openFullImg(url, caption = "") { 
             document.getElementById('fullImg').src = url; 
             document.getElementById('modalCaption').innerText = caption; 
