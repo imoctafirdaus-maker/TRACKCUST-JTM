@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <!-- Library Hammer.js untuk menangani gestur pinch zoom 2 jari -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     
     <style>
@@ -252,7 +253,7 @@
             { name: "BEKASI BARAT", lat: -6.2394, lng: 106.9744 },
             { name: "DUREN SAWIT", lat: -6.2343, lng: 106.9194 },
             { name: "MAKASAR", lat: -6.2735, lng: 106.8841 },
-            { name: "CIRACAS", lat: -6.3262, rounded_corners: true, lat: -6.3262, lng: 106.8797 }
+            { name: "CIRACAS", lat: -6.3262, lng: 106.8797 }
         ];
 
         window.onload = () => {
@@ -607,9 +608,11 @@
                             areaFormatBaru = `${kecamatanOtomatis} (${detailArray.join(', ')})`;
                         }
 
+                        // Mengunci status agar tetap sesuai asalnya (jika dari history tetap done)
                         let updateData = { 
                             maps: generatedMapsUrl,
-                            area: areaFormatBaru
+                            area: areaFormatBaru,
+                            status: isHistory ? 'done' : (allData[id].status || 'active')
                         };
 
                         // Pertahankan atau perbarui ID agar tidak pernah hilang saat icon GPS diklik di history
@@ -637,7 +640,8 @@
                         // Fallback aman jika koneksi API luar bermasalah
                         let fallbackData = { 
                             maps: generatedMapsUrl,
-                            area: kecamatanOtomatis
+                            area: kecamatanOtomatis,
+                            status: isHistory ? 'done' : (allData[id].status || 'active')
                         };
 
                         if (allData[id]) {
