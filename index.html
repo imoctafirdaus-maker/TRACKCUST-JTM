@@ -59,6 +59,21 @@
         </div>
     </div>
 
+    <!-- Modal Coret Gambar (Baru) -->
+    <div id="drawModal" class="fixed inset-0 bg-black/95 z-[10010] hidden flex-col items-center justify-center p-0">
+        <div class="absolute top-4 left-4 z-[10011] flex gap-2">
+            <button onclick="closeDrawModal()" class="bg-gray-600 text-white px-4 py-2 rounded-full font-bold shadow-lg text-sm">Batal</button>
+        </div>
+        <div class="absolute top-4 right-4 z-[10011] flex gap-2 items-center">
+            <input type="color" id="drawColor" value="#00ff00" class="w-8 h-8 rounded-full border-2 border-white shadow-lg p-0 cursor-pointer outline-none bg-transparent">
+            <button onclick="clearDraw()" class="bg-yellow-500 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-undo"></i></button>
+            <button onclick="saveDraw()" class="bg-blue-600 text-white px-4 py-2 rounded-full font-bold shadow-lg text-sm">Selesai</button>
+        </div>
+        <div class="w-full h-full flex items-center justify-center overflow-hidden touch-none" id="drawContainer">
+            <canvas id="drawCanvas" class="max-w-full max-h-full object-contain touch-none shadow-2xl"></canvas>
+        </div>
+    </div>
+
     <div id="pinOverlay" class="fixed inset-0 dominos-blue z-[10000] flex flex-col items-center justify-center p-6">
         <div class="text-center mb-8 text-white">
             <h1 class="font-black italic text-4xl uppercase">Domino's</h1>
@@ -201,6 +216,8 @@
                             <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Foto Rumah</p>
                             <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processImage(this)">
                         </label>
+                        <!-- Tombol Coret Gambar Ditambahkan Disini -->
+                        <button onclick="openDrawModal()" id="btnDrawPhoto" class="hidden absolute top-2 right-10 bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg" title="Coret Gambar"><i class="fa fa-pen text-[10px]"></i></button>
                         <button onclick="removePhoto()" id="btnRemovePhoto" class="hidden absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-[10px]"></i></button>
                         <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
                     </div>
@@ -769,6 +786,7 @@
                         document.getElementById('imgPrev').src = photoBase64;
                         document.getElementById('imgPrev').classList.remove('hidden');
                         document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                        document.getElementById('btnDrawPhoto').classList.remove('hidden');
                         document.getElementById('photoStatus').innerText = "FOTO TERKOMPRES!";
                     };
                     img.src = e.target.result;
@@ -798,7 +816,13 @@
         function editData(id) {
             const i = allData[id]; document.getElementById('editId').value = id; document.getElementById('custArea').value = i.area;
             document.getElementById('custName').value = i.name; document.getElementById('custPhone').value = i.phone; document.getElementById('custMaps').value = i.maps;
-            if(i.photo) { photoBase64 = i.photo; document.getElementById('imgPrev').src = i.photo; document.getElementById('imgPrev').classList.remove('hidden'); document.getElementById('btnRemovePhoto').classList.remove('hidden'); }
+            if(i.photo) { 
+                photoBase64 = i.photo; 
+                document.getElementById('imgPrev').src = i.photo; 
+                document.getElementById('imgPrev').classList.remove('hidden'); 
+                document.getElementById('btnRemovePhoto').classList.remove('hidden');
+                document.getElementById('btnDrawPhoto').classList.remove('hidden'); 
+            }
             document.getElementById('formTitle').innerText = "Edit Antaran"; document.getElementById('cancelBtn').classList.remove('hidden'); showPage('add');
         }
 
@@ -871,7 +895,13 @@
             document.getElementById('cancelBtn').classList.add('hidden'); showPage('list');
         }
 
-        function removePhoto() { photoBase64 = ""; document.getElementById('imgPrev').classList.add('hidden'); document.getElementById('btnRemovePhoto').classList.add('hidden'); document.getElementById('photoStatus').innerText = "Foto Rumah"; }
+        function removePhoto() { 
+            photoBase64 = ""; 
+            document.getElementById('imgPrev').classList.add('hidden'); 
+            document.getElementById('btnRemovePhoto').classList.add('hidden'); 
+            document.getElementById('btnDrawPhoto').classList.add('hidden');
+            document.getElementById('photoStatus').innerText = "Foto Rumah"; 
+        }
         function cancelEdit() { resetForm(); }
         function clearAllHistory() { if (confirm("Kosongkan history?")) { Object.keys(allData).forEach(id => { if(allData[id].status === 'done') db.ref('customers/' + id).remove(); }); } }
         
@@ -1029,6 +1059,106 @@
                     });
                 }
             }, 1000);
+        }
+
+        // ==========================================
+        // FITUR CORET GAMBAR (DRAW ON CANVAS LOGIC)
+        // ==========================================
+        let drawCanvas, drawCtx, isDrawing = false;
+        
+        function openDrawModal() {
+            if (!photoBase64) return;
+            document.getElementById('drawModal').style.display = 'flex';
+            drawCanvas = document.getElementById('drawCanvas');
+            drawCtx = drawCanvas.getContext('2d');
+            
+            const img = new Image();
+            img.onload = () => {
+                drawCanvas.width = img.width;
+                drawCanvas.height = img.height;
+                drawCtx.drawImage(img, 0, 0);
+                drawCtx.lineCap = 'round';
+                drawCtx.lineJoin = 'round';
+            };
+            img.src = photoBase64;
+            
+            // Hapus listener lama jika ada (mencegah duplikat)
+            drawCanvas.removeEventListener('mousedown', startDrawing);
+            drawCanvas.removeEventListener('mousemove', draw);
+            drawCanvas.removeEventListener('mouseup', stopDrawing);
+            drawCanvas.removeEventListener('mouseout', stopDrawing);
+            drawCanvas.removeEventListener('touchstart', startDrawing);
+            drawCanvas.removeEventListener('touchmove', draw);
+            drawCanvas.removeEventListener('touchend', stopDrawing);
+
+            // Pasang event listener baru
+            drawCanvas.addEventListener('mousedown', startDrawing);
+            drawCanvas.addEventListener('mousemove', draw);
+            drawCanvas.addEventListener('mouseup', stopDrawing);
+            drawCanvas.addEventListener('mouseout', stopDrawing);
+            
+            drawCanvas.addEventListener('touchstart', startDrawing, {passive: false});
+            drawCanvas.addEventListener('touchmove', draw, {passive: false});
+            drawCanvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function closeDrawModal() {
+            document.getElementById('drawModal').style.display = 'none';
+        }
+
+        function clearDraw() {
+            const img = new Image();
+            img.onload = () => {
+                drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+                drawCtx.drawImage(img, 0, 0);
+            };
+            img.src = photoBase64; 
+        }
+
+        function saveDraw() {
+            photoBase64 = drawCanvas.toDataURL('image/jpeg', 0.8);
+            document.getElementById('imgPrev').src = photoBase64;
+            closeDrawModal();
+        }
+        
+        function getPos(e) {
+            const rect = drawCanvas.getBoundingClientRect();
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            
+            const scaleX = drawCanvas.width / rect.width;
+            const scaleY = drawCanvas.height / rect.height;
+            
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+        }
+
+        function startDrawing(e) {
+            e.preventDefault();
+            isDrawing = true;
+            const pos = getPos(e);
+            drawCtx.beginPath();
+            drawCtx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            drawCtx.lineWidth = drawCanvas.width * 0.015; // responsive brush size (1.5% of width)
+            drawCtx.strokeStyle = document.getElementById('drawColor').value;
+            drawCtx.lineTo(pos.x, pos.y);
+            drawCtx.stroke();
+        }
+
+        function stopDrawing(e) {
+            if(e) e.preventDefault();
+            isDrawing = false;
+            drawCtx.closePath();
         }
     </script>
 </body>
