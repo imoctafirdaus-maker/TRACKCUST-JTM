@@ -11,6 +11,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
     
+    <!-- Library Game Catur -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
     <style>
         .dominos-blue { background-color: #006491; }
         .dominos-red { background-color: #e31837; }
@@ -45,10 +48,60 @@
 
         .checkbox-custom { appearance: none; -webkit-appearance: none; width: 20px; height: 20px; border: 2px solid #22c55e; border-radius: 4px; background-color: white; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; position: relative; }
         .checkbox-custom:checked::after { content: "\f00c"; font-family: "Font Awesome 5 Free"; font-weight: 900; color: #22c55e; font-size: 12px; }
+
+        /* CSS KHUSUS GAME CATUR */
+        .chess-container { width: 100%; max-width: 450px; aspect-ratio: 1; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); box-sizing: border-box; margin: 0 auto; border: 4px solid #4a2e1b; border-radius: 4px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); background-color: #4a2e1b; overflow: hidden; }
+        .chess-sq { position: relative; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; user-select: none; box-sizing: border-box; }
+        .chess-light { background-color: #f0d9b5; color: #b58863; }
+        .chess-dark { background-color: #b58863; color: #f0d9b5; }
+        .chess-piece { width: 95%; height: 95%; z-index: 10; cursor: pointer; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3)); transition: transform 0.15s ease-out; object-fit: contain; }
+        .chess-piece.dragging { transform: scale(1.2); z-index: 100; cursor: grabbing; filter: drop-shadow(0 15px 20px rgba(0,0,0,0.5)); }
+        .chess-hl { position: absolute; inset: 0; background-color: rgba(246, 246, 105, 0.5); z-index: 5; }
+        .chess-last-move { position: absolute; inset: 0; background-color: rgba(255, 255, 51, 0.4); z-index: 4; }
+        .chess-legal-dot { position: absolute; width: 25%; height: 25%; background-color: rgba(0,0,0,0.2); border-radius: 50%; z-index: 6; pointer-events: none; }
+        .chess-legal-cap { position: absolute; width: 90%; height: 90%; border: 6px solid rgba(0,0,0,0.2); border-radius: 50%; z-index: 6; pointer-events: none; }
+        .chess-check-hl { position: absolute; inset: 0; background: radial-gradient(circle, rgba(255,0,0,0.8) 0%, rgba(255,0,0,0) 80%); z-index: 4; }
+        .chess-rank-lbl, .chess-file-lbl { position: absolute; font-size: 10px; font-weight: 800; z-index: 1; font-family: sans-serif; pointer-events: none; }
+        .chess-rank-lbl { top: 2px; left: 3px; }
+        .chess-file-lbl { bottom: 0px; right: 3px; }
+        
+        .timer-active { background-color: #ffffff !important; color: #16a34a !important; box-shadow: 0 0 15px rgba(22, 163, 74, 0.5); }
+        .timer-inactive { background-color: #374151 !important; color: #9ca3af !important; }
     </style>
 </head>
 <body class="bg-gray-50 h-screen font-sans text-gray-800 flex flex-col overflow-hidden">
 
+    <!-- AUDIO CATUR -->
+    <audio id="snd-move" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3" preload="auto"></audio>
+    <audio id="snd-capture" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3" preload="auto"></audio>
+    <audio id="snd-check" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/check.mp3" preload="auto"></audio>
+    <audio id="snd-end" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-end.mp3" preload="auto"></audio>
+    <audio id="snd-promote" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/promote.mp3" preload="auto"></audio>
+    <audio id="snd-castle" src="https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/castle.mp3" preload="auto"></audio>
+
+    <!-- MODAL CATUR -->
+    <div id="promoModal" class="fixed inset-0 bg-black/80 z-[10020] hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-800 p-6 rounded-3xl text-center w-64 shadow-2xl border border-gray-700">
+            <h3 class="font-black text-white uppercase mb-4 text-sm tracking-widest">Promosi Bidak</h3>
+            <div class="grid grid-cols-2 gap-4" id="promoOptions"></div>
+        </div>
+    </div>
+
+    <div id="challengeModal" class="fixed inset-0 bg-black/80 z-[10020] hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-gray-900 p-8 rounded-3xl text-center shadow-2xl border border-gray-700">
+            <i class="fa fa-chess-knight text-5xl text-emerald-500 mb-4 animate-bounce"></i>
+            <h3 class="font-black text-white uppercase text-xl" id="challengerName">User</h3>
+            <p class="text-xs font-bold text-gray-400 mb-6 tracking-widest">MENANTANG ANDA BERMAIN CATUR</p>
+            <div class="flex gap-3">
+                <button onclick="acceptChallenge()" class="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black uppercase shadow-lg hover:bg-emerald-500">Terima</button>
+                <button onclick="rejectChallenge()" class="flex-1 bg-red-600 text-white py-3 rounded-xl font-black uppercase shadow-lg hover:bg-red-500">Tolak</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="chessAlert" class="fixed top-10 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-8 py-4 rounded-2xl font-black uppercase text-sm shadow-2xl z-[10030] hidden transition-all duration-300 border-2 border-emerald-500 flex items-center gap-3"></div>
+
+    <!-- ELEMEN APLIKASI UTAMA -->
     <input type="file" id="cameraCaptureHidden" accept="image/*" capture="environment" class="hidden">
 
     <div id="imgModal" class="fixed inset-0 bg-black/95 z-[10001] hidden flex-col items-center justify-center p-4">
@@ -59,7 +112,7 @@
         </div>
     </div>
 
-    <!-- Modal Coret Gambar (Baru) -->
+    <!-- Modal Coret Gambar -->
     <div id="drawModal" class="fixed inset-0 bg-black/95 z-[10010] hidden flex-col items-center justify-center p-0">
         <div class="absolute top-4 left-4 z-[10011] flex gap-2">
             <button onclick="closeDrawModal()" class="bg-gray-600 text-white px-4 py-2 rounded-full font-bold shadow-lg text-sm">Batal</button>
@@ -101,7 +154,8 @@
 
         <main class="flex-1 overflow-hidden relative">
             
-            <div id="page-home" class="page p-6 overflow-y-auto bg-gray-50">
+            <!-- DITAMBAHKAN pb-32 DISINI -->
+            <div id="page-home" class="page p-6 pb-32 overflow-y-auto bg-gray-50">
                 <div class="flex flex-col items-center mb-8">
                     <div class="relative group">
                         <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=006491&color=fff" 
@@ -115,11 +169,22 @@
                     <h2 id="userNameFull" class="mt-4 font-black text-blue-900 uppercase italic text-xl">User Name</h2>
                     <p class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Jatimakmur Crew</p>
                 </div>
+                
                 <div class="space-y-3" id="profileOptions">
                     <div onclick="changePinPrompt()" class="profile-bubble">
                         <div class="profile-icon bg-yellow-50 text-yellow-600"><i class="fa fa-key"></i></div>
                         <span class="font-black text-blue-900 uppercase italic text-[11px] flex-1">Ganti PIN Akses</span>
                         <i class="fa fa-chevron-right text-gray-300 text-[10px]"></i>
+                    </div>
+
+                    <!-- TAMBAHAN MENU GAME CATUR -->
+                    <div onclick="showPage('chess-lobby')" class="profile-bubble bg-gray-900 hover:bg-gray-800 transition border-gray-700">
+                        <div class="profile-icon bg-emerald-600 text-white shadow-md"><i class="fa fa-chess-knight"></i></div>
+                        <div class="flex flex-col flex-1">
+                            <span class="font-black text-white uppercase italic text-[11px]">Catur Profesional</span>
+                            <span class="text-[8px] font-bold text-gray-400 uppercase">Multiplayer Engine</span>
+                        </div>
+                        <i class="fa fa-chevron-right text-gray-500 text-[10px]"></i>
                     </div>
 
                     <div id="adminPanel" class="hidden space-y-3">
@@ -186,6 +251,48 @@
                 </div>
             </div>
 
+            <!-- HALAMAN LOBBY CATUR (NEW) -->
+            <div id="page-chess-lobby" class="page p-6 bg-[#161512] overflow-y-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <button onclick="showPage('home')" class="text-gray-300 bg-gray-800 w-10 h-10 rounded-full flex items-center justify-center"><i class="fa fa-arrow-left"></i></button>
+                    <h2 class="font-black text-white uppercase italic text-lg tracking-widest">Play Chess</h2>
+                    <div class="w-10"></div>
+                </div>
+                <div class="bg-gray-800/80 p-5 rounded-3xl shadow-xl border border-gray-700 mb-6">
+                    <div id="chessOnlineList" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- HALAMAN GAME CATUR (NEW) -->
+            <div id="page-chess-game" class="page bg-[#161512] flex-col pb-20 justify-center">
+                <div class="flex-1 flex flex-col justify-center items-center px-4 max-w-lg mx-auto w-full relative">
+                    <div class="w-full flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-3">
+                            <img id="chessOpponentAvatar" class="w-10 h-10 rounded bg-gray-700 object-cover">
+                            <span id="chessOpponentName" class="font-black text-gray-200 text-sm">Opponent</span>
+                        </div>
+                        <div id="chessOpponentTimerBox" class="timer-inactive px-4 py-2 rounded font-mono font-bold text-lg">
+                            <span id="chessOpponentTime">10:00</span>
+                        </div>
+                    </div>
+
+                    <div id="chessBoard" class="chess-container shadow-2xl"></div>
+
+                    <div class="w-full flex justify-between items-center mt-3">
+                        <div class="flex items-center gap-3">
+                            <img id="chessMyAvatar" class="w-10 h-10 rounded bg-emerald-600 object-cover">
+                            <div class="flex flex-col">
+                                <span class="font-black text-white text-sm" id="myChessNameDisplay">Anda</span>
+                                <span class="text-[9px] text-gray-500 font-bold" id="myChessColorLabel">White</span>
+                            </div>
+                        </div>
+                        <div id="chessMyTimerBox" class="timer-inactive px-4 py-2 rounded font-mono font-bold text-lg">
+                            <span id="chessMyTime">10:00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="page-list" class="page active p-4 overflow-y-auto">
                 <div class="flex justify-between items-center mb-3">
                     <input type="text" id="searchInput" oninput="debounceRender()" placeholder="Cari Nama/HP/Driver/Area..." class="w-2/3 p-3 rounded-xl shadow-sm outline-none font-bold italic text-sm">
@@ -216,7 +323,6 @@
                             <p class="text-[9px] font-black text-blue-900 uppercase mt-1" id="photoStatus">Foto Rumah</p>
                             <input type="file" id="housePhoto" accept="image/*" class="hidden" onchange="processImage(this)">
                         </label>
-                        <!-- Tombol Coret Gambar Ditambahkan Disini -->
                         <button onclick="openDrawModal()" id="btnDrawPhoto" class="hidden absolute top-2 right-10 bg-blue-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg" title="Coret Gambar"><i class="fa fa-pen text-[10px]"></i></button>
                         <button onclick="removePhoto()" id="btnRemovePhoto" class="hidden absolute top-2 right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg"><i class="fa fa-times text-[10px]"></i></button>
                         <img id="imgPrev" class="hidden w-full h-32 object-cover rounded-lg mt-2 border-2 border-white">
@@ -295,6 +401,38 @@
         let renderTimer;
         let editCrewId = null;
 
+        // VARIABEL GAME CATUR
+        const pieceIcons = {
+            'w': { 
+                'p': 'https://chessboardjs.com/img/chesspieces/wikipedia/wP.png', 
+                'n': 'https://chessboardjs.com/img/chesspieces/wikipedia/wN.png', 
+                'b': 'https://chessboardjs.com/img/chesspieces/wikipedia/wB.png', 
+                'r': 'https://chessboardjs.com/img/chesspieces/wikipedia/wR.png', 
+                'q': 'https://chessboardjs.com/img/chesspieces/wikipedia/wQ.png', 
+                'k': 'https://chessboardjs.com/img/chesspieces/wikipedia/wK.png' 
+            },
+            'b': { 
+                'p': 'https://chessboardjs.com/img/chesspieces/wikipedia/bP.png', 
+                'n': 'https://chessboardjs.com/img/chesspieces/wikipedia/bN.png', 
+                'b': 'https://chessboardjs.com/img/chesspieces/wikipedia/bB.png', 
+                'r': 'https://chessboardjs.com/img/chesspieces/wikipedia/bR.png', 
+                'q': 'https://chessboardjs.com/img/chesspieces/wikipedia/bQ.png', 
+                'k': 'https://chessboardjs.com/img/chesspieces/wikipedia/bK.png' 
+            }
+        };
+
+        let chess = new Chess();
+        let currentChessGameId = null;
+        let myChessColor = 'w';
+        let chessOpponent = "";
+        let selectedSquare = null;
+        let chessSyncListener = null;
+        let chessTimerInterval = null;
+        
+        let wTime = 10 * 60;
+        let bTime = 10 * 60;
+        let lastTimestamp = 0;
+
         // Titik Koordinat Deteksi Jarak Wilayah Terdekat
         const KECAMATAN_POLYGONS = [
             { name: "PONDOK GEDE", lat: -6.2842, lng: 106.9242 },
@@ -321,6 +459,9 @@
             setInterval(updateTimers, 1000);
             startDeliveryStatusListener();
             checkAndResetIdsAtMidnight();
+
+            // Init listener catur ketika load
+            listenToChessChallenges();
         };
 
         // SKRIP JEMBATAN OTOMATIS PORTAL FEM
@@ -842,10 +983,18 @@
             }
         }
 
+        // --- Modifikasi showPage untuk Mendukung Catur ---
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-'+id));
-            document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.id === 'nav-'+id));
+            document.querySelectorAll('.nav-item').forEach(n => {
+                if(n.id === 'nav-'+id) n.classList.add('active');
+                else n.classList.remove('active');
+            });
             if(id === 'home') closeCrewManager();
+            
+            // Logika Catur tambahan
+            if(id === 'chess-lobby') renderChessOnlineList();
+            if(id !== 'chess-game' && typeof chessTimerInterval !== 'undefined' && chessTimerInterval) clearInterval(chessTimerInterval);
         }
 
         function updateTimers() {
@@ -1159,6 +1308,278 @@
             if(e) e.preventDefault();
             isDrawing = false;
             drawCtx.closePath();
+        }
+
+        // ==========================================
+        // JAVASCRIPT GAME CATUR (INTEGRASI)
+        // ==========================================
+        function renderChessOnlineList() {
+            db.ref('presence').once('value', snapshot => {
+                const list = document.getElementById('chessOnlineList');
+                list.innerHTML = "";
+                snapshot.forEach(child => {
+                    const usr = child.key;
+                    if(usr !== currentUser) {
+                        const avatar = child.val().photo || `https://ui-avatars.com/api/?name=${usr}&background=16a34a&color=fff`;
+                        list.innerHTML += `
+                            <div class="flex justify-between items-center bg-gray-700/50 p-3 rounded-2xl border border-gray-600">
+                                <div class="flex items-center gap-3">
+                                    <img src="${avatar}" class="w-10 h-10 rounded-full object-cover">
+                                    <span class="font-bold text-white text-sm">${usr}</span>
+                                </div>
+                                <button onclick="sendChessChallenge('${usr}')" class="bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-black">Tantang</button>
+                            </div>
+                        `;
+                    }
+                });
+            });
+        }
+
+        function sendChessChallenge(opponent) {
+            const challengeId = `chal_${currentUser}_${Date.now()}`;
+            db.ref(`chess_challenges/${opponent}`).set({ from: currentUser, id: challengeId, timestamp: Date.now() });
+            showAlert(`Menunggu ${opponent}...`, "blue");
+            
+            db.ref(`chess_challenges/${opponent}`).on('value', snap => {
+                const val = snap.val();
+                if(val && val.status === 'accepted') {
+                    db.ref(`chess_challenges/${opponent}`).off();
+                    initChessGame(val.gameId, 'w', opponent);
+                }
+            });
+        }
+
+        function listenToChessChallenges() {
+            if(!currentUser) return;
+            db.ref(`chess_challenges/${currentUser}`).on('value', snap => {
+                const chal = snap.val();
+                if(chal && !chal.status && (Date.now() - chal.timestamp < 30000)) {
+                    document.getElementById('challengerName').innerText = chal.from;
+                    document.getElementById('challengeModal').style.display = 'flex';
+                } else {
+                    document.getElementById('challengeModal').style.display = 'none';
+                }
+            });
+        }
+
+        function acceptChallenge() {
+            db.ref(`chess_challenges/${currentUser}`).once('value', snap => {
+                const chal = snap.val();
+                if(chal) {
+                    const gameId = `game_${Date.now()}`;
+                    db.ref(`chess_games/${gameId}`).set({
+                        fen: 'start', turn: 'w', white: chal.from, black: currentUser,
+                        lastMove: null, wTime: 600, bTime: 600, lastUpdate: Date.now(), status: 'active'
+                    }).then(() => {
+                        db.ref(`chess_challenges/${currentUser}`).update({ status: 'accepted', gameId: gameId });
+                        initChessGame(gameId, 'b', chal.from);
+                    });
+                }
+            });
+        }
+
+        // Tambahan Method Reject Challenge (Mencegah error saat tombol ditolak)
+        function rejectChallenge() {
+            document.getElementById('challengeModal').style.display = 'none';
+            if(currentUser) {
+                db.ref(`chess_challenges/${currentUser}`).remove();
+            }
+        }
+
+        function initChessGame(gameId, color, opponentName) {
+            currentChessGameId = gameId; myChessColor = color; chessOpponent = opponentName;
+            chess = new Chess();
+            selectedSquare = null; wTime = 600; bTime = 600; lastTimestamp = Date.now();
+            if (chessTimerInterval) clearInterval(chessTimerInterval);
+            
+            document.getElementById('myChessNameDisplay').innerText = currentUser;
+            document.getElementById('myChessColorLabel').innerText = color === 'w' ? 'WHITE' : 'BLACK';
+            document.getElementById('chessOpponentName').innerText = opponentName;
+            document.getElementById('chessMyAvatar').src = localStorage.getItem('profile_pic_' + currentUser) || `https://ui-avatars.com/api/?name=${currentUser}&background=16a34a&color=fff`;
+            
+            showPage('chess-game');
+            
+            if(chessSyncListener) db.ref(`chess_games/${currentChessGameId}`).off('value', chessSyncListener);
+            
+            chessSyncListener = db.ref(`chess_games/${currentChessGameId}`).on('value', snap => {
+                const game = snap.val();
+                if(!game) return;
+                
+                if(game.status === 'ended') {
+                    if (chessTimerInterval) clearInterval(chessTimerInterval);
+                    const pemenang = game.winner ? (game.winner === 'w' ? game.white : game.black) : 'Seri';
+                    showAlert(`Game Selesai! Pemenang: ${pemenang} (${game.reason || 'Selesai'})`, "blue");
+                    return;
+                }
+
+                if(game.fen !== 'start' && game.fen !== chess.fen()) {
+                    chess.load(game.fen);
+                }
+                
+                wTime = game.wTime; bTime = game.bTime; lastTimestamp = game.lastUpdate;
+                renderChessBoard(game.lastMove);
+                updateTurnIndicators();
+                startLocalTimer(); 
+            });
+        }
+
+        function startLocalTimer() {
+            if (chessTimerInterval) clearInterval(chessTimerInterval);
+            
+            chessTimerInterval = setInterval(() => {
+                if (!currentChessGameId) {
+                    clearInterval(chessTimerInterval);
+                    return;
+                }
+                
+                const elapsed = Math.floor((Date.now() - lastTimestamp) / 1000);
+                let liveWTime = wTime;
+                let liveBTime = bTime;
+                
+                if (chess.turn() === 'w') {
+                    liveWTime = Math.max(0, wTime - elapsed);
+                    if (liveWTime === 0 && chess.turn() === myChessColor) {
+                        handleTimeOut('w');
+                    }
+                } else {
+                    liveBTime = Math.max(0, bTime - elapsed);
+                    if (liveBTime === 0 && chess.turn() === myChessColor) {
+                        handleTimeOut('b');
+                    }
+                }
+                
+                displayTimes(liveWTime, liveBTime);
+            }, 250);
+        }
+
+        function displayTimes(whiteSecs, blackSecs) {
+            const format = (s) => {
+                const mins = Math.floor(s / 60);
+                const secs = s % 60;
+                return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+            };
+            
+            const myTimeEl = document.getElementById('chessMyTime');
+            const oppTimeEl = document.getElementById('chessOpponentTime');
+            
+            if (myChessColor === 'w') {
+                myTimeEl.innerText = format(whiteSecs);
+                oppTimeEl.innerText = format(blackSecs);
+            } else {
+                myTimeEl.innerText = format(blackSecs);
+                oppTimeEl.innerText = format(whiteSecs);
+            }
+        }
+
+        function handleTimeOut(loserColor) {
+            clearInterval(chessTimerInterval);
+            db.ref(`chess_games/${currentChessGameId}`).update({
+                status: 'ended',
+                winner: loserColor === 'w' ? 'b' : 'w',
+                reason: 'Waktu Habis (Timeout)'
+            });
+        }
+
+        function renderChessBoard(lastMoveObj = null) {
+            const boardEl = document.getElementById('chessBoard');
+            boardEl.innerHTML = '';
+            const board = chess.board();
+            
+            const rows = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
+            const cols = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
+            
+            const legalMoves = selectedSquare ? chess.moves({ square: selectedSquare, verbose: true }) : [];
+
+            rows.forEach((r) => {
+                cols.forEach((c) => {
+                    const sq = String.fromCharCode(97 + c) + (8 - r);
+                    const piece = board[r][c];
+                    const isLight = (r + c) % 2 === 0;
+                    
+                    const sqEl = document.createElement('div');
+                    sqEl.className = `chess-sq ${isLight ? 'chess-light' : 'chess-dark'}`;
+                    sqEl.onclick = () => handleSquareClick(sq);
+                    
+                    if(selectedSquare === sq) sqEl.innerHTML += `<div class="chess-hl"></div>`;
+                    
+                    const moveMatch = legalMoves.find(m => m.to === sq);
+                    if(moveMatch) sqEl.innerHTML += `<div class="chess-legal-dot"></div>`;
+
+                    if (piece) {
+                        const img = document.createElement('img');
+                        img.src = pieceIcons[piece.color][piece.type];
+                        img.className = 'chess-piece';
+                        sqEl.appendChild(img);
+                    }
+                    boardEl.appendChild(sqEl);
+                });
+            });
+        }
+
+        function handleSquareClick(sq) {
+            if(chess.turn() !== myChessColor) return;
+            const piece = chess.get(sq);
+            
+            if(piece && piece.color === myChessColor) {
+                selectedSquare = sq;
+                renderChessBoard();
+                return;
+            }
+            
+            if(selectedSquare) {
+                const moves = chess.moves({ square: selectedSquare, verbose: true });
+                const move = moves.find(m => m.to === sq);
+                if(move) {
+                    const elapsed = Math.floor((Date.now() - lastTimestamp) / 1000);
+                    if (myChessColor === 'w') {
+                        wTime = Math.max(0, wTime - elapsed);
+                    } else {
+                        bTime = Math.max(0, bTime - elapsed);
+                    }
+
+                    chess.move(move);
+                    
+                    let gameStatus = 'active';
+                    let winner = null;
+                    let reason = null;
+                    
+                    if (chess.in_checkmate()) {
+                        gameStatus = 'ended';
+                        winner = myChessColor;
+                        reason = 'Skakmat (Checkmate)';
+                    } else if (chess.in_draw() || chess.in_stalemate()) {
+                        gameStatus = 'ended';
+                        reason = 'Remis (Draw)';
+                    }
+
+                    db.ref(`chess_games/${currentChessGameId}`).update({
+                        fen: chess.fen(), turn: chess.turn(), lastMove: move,
+                        wTime: wTime, bTime: bTime, lastUpdate: Date.now(),
+                        status: gameStatus, winner: winner, reason: reason
+                    });
+                    selectedSquare = null;
+                }
+            }
+        }
+
+        function updateTurnIndicators() {
+            const isMyTurn = chess.turn() === myChessColor;
+            const myTimer = document.getElementById('chessMyTimerBox');
+            const oppTimer = document.getElementById('chessOpponentTimerBox');
+            if(isMyTurn) {
+                myTimer.className = 'timer-active px-4 py-2 rounded font-mono font-bold text-lg';
+                oppTimer.className = 'timer-inactive px-4 py-2 rounded font-mono font-bold text-lg';
+            } else {
+                myTimer.className = 'timer-inactive px-4 py-2 rounded font-mono font-bold text-lg';
+                oppTimer.className = 'timer-active px-4 py-2 rounded font-mono font-bold text-lg';
+            }
+        }
+
+        function showAlert(msg, color) {
+            const alertBox = document.getElementById('chessAlert');
+            alertBox.innerText = msg;
+            alertBox.style.display = 'flex';
+            setTimeout(() => { alertBox.style.display = 'none'; }, 3000);
         }
     </script>
 </body>
