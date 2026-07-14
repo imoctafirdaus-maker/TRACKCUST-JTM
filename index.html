@@ -1572,14 +1572,20 @@
                 const game = snap.val();
                 if(!game) return;
                 
+                // 1. UPDATE WARNA DINAMIS BILA TERJADI PERTUKARAN
+                myChessColor = (game.white === currentUser) ? 'w' : 'b';
+                chessOpponent = (myChessColor === 'w') ? game.black : game.white;
+                document.getElementById('myChessColorLabel').innerText = myChessColor === 'w' ? 'WHITE' : 'BLACK';
+                document.getElementById('chessOpponentName').innerText = chessOpponent;
+
                 const isNewFen = game.fen !== chess.fen() && (game.fen !== 'start' || chess.fen() !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
                 
-                if (game.status === 'active' && game.lastUpdate === lastTimestamp) {
+                if (game.status === 'active' && game.lastUpdate === lastTimestamp && game.fen !== 'start') {
                     return; 
                 }
 
                 // ==============================
-                // FITUR MUTUAL RESET AGREEMENT
+                // FITUR MUTUAL RESET & TUKAR WARNA
                 // ==============================
                 const resetRequests = game.resetRequest || {};
                 const myReset = resetRequests[currentUser];
@@ -1587,13 +1593,22 @@
                 const btnReset = document.getElementById('btnResetGame');
 
                 if (myReset && oppReset) {
-                    // Keduanya setuju reset, bersihkan dan mulai ulang papan
-                    if (myChessColor === 'w') {
+                    // Keduanya setuju reset. Hanya klien yang tadinya memegang warna Putih
+                    // yang mengeksekusi ke Firebase untuk menghindari pembaruan ganda.
+                    if (game.white === currentUser) {
                         db.ref(`chess_games/${currentChessGameId}`).update({
-                            fen: 'start', turn: 'w', lastMove: null, 
-                            wTime: 600, bTime: 600, lastUpdate: Date.now(), 
-                            status: 'active', winner: null, reason: null,
-                            resetRequest: null
+                            fen: 'start',
+                            turn: 'w',
+                            lastMove: null, 
+                            wTime: 600,
+                            bTime: 600,
+                            lastUpdate: Date.now(), 
+                            status: 'active',
+                            winner: null,
+                            reason: null,
+                            resetRequest: null,
+                            white: game.black, // Tukar Black menjadi White
+                            black: game.white  // Tukar White menjadi Black
                         });
                     }
                 } else if (oppReset && !myReset) {
@@ -1613,7 +1628,6 @@
                 if(game.status === 'ended') {
                     document.getElementById('chessResetContainer').classList.remove('hidden');
                     if (chessTimerInterval) clearInterval(chessTimerInterval);
-                    selectedSquare = null; // Rapihkan seleksi ketika game selesai
                     
                     const pemenang = game.winner ? (game.winner === 'w' ? game.white : game.black) : 'Seri';
                     
@@ -1640,12 +1654,20 @@
                     scoreProcessedForGame = false;
                 }
 
-                if(game.fen !== 'start' && game.fen !== chess.fen()) {
+                // ==============================
+                // PERBAIKAN: RESET PAPAN LOKAL
+                // ==============================
+                if (game.fen === 'start') {
+                    chess.reset();
+                    selectedSquare = null;
+                    isAnimatingPiece = false;
+                } else if (game.fen !== chess.fen()) {
                     chess.load(game.fen);
                     playChessSound(game.lastMove, chess.in_check());
                 }
                 
                 wTime = game.wTime; bTime = game.bTime; lastTimestamp = game.lastUpdate;
+                
                 renderChessBoard(game.lastMove);
                 updateTurnIndicators();
                 startLocalTimer(); 
@@ -1773,6 +1795,7 @@
                 }
             }
             
+            // Render papan mengikuti orientasi warna (sudah dinamis saat rotasi reset)
             const rows = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
             const cols = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
             
