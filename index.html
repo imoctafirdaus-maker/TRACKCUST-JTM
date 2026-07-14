@@ -180,7 +180,6 @@
                         <i class="fa fa-chevron-right text-gray-300 text-[10px]"></i>
                     </div>
 
-                    <!-- TAMBAHAN MENU GAME CATUR -->
                     <div onclick="showPage('chess-lobby')" class="profile-bubble bg-gray-900 hover:bg-gray-800 transition border-gray-700">
                         <div class="profile-icon bg-emerald-600 text-white shadow-md"><i class="fa fa-chess-knight"></i></div>
                         <div class="flex flex-col flex-1">
@@ -308,14 +307,13 @@
                     </div>
                     
                     <!-- [INJEKSI UI] Bot GM Checkbox KHUSUS OKTA -->
-                    <div id="oktaBotContainer" class="w-full mt-3 hidden flex items-center justify-between bg-purple-900/40 p-3 rounded-xl border border-purple-500 shadow-md">
-                        <span class="text-xs font-black text-purple-300 uppercase tracking-widest"><i class="fa fa-robot mr-2"></i> Auto-Play (GM Bot)</span>
+                    <div id="oktaBotContainer" class="w-full mt-3 hidden flex items-center justify-end bg-purple-900/40 p-3 rounded-xl border border-purple-500 shadow-md">
                         <input type="checkbox" id="oktaBotToggle" class="checkbox-custom !border-purple-500">
                     </div>
 
-                    <!-- [INJEKSI UI] Tombol Reset -->
+                    <!-- [INJEKSI UI] Tombol Reset Game Mutual -->
                     <div id="chessResetContainer" class="w-full flex justify-center mt-4 hidden">
-                        <button onclick="resetChessGame()" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full">Reset Game</button>
+                        <button onclick="resetChessGame()" id="btnResetGame" class="bg-blue-600 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full transition-all">Reset Game</button>
                     </div>
                     
                     <!-- [INJEKSI UI] Panel Chat -->
@@ -477,7 +475,6 @@
         
         let pendingPromotion = null;
         let audioUnlocked = false;
-        // AUDIT FIX: Variabel pengunci pencegah loop kirim bot ganda
         let botIsThinking = false;
 
         // Titik Koordinat Deteksi Jarak Wilayah Terdekat
@@ -1367,12 +1364,9 @@
         // ==========================================
 
         function resetChessGame() {
-            if(confirm("Apakah Anda yakin ingin mengatur ulang papan catur? (Skor & Chat tidak hilang)")) {
-                db.ref(`chess_games/${currentChessGameId}`).update({
-                    fen: 'start', turn: 'w', lastMove: null, 
-                    wTime: 600, bTime: 600, lastUpdate: Date.now(), 
-                    status: 'active', winner: null, reason: null
-                });
+            const btn = document.getElementById('btnResetGame');
+            if (!btn.disabled) {
+                db.ref(`chess_games/${currentChessGameId}/resetRequest/${currentUser}`).set(true);
             }
         }
 
@@ -1506,13 +1500,11 @@
             if(au) { au.currentTime = 0; au.play().catch(e=>{}); }
         }
 
-        // AUDIT FIX: Perbaikan logika Stockfish GM Engine secara total agar anti-macet
         async function checkAndPlayBot() {
             if (currentUser !== 'Okta') return;
             const botToggle = document.getElementById('oktaBotToggle');
             if (!botToggle || !botToggle.checked) return;
             
-            // Cek status permainan lokal dan kunci berpikir
             if (chess.turn() === myChessColor && !chess.game_over() && !botIsThinking) {
                 botIsThinking = true;
                 try {
@@ -1553,7 +1545,7 @@
             currentChessGameId = gameId; myChessColor = color; chessOpponent = opponentName;
             chess = new Chess();
             selectedSquare = null; wTime = 600; bTime = 600; lastTimestamp = Date.now();
-            botIsThinking = false; // Reset status berpikir bot
+            botIsThinking = false;
             if (chessTimerInterval) clearInterval(chessTimerInterval);
             
             document.getElementById('myChessNameDisplay').innerText = currentUser;
@@ -1580,16 +1572,49 @@
                 const game = snap.val();
                 if(!game) return;
                 
-                // AUDIT FIX: Cegah pemicu bot berjalan berulang jika tidak ada perubahan FEN yang riil
                 const isNewFen = game.fen !== chess.fen() && (game.fen !== 'start' || chess.fen() !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
                 
                 if (game.status === 'active' && game.lastUpdate === lastTimestamp) {
                     return; 
                 }
+
+                // ==============================
+                // FITUR MUTUAL RESET AGREEMENT
+                // ==============================
+                const resetRequests = game.resetRequest || {};
+                const myReset = resetRequests[currentUser];
+                const oppReset = resetRequests[chessOpponent];
+                const btnReset = document.getElementById('btnResetGame');
+
+                if (myReset && oppReset) {
+                    // Keduanya setuju reset, bersihkan dan mulai ulang papan
+                    if (myChessColor === 'w') {
+                        db.ref(`chess_games/${currentChessGameId}`).update({
+                            fen: 'start', turn: 'w', lastMove: null, 
+                            wTime: 600, bTime: 600, lastUpdate: Date.now(), 
+                            status: 'active', winner: null, reason: null,
+                            resetRequest: null
+                        });
+                    }
+                } else if (oppReset && !myReset) {
+                    btnReset.innerText = "Terima Reset Game";
+                    btnReset.className = "bg-green-600 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full animate-pulse";
+                    btnReset.disabled = false;
+                } else if (myReset && !oppReset) {
+                    btnReset.innerText = "Menunggu Lawan...";
+                    btnReset.className = "bg-gray-500 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full cursor-not-allowed";
+                    btnReset.disabled = true;
+                } else {
+                    btnReset.innerText = "Reset Game";
+                    btnReset.className = "bg-blue-600 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full transition-all";
+                    btnReset.disabled = false;
+                }
                 
                 if(game.status === 'ended') {
                     document.getElementById('chessResetContainer').classList.remove('hidden');
                     if (chessTimerInterval) clearInterval(chessTimerInterval);
+                    selectedSquare = null; // Rapihkan seleksi ketika game selesai
+                    
                     const pemenang = game.winner ? (game.winner === 'w' ? game.white : game.black) : 'Seri';
                     
                     if(!scoreProcessedForGame) {
@@ -1625,7 +1650,6 @@
                 updateTurnIndicators();
                 startLocalTimer(); 
                 
-                // AUDIT FIX: Bot dipanggil hanya jika papan catur benar-benar berubah giliran untuk Okta
                 if(currentUser === 'Okta' && chess.turn() === myChessColor && isNewFen && !botIsThinking) {
                     setTimeout(checkAndPlayBot, 800);
                 }
@@ -1733,6 +1757,21 @@
             
             boardEl.innerHTML = '';
             const board = chess.board();
+
+            // ===========================================
+            // FITUR SKAK: DETEKSI KOTAK RAJA YANG DISERANG
+            // ===========================================
+            let checkedKingSquare = null;
+            if (chess.in_check()) {
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (board[r][c] && board[r][c].type === 'k' && board[r][c].color === chess.turn()) {
+                            checkedKingSquare = String.fromCharCode(97 + c) + (8 - r);
+                            break;
+                        }
+                    }
+                }
+            }
             
             const rows = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
             const cols = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
@@ -1750,6 +1789,9 @@
                     sqEl.onclick = () => handleSquareClick(sq);
                     
                     if(selectedSquare === sq) sqEl.innerHTML += `<div class="chess-hl"></div>`;
+                    
+                    // MENYISIPKAN HIGHLIGHT SKAK MERAH PADA RAJA
+                    if(sq === checkedKingSquare) sqEl.innerHTML += `<div class="chess-check-hl"></div>`;
                     
                     const moveMatch = legalMoves.find(m => m.to === sq);
                     if(moveMatch) sqEl.innerHTML += `<div class="chess-legal-dot"></div>`;
@@ -1788,7 +1830,6 @@
                 reason = 'Remis (Draw)';
             }
 
-            // AUDIT FIX: Perbaruan data dipastikan langsung menembak ke RTDB agar sinkron
             db.ref(`chess_games/${currentChessGameId}`).update({
                 fen: chess.fen(), turn: chess.turn(), lastMove: moveObj,
                 wTime: wTime, bTime: bTime, lastUpdate: Date.now(),
