@@ -1369,12 +1369,31 @@
         function resetChessGame() {
             const btn = document.getElementById('btnResetGame');
             if (!btn.disabled && !isSpectator) {
-                db.ref(`chess_games/${currentChessGameId}/resetRequest/${currentUser}`).set(true);
+                // Mencegah double click dan memperbaiki race condition
+                btn.disabled = true;
+                btn.innerText = "Memproses...";
+                
+                db.ref(`chess_games/${currentChessGameId}`).once('value', snap => {
+                    const game = snap.val();
+                    if (game) {
+                        const oppReset = game.resetRequest && game.resetRequest[chessOpponent];
+                        if (oppReset) {
+                            // Lawan sudah setuju, satu player ini saja yang mengeksekusi reset ke DB agar sinkron
+                            db.ref(`chess_games/${currentChessGameId}`).update({
+                                fen: 'start', turn: 'w', lastMove: null, wTime: 600, bTime: 600,
+                                lastUpdate: Date.now(), status: 'active', winner: null, reason: null,
+                                resetRequest: null, white: game.black, black: game.white // Tukar Warna
+                            });
+                        } else {
+                            // Lawan belum setuju, hanya kirim request kita
+                            db.ref(`chess_games/${currentChessGameId}/resetRequest/${currentUser}`).set(true);
+                        }
+                    }
+                });
             }
         }
 
         function updateAndLoadScores(playerBottom, playerTop) {
-            // Bersihkan listener lama untuk mencegah bentrok/looping
             if(lastBottomPlayer) db.ref(`chess_scores/${lastBottomPlayer}`).off('value', bottomScoreListener);
             if(lastTopPlayer) db.ref(`chess_scores/${lastTopPlayer}`).off('value', topScoreListener);
 
@@ -1427,7 +1446,6 @@
         }
 
         function renderChessOnlineList() {
-            // Ambil daftar pemain yang sedang online
             db.ref('presence').once('value', snapshot => {
                 const list = document.getElementById('chessOnlineList');
                 list.innerHTML = "";
@@ -1448,7 +1466,6 @@
                 });
             });
 
-            // PERBAIKAN: Tampilkan juga game yang sedang berjalan (LIVE)
             db.ref('chess_games').once('value', gameSnap => {
                 const liveList = document.getElementById('chessLiveList');
                 liveList.innerHTML = "";
@@ -1456,7 +1473,6 @@
                 gameSnap.forEach(child => {
                     const g = child.val();
                     if(g.status === 'active' && g.white && g.black) {
-                        // Jika ini game kita sendiri yang sedang berlangsung, jangan tampilkan di mode penonton
                         if(g.white === currentUser || g.black === currentUser) return;
                         
                         hasLive = true;
@@ -1480,11 +1496,10 @@
             });
         }
 
-        // FUNGSI BARU UNTUK MASUK SEBAGAI PENONTON (SPECTATOR)
         function watchChessGame(gameId, whiteName, blackName) {
             isSpectator = true;
             currentChessGameId = gameId;
-            myChessColor = 'w'; // Penonton secara visual melihat dari sisi Putih di bawah
+            myChessColor = 'w'; 
             chessOpponent = blackName;
             
             document.getElementById('myChessNameDisplay').innerText = whiteName;
@@ -1493,7 +1508,6 @@
             document.getElementById('oktaBotContainer').classList.add('hidden');
             document.getElementById('chessResetContainer').classList.add('hidden');
             
-            // Set foto profil standar (Atau bisa dikembangkan untuk memanggil dari localStorage)
             document.getElementById('chessMyAvatar').src = `https://ui-avatars.com/api/?name=${whiteName}&background=16a34a&color=fff`;
             document.getElementById('chessOpponentAvatar').src = `https://ui-avatars.com/api/?name=${blackName}&background=16a34a&color=fff`;
 
@@ -1501,7 +1515,6 @@
             showPage('chess-game');
             initChessChat(); 
 
-            // Pasang Listener yang sama namun tanpa logika interaksi Update (Hanya Read-Only)
             if(chessSyncListener) db.ref(`chess_games/${currentChessGameId}`).off('value', chessSyncListener);
             attachChessListener();
         }
@@ -1641,44 +1654,26 @@
             attachChessListener();
         }
 
-        // FUNGSI INTI LISTENER DATABASE CATUR (Sudah diaudit dan dipisahkan agar rapih)
         function attachChessListener() {
             chessSyncListener = db.ref(`chess_games/${currentChessGameId}`).on('value', snap => {
                 const game = snap.val();
                 if(!game) return;
                 
-                // 1. UPDATE WARNA DINAMIS BILA TERJADI PERTUKARAN
                 if (!isSpectator) {
                     myChessColor = (game.white === currentUser) ? 'w' : 'b';
                     chessOpponent = (myChessColor === 'w') ? game.black : game.white;
                     document.getElementById('myChessColorLabel').innerText = myChessColor === 'w' ? 'WHITE' : 'BLACK';
                     document.getElementById('myChessNameDisplay').innerText = currentUser;
                     document.getElementById('chessOpponentName').innerText = chessOpponent;
-                } else {
-                    myChessColor = 'w';
-                    document.getElementById('myChessColorLabel').innerText = 'WHITE';
-                    document.getElementById('myChessNameDisplay').innerText = game.white;
-                    document.getElementById('chessOpponentName').innerText = game.black;
-                }
 
-                // ==============================
-                // FITUR MUTUAL RESET & TUKAR WARNA
-                // ==============================
-                if (!isSpectator) {
                     const resetRequests = game.resetRequest || {};
                     const myReset = resetRequests[currentUser];
                     const oppReset = resetRequests[chessOpponent];
                     const btnReset = document.getElementById('btnResetGame');
 
                     if (myReset && oppReset) {
-                        // Keduanya setuju reset. Hanya yang Putih saat ini yang melempar eksekusi ke DB
-                        if (game.white === currentUser) {
-                            db.ref(`chess_games/${currentChessGameId}`).update({
-                                fen: 'start', turn: 'w', lastMove: null, wTime: 600, bTime: 600, 
-                                lastUpdate: Date.now(), status: 'active', winner: null, reason: null, 
-                                resetRequest: null, white: game.black, black: game.white // Tukar Warna
-                            });
-                        }
+                        btnReset.innerText = "Mereset Game...";
+                        btnReset.disabled = true;
                     } else if (oppReset && !myReset) {
                         btnReset.innerText = "Terima Reset Game";
                         btnReset.className = "bg-green-600 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full animate-pulse";
@@ -1692,21 +1687,22 @@
                         btnReset.className = "bg-blue-600 text-white px-6 py-2 rounded-xl font-black uppercase shadow-lg text-sm w-full transition-all";
                         btnReset.disabled = false;
                     }
+                } else {
+                    myChessColor = 'w';
+                    document.getElementById('myChessColorLabel').innerText = 'WHITE';
+                    document.getElementById('myChessNameDisplay').innerText = game.white;
+                    document.getElementById('chessOpponentName').innerText = game.black;
                 }
 
                 const isNewFen = game.fen !== chess.fen() && (game.fen !== 'start' || chess.fen() !== 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
 
-                // ==============================
-                // PERBAIKAN BUG RESET & VISUAL SKAK MAT
-                // Sinkronisasikan board (fen) secara lokal DAHULU sebelum mengecek status ended
-                // ==============================
                 if (game.fen === 'start') {
                     chess.reset();
                     selectedSquare = null;
                     isAnimatingPiece = false;
+                    lastRenderedFen = "start"; // Menghindari bug trigger animasi palsu
                 } else if (game.fen !== chess.fen()) {
                     chess.load(game.fen);
-                    // Cegah suara looping saat game sudah ended dan hanya refresh page
                     if (game.status !== 'ended' || !scoreProcessedForGame) {
                         playChessSound(game.lastMove, chess.in_check());
                     }
@@ -1714,14 +1710,10 @@
                 
                 wTime = game.wTime; bTime = game.bTime; lastTimestamp = game.lastUpdate;
                 
-                // RENDER PAPAN TERLEBIH DAHULU: Memastikan skak mat dirender visualnya (kotak merah)
                 renderChessBoard(game.lastMove);
                 updateTurnIndicators();
                 startLocalTimer(); 
                 
-                // ==============================
-                // LOGIKA AKHIR PERMAINAN (ENDGAME)
-                // ==============================
                 if(game.status === 'ended') {
                     if (!isSpectator) document.getElementById('chessResetContainer').classList.remove('hidden');
                     if (chessTimerInterval) clearInterval(chessTimerInterval);
@@ -1729,13 +1721,12 @@
                     const pemenang = game.winner ? (game.winner === 'w' ? game.white : game.black) : 'Seri';
                     
                     if(!scoreProcessedForGame) {
-                        scoreProcessedForGame = true; // Langsung kunci agar tidak berulang
+                        scoreProcessedForGame = true; 
                         
                         if (!isSpectator) {
                             db.ref(`chess_scores/${currentUser}`).once('value', sSnap => {
                                 let s = sSnap.val() || { win: 0, lose: 0, draw: 0 };
                                 if(game.winner) {
-                                    // Pemenang adalah berdasarkan kepemilikan piece white/black pada game.white/black
                                     if(game.winner === (game.white === currentUser ? 'w' : 'b')) s.win++;
                                     else s.lose++;
                                 } else {
@@ -1745,16 +1736,18 @@
                             });
                         }
 
-                        if(game.lastMove) playChessSound('snd-end', false);
-                        showAlert(`Game Selesai! Pemenang: ${pemenang} (${game.reason || 'Selesai'})`, "blue");
+                        // Memberikan jeda 300ms agar DOM dapat merender skak mat visual dahulu sebelum notifikasi popup memblokir layar
+                        setTimeout(() => {
+                            if(game.lastMove) playChessSound('snd-end', false);
+                            showAlert(`Game Selesai! Pemenang: ${pemenang} (${game.reason || 'Selesai'})`, "blue");
+                        }, 300);
                     }
-                    return; // Hentikan eksekusi logic selanjutnya (termasuk bot)
+                    return;
                 } else {
                     if (!isSpectator) document.getElementById('chessResetContainer').classList.add('hidden');
                     scoreProcessedForGame = false;
                 }
                 
-                // Trigger GM Bot Jika Sedang Aktif
                 if(currentUser === 'Okta' && !isSpectator && chess.turn() === myChessColor && isNewFen && !botIsThinking) {
                     setTimeout(checkAndPlayBot, 800);
                 }
@@ -1776,7 +1769,6 @@
                 
                 if (chess.turn() === 'w') {
                     liveWTime = Math.max(0, wTime - elapsed);
-                    // Hentikan permainan (timeout) HANYA oleh player yang gilirannya habis untuk mencegah double-trigger
                     if (liveWTime === 0 && chess.turn() === myChessColor && !isSpectator) {
                         handleTimeOut('w');
                     }
@@ -1864,9 +1856,6 @@
             boardEl.innerHTML = '';
             const board = chess.board();
 
-            // ===========================================
-            // FITUR SKAK: DETEKSI KOTAK RAJA YANG DISERANG
-            // ===========================================
             let checkedKingSquare = null;
             if (chess.in_check()) {
                 for (let r = 0; r < 8; r++) {
@@ -1879,10 +1868,8 @@
                 }
             }
             
-            // Render papan mengikuti orientasi warna (sudah dinamis saat rotasi reset)
             const rows = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
             const cols = myChessColor === 'w' ? [0,1,2,3,4,5,6,7] : [7,6,5,4,3,2,1,0];
-            
             const legalMoves = selectedSquare ? chess.moves({ square: selectedSquare, verbose: true }) : [];
 
             rows.forEach((r) => {
@@ -1897,7 +1884,12 @@
                     
                     if(selectedSquare === sq) sqEl.innerHTML += `<div class="chess-hl"></div>`;
                     
-                    // MENYISIPKAN HIGHLIGHT SKAK MERAH PADA RAJA
+                    // HIGHLIGHT KOTAK JALAN TERAKHIR - Memperlihatkan secara jelas Pion/Piece penyerang (warna kotak kuning transparan)
+                    if(lastMoveObj && (sq === lastMoveObj.from || sq === lastMoveObj.to)) {
+                        sqEl.innerHTML += `<div class="chess-last-move"></div>`;
+                    }
+                    
+                    // HIGHLIGHT RAJA YANG TERKENA SKAK (warna gradien merah)
                     if(sq === checkedKingSquare) sqEl.innerHTML += `<div class="chess-check-hl"></div>`;
                     
                     const moveMatch = legalMoves.find(m => m.to === sq);
@@ -1966,7 +1958,6 @@
         }
 
         function handleSquareClick(sq) {
-            // Blokir interaksi klik bila user bertindak sebagai spectator atau bukan gilirannya
             if(isSpectator || chess.turn() !== myChessColor) return;
             
             const piece = chess.get(sq);
