@@ -188,16 +188,6 @@
                         </div>
                         <i class="fa fa-chevron-right text-gray-500 text-[10px]"></i>
                     </div>
-                    
-                    <!-- MENU BARU: SPIN YOUR TEAM -->
-                    <div onclick="showPage('spin-team')" class="profile-bubble border-purple-200 bg-purple-50/20">
-                        <div class="profile-icon bg-purple-600 text-white shadow-md"><i class="fa fa-users"></i></div>
-                        <div class="flex flex-col flex-1">
-                            <span class="font-black text-purple-800 uppercase italic text-[11px]">Spin Your Team</span>
-                            <span class="text-[8px] font-bold text-gray-400 uppercase">Acak Tim Games (2 Orang)</span>
-                        </div>
-                        <i class="fa fa-chevron-right text-purple-500 text-[10px]"></i>
-                    </div>
 
                     <div id="adminPanel" class="hidden space-y-3">
                         <div class="border-t-2 border-dashed border-gray-200 my-4 pt-4">
@@ -262,38 +252,8 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- HALAMAN SPIN YOUR TEAM (UPDATE DENGAN BUBBLE TEKS) -->
-            <div id="page-spin-team" class="page p-6 bg-gray-50 overflow-y-auto pb-32">
-                <div class="flex justify-between items-center mb-6">
-                    <button onclick="showPage('home')" class="text-blue-900 bg-white w-10 h-10 rounded-full flex items-center justify-center shadow-md border border-gray-200"><i class="fa fa-arrow-left"></i></button>
-                    <h2 class="font-black text-blue-900 uppercase italic text-lg tracking-widest">Spin Team</h2>
-                    <div class="w-10"></div>
-                </div>
-                
-                <div class="bg-white rounded-[2rem] p-6 shadow-xl border-b-4 border-purple-600 mb-6">
-                    <p class="text-[10px] font-black text-gray-400 uppercase mb-3 text-center">Pilih Peserta Bermain<br>(Tap 1x: Ikut, Tap 2x: Tidak Ikut)</p>
-                    
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="customSpinName" placeholder="Tambah manual (contoh: Alex)" class="flex-1 p-3 bg-gray-50 rounded-xl border border-gray-200 outline-none font-bold text-sm text-blue-900" onkeypress="if(event.key==='Enter') addCustomSpinName()">
-                        <button onclick="addCustomSpinName()" class="bg-blue-600 text-white px-4 rounded-xl font-bold shadow-md active:scale-95 transition-transform"><i class="fa fa-plus"></i></button>
-                    </div>
 
-                    <!-- Container Bubble Teks -->
-                    <div id="spinBubblesContainer" class="flex flex-wrap gap-2 justify-center mb-4 max-h-48 overflow-y-auto p-1">
-                        <!-- Otomatis diisi oleh JavaScript -->
-                    </div>
-
-                    <button onclick="spinTeams()" class="w-full mt-4 bg-purple-600 text-white py-4 rounded-2xl font-black uppercase shadow-lg text-sm active:scale-95 transition-transform"><i class="fa fa-sync-alt mr-2"></i> Acak Tim Sekarang</button>
-                </div>
-
-                <div id="spinResultContainer" class="hidden">
-                    <h3 class="font-black text-blue-900 uppercase italic text-sm text-center mb-4">🏆 Hasil Undian Tim 🏆</h3>
-                    <div id="spinResultList" class="grid grid-cols-2 gap-4"></div>
-                </div>
-            </div>
-
-            <!-- HALAMAN LOBBY CATUR -->
+            <!-- HALAMAN LOBBY CATUR (NEW) -->
             <div id="page-chess-lobby" class="page p-6 bg-[#161512] overflow-y-auto">
                 <div class="flex justify-between items-center mb-6">
                     <button onclick="showPage('home')" class="text-gray-300 bg-gray-800 w-10 h-10 rounded-full flex items-center justify-center"><i class="fa fa-arrow-left"></i></button>
@@ -301,6 +261,7 @@
                     <div class="w-10"></div>
                 </div>
                 
+                <!-- INJEKSI UI: LIVE GAMES -->
                 <div id="chessLiveList" class="space-y-3 mb-6"></div>
 
                 <div class="bg-gray-800/80 p-5 rounded-3xl shadow-xl border border-gray-700 mb-6">
@@ -518,8 +479,6 @@
         let pendingPromotion = null;
         let audioUnlocked = false;
         let botIsThinking = false;
-        
-        let spinParticipants = {}; // Object untuk melacak state bubble spin tim
 
         // Titik Koordinat Deteksi Jarak Wilayah Terdekat
         const KECAMATAN_POLYGONS = [
@@ -1086,9 +1045,8 @@
                 if(n.id === 'nav-'+id) n.classList.add('active');
                 else n.classList.remove('active');
             });
-            
             if(id === 'home') closeCrewManager();
-            if(id === 'spin-team') initSpinParticipants();
+            
             if(id === 'chess-lobby') renderChessOnlineList();
             if(id !== 'chess-game' && typeof chessTimerInterval !== 'undefined' && chessTimerInterval) clearInterval(chessTimerInterval);
         }
@@ -1304,99 +1262,6 @@
                     });
                 }
             }, 1000);
-        }
-
-        // ==========================================
-        // FITUR SPIN YOUR TEAM (UPDATE BUBBLE)
-        // ==========================================
-        
-        function initSpinParticipants() {
-            if(Object.keys(spinParticipants).length === 0) {
-                // Muat otomatis dari database crew (userPins)
-                Object.keys(userPins).forEach(name => {
-                    spinParticipants[name] = 0; // 0 = Netral, 1 = Hijau (Ikut), 2 = Merah (Tidak Ikut)
-                });
-            }
-            renderSpinBubbles();
-        }
-
-        function renderSpinBubbles() {
-            const container = document.getElementById('spinBubblesContainer');
-            if(!container) return;
-            container.innerHTML = "";
-            
-            Object.keys(spinParticipants).forEach(name => {
-                const state = spinParticipants[name];
-                let bgClass = "bg-gray-100 text-gray-600 border-gray-200";
-                let icon = "";
-                
-                if (state === 1) {
-                    bgClass = "bg-green-500 text-white border-green-600 shadow-md transform scale-105";
-                    icon = '<i class="fa fa-check mr-1"></i>';
-                } else if (state === 2) {
-                    bgClass = "bg-red-500 text-white border-red-600 shadow-md opacity-75";
-                    icon = '<i class="fa fa-times mr-1"></i>';
-                }
-
-                container.innerHTML += `
-                    <div onclick="toggleSpinStatus('${name}')" class="px-3 py-2 rounded-full border-2 cursor-pointer transition-all duration-200 font-bold text-xs select-none flex items-center ${bgClass}">
-                        ${icon}${name}
-                    </div>
-                `;
-            });
-        }
-
-        function toggleSpinStatus(name) {
-            // Rotasi Status: 0 -> 1 -> 2 -> 0
-            spinParticipants[name] = (spinParticipants[name] + 1) % 3;
-            renderSpinBubbles();
-        }
-
-        function addCustomSpinName() {
-            const inp = document.getElementById('customSpinName');
-            const name = inp.value.trim();
-            if(name && spinParticipants[name] === undefined) {
-                spinParticipants[name] = 1; // Default otomatis ikut (hijau)
-                renderSpinBubbles();
-                inp.value = "";
-            }
-        }
-
-        function spinTeams() {
-            // Hanya ambil nama yang statusnya 1 (Ikut / Hijau)
-            let names = Object.keys(spinParticipants).filter(name => spinParticipants[name] === 1);
-            
-            if (names.length < 2) {
-                alert("Minimal pilih 2 peserta yang ikut (Bubble Warna Hijau)!");
-                return;
-            }
-
-            // Shuffle array secara acak (Fisher-Yates)
-            for (let i = names.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [names[i], names[j]] = [names[j], names[i]];
-            }
-
-            const resultList = document.getElementById('spinResultList');
-            resultList.innerHTML = "";
-            
-            let teamCount = 1;
-            for (let i = 0; i < names.length; i += 2) {
-                const member1 = names[i];
-                const member2 = names[i+1] ? names[i+1] : '<span class="text-gray-400 italic">Kosong</span>';
-                
-                resultList.innerHTML += `
-                    <div class="bg-white p-4 rounded-2xl shadow-sm border-t-4 border-purple-500 flex flex-col items-center text-center">
-                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-[9px] font-black uppercase mb-3 tracking-widest">TIM ${teamCount}</span>
-                        <span class="font-bold text-gray-800 text-sm">${member1}</span>
-                        <span class="text-[10px] text-purple-400 font-bold my-1"><i class="fa fa-plus"></i></span>
-                        <span class="font-bold text-gray-800 text-sm">${member2}</span>
-                    </div>
-                `;
-                teamCount++;
-            }
-            
-            document.getElementById('spinResultContainer').classList.remove('hidden');
         }
 
         // ==========================================
