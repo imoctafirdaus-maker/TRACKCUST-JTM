@@ -470,6 +470,9 @@
 </div>
 
 <script>
+// Penambahan variabel global yang mungkin terlewat di kode sebelumnya
+let audioUnlocked = false; 
+
 let userPins = { 
 "Pak KUR (Mgt)": "0000", "Pak Agus (Mgt)": "6413", "Pak Ageng (Mgt)": "4444",
 "Sintiya (Cashier)": "0959", "Ridha (Cashier)": "0968", "Okta": "1410", 
@@ -486,10 +489,18 @@ projectId: "trackcust-jtm"
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// INISIALISASI FCM & PENDETEKSI PESAN DI FOREGROUND
-const messaging = firebase.messaging();
+// PERBAIKAN: INISIALISASI FCM & PENDETEKSI PESAN
+// Dibungkus try...catch agar aplikasi tetap berjalan meski browser/perangkat menolak fitur notifikasi
+let messaging = null;
+try {
+    messaging = firebase.messaging();
+} catch (error) {
+    console.warn("Firebase Cloud Messaging tidak didukung di perangkat/browser ini.", error);
+}
 
 function requestFCMToken() {
+    if (!messaging) return; // Hentikan fungsi jika FCM tidak didukung
+    
     if (!("Notification" in window)) {
         console.warn("Browser ini tidak mendukung notifikasi.");
         return;
@@ -513,11 +524,15 @@ function requestFCMToken() {
     });
 }
 
-messaging.onMessage((payload) => {
-    if (payload && payload.notification) {
-        alert(`NOTIFIKASI BARU: ${payload.notification.title}\n${payload.notification.body}`);
-    }
-});
+if (messaging) {
+    try {
+        messaging.onMessage((payload) => {
+            if (payload && payload.notification) {
+                alert(`NOTIFIKASI BARU: ${payload.notification.title}\n${payload.notification.body}`);
+            }
+        });
+    } catch(e) {}
+}
 
 let currentUser = localStorage.getItem('jtm_user') || "";
 let sessionID = Math.random().toString(36).substring(2, 15);
@@ -1701,7 +1716,6 @@ if(isMyTurn) { myTimer.className = 'timer-active px-4 py-2 rounded font-mono fon
 else { myTimer.className = 'timer-inactive px-4 py-2 rounded font-mono font-bold text-lg'; oppTimer.className = 'timer-active px-4 py-2 rounded font-mono font-bold text-lg'; }
 }
 function showAlert(msg, color) { const alertBox = document.getElementById('chessAlert'); alertBox.innerText = msg; alertBox.style.display = 'flex'; setTimeout(() => { alertBox.style.display = 'none'; }, 3000); }
-
 
 // ==========================================
 // LOGIKA KALKULATOR POPUP UNTUK ECERAN
