@@ -8,6 +8,8 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<!-- TAMBAHAN SCRIPT FCM -->
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-messaging-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <style>
@@ -483,6 +485,40 @@ projectId: "trackcust-jtm"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+// INISIALISASI FCM & PENDETEKSI PESAN DI FOREGROUND
+const messaging = firebase.messaging();
+
+function requestFCMToken() {
+    if (!("Notification" in window)) {
+        console.warn("Browser ini tidak mendukung notifikasi.");
+        return;
+    }
+    Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+            messaging.getToken({ 
+                vapidKey: 'BDyi9aXSxkkzNHwd63meju5gCvOgXM2PD4ZKpLXv3RWlGEsAEH4fU9Y53FkTQRkubgxTtpwKXFOMt5HBNYQmsbs' 
+            }).then((currentToken) => {
+                if (currentToken && currentUser) {
+                    const safeUserKey = currentUser.replace(/[.#$[\]]/g, '_');
+                    db.ref('fcm_tokens/' + safeUserKey).set({
+                        token: currentToken,
+                        updatedAt: Date.now()
+                    });
+                }
+            }).catch((err) => {
+                console.error('Terjadi kesalahan saat mengambil token:', err);
+            });
+        }
+    });
+}
+
+messaging.onMessage((payload) => {
+    if (payload && payload.notification) {
+        alert(`NOTIFIKASI BARU: ${payload.notification.title}\n${payload.notification.body}`);
+    }
+});
+
 let currentUser = localStorage.getItem('jtm_user') || "";
 let sessionID = Math.random().toString(36).substring(2, 15);
 let allData = {}; let photoBase64 = "";
@@ -1107,6 +1143,10 @@ currentUser = n; localStorage.setItem('jtm_user', n);
 document.getElementById('userDisplay').innerText = n;
 document.getElementById('pinOverlay').style.display = "none"; document.getElementById('mainContent').style.display = "flex";
 updatePresence(); updateProfileUI();
+
+// REQUEST TOKEN FCM SAAT BERHASIL LOGIN
+requestFCMToken();
+
 db.ref('presence/' + n + '/session').on('value', snap => {
 if (!isOkta && snap.exists() && snap.val() !== sessionID) { alert("⚠️ Sesi Anda berakhir."); handleLogout(false); }
 });
@@ -1455,7 +1495,7 @@ const chatBox = document.getElementById('chessChatHistory'); chatBox.innerHTML =
 if(chessChatListener) db.ref(`chess_games/${currentChessGameId}/chat`).off('child_added', chessChatListener);
 chessChatListener = db.ref(`chess_games/${currentChessGameId}/chat`).on('child_added', snap => {
 const msg = snap.val(); const d = new Date(msg.timestamp); const time = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-const isMe = msg.sender === currentUser; const nameColor = isMe ? 'text-emerald-400' : 'text-blue-400';
+const isMe = msg.sender === currentUser; const nameColor = isMe ? 'textemerald-400' : 'text-blue-400';
 chatBox.innerHTML += `<div class="mb-1 leading-tight"><span class="${nameColor} font-bold mr-1">${msg.sender}</span><span class="text-gray-500 text-[8px] mr-1">[${time}]</span><span class="text-gray-200">${msg.text}</span></div>`;
 chatBox.scrollTop = chatBox.scrollHeight;
 });
